@@ -17,30 +17,64 @@ logging.basicConfig(
 class Handler(BaseRequestHandler):
 
     def handle(self):
+        """See https://github.com/discos/simulators/issues/1"""
         logging.info('Got connection from %s', self.client_address)
-        msg_header = self.system.msg_header
-        msg_tail = self.system.msg_tail
-        msg = b''
+        # We accept some commands not related to the protocol.  I.e. a
+        # $stop! command will stop the server, a $error! command will
+        # configure the system in order to respond with errors, etc.
+        # We call these commands *custom commands*, and we use for them
+        # the following header and tail:
+        custom_header, custom_tail = ('$', '!')
+        custom_msg = b''
         while True:
             byte = self.request.recv(1)
             if not byte:
                 break
-            elif byte == msg_header:
-                msg = msg_header
-            elif msg.startswith(msg_header):
-                msg += byte
-                if byte == msg_tail:
-                    command_name, parameters = self.system.parse(msg)
-                    try:
-                        command_method = getattr(self.system, command_name)
-                    except AttributeError:
-                        error = 'command %s not supported' % command_name
-                        response = msg_header + error + msg_tail
-                    else:
-                        response = command_method(*parameters)
-                    self.request.sendall(response)
+            try:
+                response = self.system.parse(byte)
+            except ValueError, ex:
+                logging.debug(ex)
+                continue
+            except Exception:
+                logging.debug('unexpected exception')
+                continue
+            if response is True:
+                # All custom command bytes should be different than the
+                # system header, otherwise the custom command will be cleared
+                custom_msg = b''
+                continue  # The system is still composing the message
+            elif response and isinstance(response, str):
+                self.request.sendall(response)
+            elif response is False:
+                # The system is still waiting for the header:
+                # check if the client is sending a custom command
+                # $command:par1,par2,...,parN!
+                if byte == custom_header:
+                    custom_msg = custom_header
+                elif custom_msg.startswith(custom_header):
+                    custom_msg += byte
+                    if byte == custom_tail:
+                        msg_body = custom_msg[1:-1]
+                        custom_msg = b''
+                        if ':' in msg_body:
+                            name, params_str = msg_body.split(':')
+                        else:
+                            name, params_str = msg_body, ''
+                        if ',' in params_str:
+                            params = params_str.split(',')
+                        else:
+                            params = ()
+                        try:
+                            method = getattr(self.system, name)
+                            response = method(*params)
+                            if isinstance(response, str):
+                                self.request.sendall(response)
+                        except AttributeError:
+                            logging.debug('command %s not supported', name)
+                        except Exception, ex:
+                            logging.debug('unexpected exception %s', ex)
             else:
-                logging.debug('expecting the header, got a %s', byte)
+                logging.debug('unexpected response: %s', response)
 
 
 class Server(ThreadingMixIn, ThreadingTCPServer):
