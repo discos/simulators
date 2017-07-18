@@ -196,16 +196,22 @@ class System(BaseSystem):
             else:
                 binary = bin(ord(self.msg[1]))[2:].zfill(8)
                 self.expected_bytes = int(binary[:3], base=2)
-                if self.expected_bytes > 7:
+                if self.expected_bytes > 7 or self.expected_bytes < 1:
                     self.__init__()
-                    return False
+                    raise ValueError(
+                        "Wrong byte_nbyte_address value: got %d, expected %d."
+                        % (self.expected_bytes, 7)
+                    )
             return True
         elif len(self.msg) == 3:
             if self.msg_to_all == True:
                 self.expected_bytes = ord(self.msg[2])
-                if self.expected_bytes > 7:
+                if self.expected_bytes > 7 or self.expected_bytes < 1:
                     self.__init__()
-                    return False
+                    raise ValueError(
+                        "Wrong byte_nbyte value: got %d, expected %d."
+                        % (self.expected_bytes, 7)
+                    )
             else:
                 self.expected_bytes -= 1
             return True
