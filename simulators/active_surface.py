@@ -228,7 +228,7 @@ class System(BaseSystem):
         self.__init__()
 
         if checksum(msg[:-1]) != ord(msg[-1]):
-            return True
+            raise ValueError("Checksum error.")
 
         byte_start = ord(msg[0])
 
