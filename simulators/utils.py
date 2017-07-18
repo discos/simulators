@@ -1,8 +1,22 @@
 import math
 from datetime import datetime
 
-def calc_checksum(msg):
-    return int(bin(sum([ord(x) for x in msg]))[2:].zfill(8)[-8:], base=2) ^ 0xFF
+def checksum(msg):
+    """Return the checksum of a string message.
+
+    >>> checksum('foo')
+    187
+    """
+    # Remove the notation.  I.e: '0b1111 -> '1111'
+    bin_sum = bin(sum(ord(x) for x in msg))[2:]
+    # The string should always have lenght 8.  In case
+    # there are more than 8 bits, we remove the most
+    # significant one:
+    # I.e. '101010101' (len 9) -> 01010101 (len 8)
+    bin_sum_fixed_lenght = bin_sum.zfill(8)[-8:]
+    # Eventually we should return the one complement
+    return int(bin_sum_fixed_lenght, base=2) ^ 0xFF
+    
 
 def twos_to_int(binary_string):
     val = int(binary_string, base=2)
@@ -53,3 +67,8 @@ def day_milliseconds():
     utcnow = datetime.utcnow()
 
     return ((((((utcnow.hour * 60) + utcnow.minute) * 60) + utcnow.second) * 1000000) + utcnow.microsecond) / 1000
+
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()

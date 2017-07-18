@@ -219,8 +219,7 @@ class System(BaseSystem):
     def parser(self, msg):
         self.__init__()
 
-        checksum = calc_checksum(msg[:-1])
-        if checksum != ord(msg[-1]):
+        if checksum(msg[:-1]) != ord(msg[-1]):
             return True
 
         byte_start = ord(msg[0])
@@ -310,8 +309,7 @@ class System(BaseSystem):
                            + self.params[0].version[1]))
             else:
                 return self.byte_nak
-            checksum = calc_checksum(retval)
-            return retval + chr(checksum)
+            return retval + chr(checksum(retval))
 
     def soft_stop(self, params):
         if params[0] == -1:
@@ -346,9 +344,7 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
 
-            checksum = calc_checksum(retval)
-
-            return retval + chr(checksum)
+            return retval + chr(checksum(retval))
 
     def get_status(self, params):
         if params[0] == -1:
@@ -368,8 +364,7 @@ class System(BaseSystem):
                 retval += chr(byte_nbyte_address) + status
             else:
                 return self.byte_nak
-            checksum = calc_checksum(retval)
-            return retval + chr(checksum)
+            return retval + chr(checksum(retval))
 
     def get_driver_type(self, params):
         if params[0] == -1:
@@ -388,8 +383,7 @@ class System(BaseSystem):
                            + chr(self.drivers[params[0]].driver_type))
             else:
                 return self.byte_nak
-            checksum = calc_checksum(retval)
-            return retval + chr(checksum)
+            return retval + chr(checksum(retval))
 
     def set_min_frequency(self, params):
         if len(params[2]) != 2:
@@ -750,7 +744,7 @@ class System(BaseSystem):
         var = raw_input()
 
         if var == "c":
-            var = calc_checksum(msg)
+            var = checksum(msg)
             msg = b''
         else:
             var = int(var, base=16)
