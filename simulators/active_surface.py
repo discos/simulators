@@ -183,7 +183,7 @@ class System(BaseSystem):
     def parse(self, byte):
         #Return None or the response.
         #Raise a ValueError in case of unexpected data
-        self.msg += chr(byte)
+        self.msg += byte
 
         if len(self.msg) == 1:
             if ord(self.msg[0]) != 0xFA and ord(self.msg[0]) != 0xFC:
@@ -756,7 +756,7 @@ class System(BaseSystem):
             var = int(var, base=16)
             msg += chr(var)
         try:
-            response = AS.parse(var)
+            response = AS.parse(chr(var))
             if response is not None:
                 if type(response) is bool:
                     print(response)
