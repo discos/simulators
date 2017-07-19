@@ -1,9 +1,8 @@
 #!/usr/bin/python
+import time
+import Queue
+import utils
 from common import BaseSystem
-from time import *
-from thread import *
-from utils import *
-from Queue import *
 
 class Driver(object):
 
@@ -18,15 +17,14 @@ class Driver(object):
         7: 128,
     }
 
-    def __init__(self):
-        start_new_thread(self.reset, ())
+    def __init__(self, driver_reset_delay=0):
+        self.driver_reset_delay = driver_reset_delay  #Actually it should be 100ms
+        self.reset()
 
     def reset(self):
-        start_time = day_milliseconds()
-
         self.reference_position = 0
         self.current_position = 0
-        self.position_queue = Queue()
+        self.position_queue = Queue.Queue()
 
         self.delay_multiplier = 0   # x*delay_step. 255=infinite delay (no response)
 
@@ -52,10 +50,10 @@ class Driver(object):
         self.auto_resolution = True
         self.resolution = self.resolutions.get(0)
 
-        sleep((100 - (day_milliseconds() - start_time))*0.001)
+        time.sleep(self.driver_reset_delay)
 
     def soft_reset(self):
-        self.__init__()
+        self.reset()
 
     def soft_trigger(self):
         if self.ready is True and self.running is False:
@@ -170,11 +168,13 @@ class System(BaseSystem):
     byte_nak = chr(0x15)
 
     delay_step = 0.000512
-    slope_time = 10             # msec
+    slope_time = 10  # msec
 
-    drivers = [Driver() for x in xrange(32)]
+    def __init__(self, driver_reset_delay=0):
+        self.create_empty_msg()
+        self.drivers = [Driver(driver_reset_delay) for x in xrange(32)]
 
-    def __init__(self):
+    def create_empty_msg(self):
         #parsing operation variables
         self.msg = b''
         self.msg_to_all = False
@@ -187,7 +187,7 @@ class System(BaseSystem):
 
         if len(self.msg) == 1:
             if ord(self.msg[0]) != 0xFA and ord(self.msg[0]) != 0xFC:
-                self.__init__()
+                self.create_empty_msg()
                 return False
             return True
         elif len(self.msg) == 2:
@@ -198,7 +198,7 @@ class System(BaseSystem):
                 self.expected_bytes = int(binary[:3], base=2)
                 if self.expected_bytes > 7 or self.expected_bytes < 1:
                     exp_bytes = self.expected_bytes
-                    self.__init__()
+                    self.create_empty_msg()
                     raise ValueError(
                         "Wrong byte_nbyte_address value: got %d, expected %d."
                         % (exp_bytes, 7)
@@ -209,7 +209,7 @@ class System(BaseSystem):
                 self.expected_bytes = ord(self.msg[2])
                 if self.expected_bytes > 7 or self.expected_bytes < 1:
                     exp_bytes = self.expected_bytes
-                    self.__init__()
+                    self.create_empty_msg()
                     raise ValueError(
                         "Wrong byte_nbyte value: got %d, expected %d."
                         % (exp_bytes, 7)
@@ -225,9 +225,9 @@ class System(BaseSystem):
                 return True
 
     def parser(self, msg):
-        self.__init__()
+        self.create_empty_msg()
 
-        if checksum(msg[:-1]) != ord(msg[-1]):
+        if utils.checksum(msg[:-1]) != ord(msg[-1]):
             raise ValueError("Checksum error.")
 
         byte_start = ord(msg[0])
@@ -262,7 +262,7 @@ class System(BaseSystem):
                 if self.drivers[driver].delay_multiplier == 255:
                     return True
                 else:
-                    sleep(self.drivers[driver].delay_multiplier*self.delay_step)
+                    time.sleep(self.drivers[driver].delay_multiplier*self.delay_step)
                 return(retval)
             else:
                 return True
@@ -308,16 +308,16 @@ class System(BaseSystem):
             retval = self.byte_ack + chr(params[1])
             if params[1] == 0xFA:
                 retval += (chr((self.drivers[params[0]].version[0] + 0xF)
-                           + self.params[0].version[1]))
+                           + self.drivers[params[0]].version[1]))
             elif params[1] == 0xFC:
                 byte_nbyte_address = (int(bin(1)[2:].zfill(3)
                                       + bin(params[0])[2:].zfill(5), base=2))
                 retval += (chr(byte_nbyte_address)
                            + chr((self.drivers[params[0]].version[0] + 0xF)
-                           + self.params[0].version[1]))
+                           + self.drivers[params[0]].version[1]))
             else:
                 return self.byte_nak
-            return retval + chr(checksum(retval))
+            return retval + chr(utils.checksum(retval))
 
     def soft_stop(self, params):
         if params[0] == -1:
@@ -336,7 +336,7 @@ class System(BaseSystem):
         else:
             retval = self.byte_ack + chr(params[1])
 
-            bin_position = int_to_twos(self.drivers[params[0]].current_position)
+            bin_position = utils.int_to_twos(self.drivers[params[0]].current_position)
 
             val = b''
 
@@ -352,7 +352,7 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
 
-            return retval + chr(checksum(retval))
+            return retval + chr(utils.checksum(retval))
 
     def get_status(self, params):
         if params[0] == -1:
@@ -372,7 +372,7 @@ class System(BaseSystem):
                 retval += chr(byte_nbyte_address) + status
             else:
                 return self.byte_nak
-            return retval + chr(checksum(retval))
+            return retval + chr(utils.checksum(retval))
 
     def get_driver_type(self, params):
         if params[0] == -1:
@@ -391,7 +391,7 @@ class System(BaseSystem):
                            + chr(self.drivers[params[0]].driver_type))
             else:
                 return self.byte_nak
-            return retval + chr(checksum(retval))
+            return retval + chr(utils.checksum(retval))
 
     def set_min_frequency(self, params):
         if len(params[2]) != 2:
@@ -436,7 +436,7 @@ class System(BaseSystem):
                             self.drivers[x].max_frequency = frequency
                     return
                 else:
-                    if frequency <= self.drivers[params[0]].min_frequency:
+                    if frequency >= self.drivers[params[0]].min_frequency:
                         self.drivers[params[0]].max_frequency = frequency
                         return self.byte_ack
                     else:
@@ -471,7 +471,7 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            reference_position = twos_to_int(bin(params[2][0]*0x1000000
+            reference_position = utils.twos_to_int(bin(params[2][0]*0x1000000
                                                  + params[2][1]*0x10000
                                                  + params[2][2]*0x100
                                                  + params[2][3])[2:].zfill(32))
@@ -582,7 +582,7 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            absolute_position = twos_to_int(bin(params[2][0]*0x1000000
+            absolute_position = utils.twos_to_int(bin(params[2][0]*0x1000000
                                             + params[2][1]*0x10000
                                             + params[2][2]*0x100
                                             + params[2][3])[2:].zfill(32))
@@ -601,7 +601,7 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            relative_position = twos_to_int(bin(params[2][0]*0x1000000
+            relative_position = utils.twos_to_int(bin(params[2][0]*0x1000000
                                                 + params[2][1]*0x10000
                                                 + params[2][2]*0x100
                                                 + params[2][3])[2:].zfill(32))
@@ -620,7 +620,7 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            speed = twos_to_int(bin(params[2][0])[2:].zfill(8))
+            speed = utils.twos_to_int(bin(params[2][0])[2:].zfill(8))
 
             #rotate according to speed, sign = direction of rotation
             if params[0] == -1:
@@ -635,7 +635,7 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            velocity = twos_to_int(bin(params[2][0]*0x10000
+            velocity = utils.twos_to_int(bin(params[2][0]*0x10000
                                        + params[2][1]*0x100
                                        + params[2][2])[2:].zfill(24))
             if velocity > 100000 or velocity < -100000:
@@ -752,7 +752,7 @@ class System(BaseSystem):
         var = raw_input()
 
         if var == "c":
-            var = checksum(msg)
+            var = utils.checksum(msg)
             msg = b''
         else:
             var = int(var, base=16)
