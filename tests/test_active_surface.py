@@ -92,7 +92,7 @@ class TestASParse(unittest.TestCase):
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(checksum)
-        expected_length = 4  #byte_ack + byte_start + version + byte_checksum
+        expected_length = 4  # byte_ack + byte_start + version + byte_checksum
         self.assertEqual(expected_length, len(response))
         self.assertEqual(response[0], byte_ack)
 
@@ -112,7 +112,7 @@ class TestASParse(unittest.TestCase):
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(checksum)
-        expected_length = 7  #byte_ack + byte_start + pos 3-0 + byte_checksum
+        expected_length = 7  # byte_ack + byte_start + pos 3-0 + byte_checksum
         self.assertEqual(expected_length, len(response))
         self.assertEqual(response[0], byte_ack)
 
@@ -125,7 +125,7 @@ class TestASParse(unittest.TestCase):
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(checksum)
-        expected_length = 6  #byte_ack + byte_start + status 0-2 + byte_checksum
+        expected_length = 6  # byte_ack + byte_start + status 0-2 + byte_checksum
         self.assertEqual(expected_length, len(response))
         self.assertEqual(response[0], byte_ack)
 
@@ -138,33 +138,41 @@ class TestASParse(unittest.TestCase):
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(checksum)
-        expected_length = 4  #byte_ack + byte_start + driver_type + byte_checksum
+        expected_length = 4  # byte_ack + byte_start + driver_type + byte_checksum
         self.assertEqual(expected_length, len(response))
         self.assertEqual(response[0], byte_ack)
 
     def test_set_in_range_min_frequency(self):
-        msg = b'\xFA\x60\x20\x03\xE8'  #Min frequency set to 1000Hz, OK
+        """Setting min freq to 1000Hz (\x03\xE8), allowed range is 20-10000Hz,
+        so the system returns the byte_ack"""
+        msg = b'\xFA\x60\x20\x03\xE8'
         checksum = b'\x9A'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.parse(checksum), byte_ack)
 
     def test_set_out_range_min_frequency(self):
-        msg = b'\xFA\x60\x20\x00\x0A'  #Min frequency set to 10Hz, too low
+        """Setting min freq to 10Hz (\x00\x0A), outside the allowed range,
+        so the system returns the byte_nak"""
+        msg = b'\xFA\x60\x20\x00\x0A'
         checksum = b'\x7B'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.parse(checksum), byte_nak)
 
     def test_set_in_range_max_frequency(self):
-        msg = b'\xFA\x60\x21\x23\x28'  #Max frequency set to 9000Hz, OK
+        """Setting max freq to 9000Hz (\x23\x28), allowed range is 20-10000Hz,
+        so the system returns the byte_ack"""
+        msg = b'\xFA\x60\x21\x23\x28'
         checksum = b'\x39'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.parse(checksum), byte_ack)
 
     def test_set_out_range_max_frequency(self):
-        msg = b'\xFA\x60\x21\x2A\xF8'  #Max frequency set to 11000Hz, too high
+        """Setting max freq to 11000Hz (\x2A\xF8), outside the allowed range,
+        so the system returns the byte_nak"""
+        msg = b'\xFA\x60\x21\x2A\xF8'
         checksum = b'\x62'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
@@ -241,20 +249,28 @@ class TestASParse(unittest.TestCase):
         self.assertEqual(self.system.parse(checksum), byte_ack)
 
     def test_rotate(self):
-        msg = b'\xFA\x40\x32\x00'  #Rotate according to velocity. Sign = direction
+        """The driver starts to rotate according to its set velocity.
+        The last byte of the message (before the checksum, \x00)
+        holds an int in twos complement notation, its sign (+ or -)
+        represents the direction in which the motor will rotate"""
+        msg = b'\xFA\x40\x32\x00'
         checksum = b'\x93'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.parse(checksum), byte_ack)
 
     def test_set_in_range_velocity(self):
-        msg = b'\xFA\x80\x35\x00\x00\x00'  # Velocity = 0, OK
+        """Setting velocity in a range between -100000 and +100000 tenths of Hz.
+        The value is stored in the last 3 bytes (\x00\x00\x00 in this case)"""
+        msg = b'\xFA\x80\x35\x00\x00\x00'
         checksum = b'\x50'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.parse(checksum), byte_ack)
 
-    def test_set_out_range_velocity(self): # Velocity = 8388607, too high
+    def test_set_out_range_velocity(self):
+        """Setting velocity outside allowed range.
+        Bytes \xEF\xFF\xFF represents a velocity of 8388607 tenths of Hz"""
         msg = b'\xFA\x80\x35\xEF\xFF\xFF'
         checksum = b'\x63'
         for byte in msg:
