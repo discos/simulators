@@ -1,0 +1,13 @@
+.topic p {
+    font-style: italic;
+    font-size: 1.07em;
+}
+
+.bolditalic {
+  font-weight: bold;
+  font-style: italic;
+}
+
+.italic {
+  font-style: italic;
+}
