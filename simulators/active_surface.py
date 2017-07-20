@@ -19,9 +19,9 @@ class Driver(object):
 
     def __init__(self, driver_reset_delay=0):
         self.driver_reset_delay = driver_reset_delay  # Actually it should be 100ms
-        self.reset()
+        self._set_default()
 
-    def reset(self):
+    def _set_default(self):
         self.reference_position = 0
         self.current_position = 0
         self.position_queue = Queue.Queue()
@@ -53,7 +53,7 @@ class Driver(object):
         time.sleep(self.driver_reset_delay)
 
     def soft_reset(self):
-        self.reset()
+        self._set_default()
 
     def soft_trigger(self):
         if self.ready is True and self.running is False:
@@ -174,10 +174,10 @@ class System(BaseSystem):
     slope_time = 10  # msec
 
     def __init__(self, driver_reset_delay=0):
-        self.create_empty_msg()
+        self._set_default()
         self.drivers = [Driver(driver_reset_delay) for x in xrange(32)]
 
-    def create_empty_msg(self):
+    def _set_default(self):
         self.msg = b''
         self.msg_to_all = False
         self.expected_bytes = 0
@@ -196,7 +196,7 @@ class System(BaseSystem):
 
         if len(self.msg) == 1:
             if self.msg[0] != '\xFA' and self.msg[0] != '\xFC':
-                self.create_empty_msg()
+                self._set_default()
                 return False
             return True
         elif len(self.msg) == 2:
@@ -207,7 +207,7 @@ class System(BaseSystem):
                 self.expected_bytes = int(binary[:3], base=2)
                 if self.expected_bytes > 7 or self.expected_bytes < 1:
                     exp_bytes = self.expected_bytes
-                    self.create_empty_msg()
+                    self._set_default()
                     raise ValueError(
                         "Wrong byte_nbyte_address value: got %d, expected %d."
                         % (exp_bytes, 7)
@@ -218,7 +218,7 @@ class System(BaseSystem):
                 self.expected_bytes = ord(self.msg[2])
                 if self.expected_bytes > 7 or self.expected_bytes < 1:
                     exp_bytes = self.expected_bytes
-                    self.create_empty_msg()
+                    self._set_default()
                     raise ValueError(
                         "Wrong byte_nbyte value: got %d, expected %d."
                         % (exp_bytes, 7)
@@ -234,7 +234,7 @@ class System(BaseSystem):
                 return True
 
     def parser(self, msg):
-        self.create_empty_msg()
+        self._set_default()
 
         if utils.checksum(msg[:-1]) != ord(msg[-1]):
             raise ValueError("Checksum error.")
