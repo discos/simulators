@@ -37,10 +37,10 @@ class Driver(object):
         self.max_frequency = 10000
 
         self.IO_dir = [0, 0, 0]  # 0 = input, 1 = output
-        self.IO_val = [0, 0, 0]  # These values show the corresponding
-                                 # I/O line value, but only if the direction
-                                 # of the I/O line is set to output
-                                 # (IO_dir[x] = 1)
+        # The following values show the corresponding I/O line value,
+        # but only if the direction of the I/O line is set to output
+        # i.e.: (IO_dir[x] = 1)
+        self.IO_val = [0, 0, 0]
 
         self.running = False
         self.delayed_execution = False
@@ -183,8 +183,14 @@ class System(BaseSystem):
         self.expected_bytes = 0
 
     def parse(self, byte):
-        # Return None or the response.
-        # Raise a ValueError in case of unexpected data
+        """This method takes a byte (single character string) and returns:
+        False when the given byte is not the header, but the header is expected,
+        True when the given byte is the header or a following expected byte,
+        the response for the given message, a string to send back to the client.
+        The method eventually raises a ValueError in one of the following cases:
+        the declared length of the message exceeds the maximum expected length,
+        the sent message carries a wrong checksum,
+        the client asks to execute an unknown command."""
         self.msg += byte
 
         if len(self.msg) == 1:
