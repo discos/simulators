@@ -53,6 +53,11 @@ def int_to_twos(val):
 
     >>> int_to_twos(-1625)
     '11111111111111111111100110100111'
+
+    >>> int_to_twos(4294967295)
+    Traceback (most recent call last):
+        ...
+    ValueError: Out of range value, got 4294967295, expected from -2147483648 to 2147483647.
     """
     if val < -2147483648 or val > 2147483647:
         raise ValueError(
