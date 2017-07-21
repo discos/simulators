@@ -1,0 +1,20 @@
+strictness: veryhigh
+
+test-warnings: true
+
+autodetect: yes
+
+ignore-paths:
+  - build
+
+pylint:
+  disable:
+    - invalid-name
+    - too-many-branches
+
+mccabe:
+  disable:
+    - MC0001
+
+python-targets:
+  - 2.7

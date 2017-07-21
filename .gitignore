@@ -5,4 +5,7 @@ htmlcov/
 *.log
 *.pyc
 *.egg-info/
-*.coverage
+*.swp
+.coverage
+.coverage[.]*
+.tox
