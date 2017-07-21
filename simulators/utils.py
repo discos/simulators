@@ -16,19 +16,42 @@ def checksum(msg):
     bin_sum_fixed_lenght = bin_sum.zfill(8)[-8:]
     # Eventually we should return the one complement
     return int(bin_sum_fixed_lenght, base=2) ^ 0xFF
-    
+
 
 def twos_to_int(binary_string):
+    """Return the integer represented by the given binary string.
+    It is mandatory to pad the binary string to the desired bits
+    length before passing it to the method.
+
+    >>> twos_to_int('11111011')
+    -5
+
+    >>> twos_to_int('101'.zfill(8))
+    5
+    """
+    # Convert the binary string to integer without any representation
     val = int(binary_string, base=2)
+    # Check if the string represents a negative integer
     if (val & (1 << (len(binary_string) - 1))) != 0:
+        # Perform twos complement
         val = val - (1 << len(binary_string))
     return val
 
 def int_to_twos(val):
+    """Return the twos complement of the given integer as a string of zeroes
+    and ones with len = 32.
+
+    >>> int_to_twos(5)
+    '00000000000000000000000000000101'
+
+    >>> int_to_twos(-1625)
+    '11111111111111111111100110100111'
+    """
     binary_string = bin(val & int("1"*32, 2))[2:]
     return ("{0:0>%s}" % 32).format(binary_string)
 
 def mjd():
+    """Return the modified julian date. https://bowie.gsfc.nasa.gov/time/"""
     utcnow = datetime.utcnow()
 
     year = utcnow.year
@@ -42,13 +65,15 @@ def mjd():
         yearp = year
         monthp = month
 
-    # this checks where we are in relation to October 15, 1582, the beginning
+    # This checks where we are in relation to October 15, 1582, the beginning
     # of the Gregorian calendar.
-    if ((year < 1582) or (year == 1582 and month < 10) or (year == 1582 and month == 10 and day < 15)):
-        # before start of Gregorian calendar
+    if ((year < 1582)
+        or (year == 1582 and month < 10)
+        or (year == 1582 and month == 10 and day < 15)):
+        # Before start of Gregorian calendar
         B = 0
     else:
-        # after start of Gregorian calendar
+        # After start of Gregorian calendar
         A = math.trunc(yearp / 100.)
         B = 2 - A + math.trunc(A / 4.)
 
@@ -61,12 +86,39 @@ def mjd():
 
     jd = B + C + D + day + 1720994.5
 
-    return jd - 2400000.5 + float((((((utcnow.hour * 60) + utcnow.minute) * 60) + utcnow.second) * 1000000) + utcnow.microsecond) / 86400000000
+    modified_julian_day = jd - 2400000.5
+
+    # Total UTC hours of the day
+    day_hours = utcnow.hour
+    # Total minutes of the day
+    day_minutes = (day_hours*60) + utcnow.minute
+    # Total seconds of the day
+    day_seconds = (day_minutes*60) + utcnow.second
+    # Total microseconds of the day
+    day_microseconds = (day_seconds*1000000) + utcnow.microsecond
+
+    # Day percentage, 00:00 = 0.0, 24:00=1.0
+    day_percentage = round(float(day_microseconds) / 86400000000, 6)
+
+    return float(modified_julian_day + day_percentage)
 
 def day_milliseconds():
+    """Return how many milliseconds elapsed since last midnight UTC."""
     utcnow = datetime.utcnow()
 
-    return ((((((utcnow.hour * 60) + utcnow.minute) * 60) + utcnow.second) * 1000000) + utcnow.microsecond) / 1000
+    # Total UTC hours of the day
+    day_hours = utcnow.hour
+    # Total minutes of the day
+    day_minutes = (day_hours*60) + utcnow.minute
+    # Total seconds of the day
+    day_seconds = (day_minutes*60) + utcnow.second
+    # Total microseconds of the day
+    day_microseconds = (day_seconds*1000000) + utcnow.microsecond
+
+    # Total milliseconds of the day
+    day_milliseconds = day_microseconds / 1000
+
+    return day_milliseconds
 
 
 if __name__ == '__main__':
