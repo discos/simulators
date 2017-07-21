@@ -47,6 +47,7 @@ we need some dependencies.  Let's install them:
    $ pip install sphinx  # documentation generator
    $ pip install sphinx_rtd_theme  # HTML doc theme
    $ pip install tox
+   $ sudo install ruby
    $ sudo gem install wwtd  # travis-ci locally
 
 
@@ -83,6 +84,27 @@ Move to the project's root directory and execute the following command:
 .. code-block:: shell
 
    $ python -m unittest discover tests
+
+
+Check the testing coverage
+--------------------------
+If you want to see the percentage of code covered by test,
+run the unit tests using `Coverage.py
+<https://coverage.readthedocs.io/>`__:
+
+.. code-block:: shell
+
+   $ coverage run -m unittest discover tests
+
+Now you can generate an HTML report:
+
+.. code-block:: shell
+
+   $ coverage report
+   $ coverage html
+
+To see the HTML report open the generated *htmlcov/index.html*
+file with your browser.
 
 
 Test the documentation
