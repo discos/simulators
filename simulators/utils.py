@@ -15,30 +15,37 @@ def checksum(msg):
     # I.e. '101010101' (len 9) -> 01010101 (len 8)
     bin_sum_fixed_lenght = bin_sum.zfill(8)[-8:]
     # Eventually we should return the one complement
-    return int(bin_sum_fixed_lenght, base=2) ^ 0xFF
+    return int(bin_sum_fixed_lenght, 2) ^ 0xFF
 
 
 def twos_to_int(binary_string):
-    """Return the integer represented by the given binary string.
-    It is mandatory to pad the binary string to the desired bits
-    length before passing it to the method.
+    """Return the two's complement of binary_string.
 
     >>> twos_to_int('11111011')
     -5
 
-    >>> twos_to_int('101'.zfill(8))
-    5
+    It is mandatory to pad the binary string to the desired bits length
+    before passing it to the method in order to avoid representation errors.
+
+    >>> binary_string = '111'
+    >>> twos_to_int(binary_string)
+    -1
+    >>> binary_string = binary_string.zfill(8)
+    >>> binary_string
+    '00000111'
+    >>> twos_to_int(binary_string)
+    6
     """
     # Convert the binary string to integer without any representation
-    val = int(binary_string, base=2)
+    val = int(binary_string, 2)
     # Check if the string represents a negative integer
     if (val & (1 << (len(binary_string) - 1))) != 0:
-        # Perform twos complement
+        # Perform two's complement
         val = val - (1 << len(binary_string))
     return val
 
 def int_to_twos(val):
-    """Return the twos complement of the given integer as a string of zeroes
+    """Return the two's complement of the given integer as a string of zeroes
     and ones with len = 32.
 
     >>> int_to_twos(5)
@@ -65,15 +72,15 @@ def mjd():
         yearp = year
         monthp = month
 
-    # This checks where we are in relation to October 15, 1582, the beginning
+    # Check where we are in relation to October 15, 1582, the beginning
     # of the Gregorian calendar.
     if ((year < 1582)
         or (year == 1582 and month < 10)
         or (year == 1582 and month == 10 and day < 15)):
-        # Before start of Gregorian calendar
+        # Before the beginning of Gregorian calendar
         B = 0
     else:
-        # After start of Gregorian calendar
+        # After the beginning of Gregorian calendar
         A = math.trunc(yearp / 100.)
         B = 2 - A + math.trunc(A / 4.)
 
@@ -103,7 +110,7 @@ def mjd():
     return float(modified_julian_day + day_percentage)
 
 def day_milliseconds():
-    """Return how many milliseconds elapsed since last midnight UTC."""
+    """Return the milliseconds elapsed since last midnight UTC."""
     utcnow = datetime.utcnow()
 
     # Total UTC hours of the day
