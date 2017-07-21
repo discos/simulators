@@ -34,7 +34,7 @@ def twos_to_int(binary_string):
     >>> binary_string
     '00000111'
     >>> twos_to_int(binary_string)
-    6
+    7
     """
     # Convert the binary string to integer without any representation
     val = int(binary_string, 2)
