@@ -54,6 +54,11 @@ def int_to_twos(val):
     >>> int_to_twos(-1625)
     '11111111111111111111100110100111'
     """
+    if val < -2147483648 or val > 2147483647:
+        raise ValueError(
+            "Out of range value, got %d, expected from %d to %d."
+            % (val, -2147483648, 2147483647)
+        )
     binary_string = bin(val & int("1"*32, 2))[2:]
     return ("{0:0>%s}" % 32).format(binary_string)
 
