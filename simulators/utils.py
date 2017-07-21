@@ -57,11 +57,11 @@ def int_to_twos(val):
     >>> int_to_twos(4294967295)
     Traceback (most recent call last):
         ...
-    ValueError: Out of range value, got 4294967295, expected from -2147483648 to 2147483647.
+    ValueError: 4294967295 out of range (-2147483648, 2147483647).
     """
     if val < -2147483648 or val > 2147483647:
         raise ValueError(
-            "Out of range value, got %d, expected from %d to %d."
+            "%d out of range (%d, %d)."
             % (val, -2147483648, 2147483647)
         )
     binary_string = bin(val & int("1"*32, 2))[2:]
