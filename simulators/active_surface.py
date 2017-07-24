@@ -239,7 +239,7 @@ class System(BaseSystem):
     def parser(self, msg):
         self._set_default()
 
-        if utils.checksum(msg[:-1]) != ord(msg[-1]):
+        if utils.checksum(msg[:-1]) != msg[-1]:
             raise ValueError("Checksum error.")
 
         byte_start = ord(msg[0])
@@ -331,7 +331,7 @@ class System(BaseSystem):
                            + self.drivers[params[0]].version[1]))
             else:
                 return self.byte_nak
-            return retval + chr(utils.checksum(retval))
+            return retval + utils.checksum(retval)
 
     def soft_stop(self, params):
         if params[0] == -1:
@@ -367,7 +367,7 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
 
-            return retval + chr(utils.checksum(retval))
+            return retval + utils.checksum(retval)
 
     def get_status(self, params):
         if params[0] == -1:
@@ -387,7 +387,7 @@ class System(BaseSystem):
                 retval += chr(byte_nbyte_address) + status
             else:
                 return self.byte_nak
-            return retval + chr(utils.checksum(retval))
+            return retval + utils.checksum(retval)
 
     def get_driver_type(self, params):
         if params[0] == -1:
@@ -408,7 +408,7 @@ class System(BaseSystem):
                     + chr(self.drivers[params[0]].driver_type))
             else:
                 return self.byte_nak
-            return retval + chr(utils.checksum(retval))
+            return retval + utils.checksum(retval)
 
     def set_min_frequency(self, params):
         if len(params[2]) != 2:
