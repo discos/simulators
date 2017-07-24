@@ -1,6 +1,7 @@
 import math
 from datetime import datetime
 
+
 def checksum(msg):
     """Return the checksum of a string message.
 
@@ -44,6 +45,7 @@ def twos_to_int(binary_string):
         val = val - (1 << len(binary_string))
     return val
 
+
 def int_to_twos(val):
     """Return the two's complement of the given integer as a string of zeroes
     and ones with len = 32.
@@ -64,8 +66,9 @@ def int_to_twos(val):
             "%d out of range (%d, %d)."
             % (val, -2147483648, 2147483647)
         )
-    binary_string = bin(val & int("1"*32, 2))[2:]
+    binary_string = bin(val & int("1" * 32, 2))[2:]
     return ("{0:0>%s}" % 32).format(binary_string)
+
 
 def mjd():
     """Return the modified julian date. https://bowie.gsfc.nasa.gov/time/"""
@@ -84,40 +87,40 @@ def mjd():
 
     # Check where we are in relation to October 15, 1582, the beginning
     # of the Gregorian calendar.
-    if ((year < 1582)
-        or (year == 1582 and month < 10)
-        or (year == 1582 and month == 10 and day < 15)):
+    if (year < 1582 or (year == 1582 and month < 10)
+            or (year == 1582 and month == 10 and day < 15)):
         # Before the beginning of Gregorian calendar
-        B = 0
+        b = 0
     else:
         # After the beginning of Gregorian calendar
-        A = math.trunc(yearp / 100.)
-        B = 2 - A + math.trunc(A / 4.)
+        a = math.trunc(yearp / 100.)
+        b = 2 - a + math.trunc(a / 4.)
 
     if yearp < 0:
-        C = math.trunc((365.25 * yearp) - 0.75)
+        c = math.trunc((365.25 * yearp) - 0.75)
     else:
-        C = math.trunc(365.25 * yearp)
+        c = math.trunc(365.25 * yearp)
 
-    D = math.trunc(30.6001 * (monthp + 1))
+    d = math.trunc(30.6001 * (monthp + 1))
 
-    jd = B + C + D + day + 1720994.5
+    jd = b + c + d + day + 1720994.5
 
     modified_julian_day = jd - 2400000.5
 
     # Total UTC hours of the day
     day_hours = utcnow.hour
     # Total minutes of the day
-    day_minutes = (day_hours*60) + utcnow.minute
+    day_minutes = (day_hours * 60) + utcnow.minute
     # Total seconds of the day
-    day_seconds = (day_minutes*60) + utcnow.second
+    day_seconds = (day_minutes * 60) + utcnow.second
     # Total microseconds of the day
-    day_microseconds = (day_seconds*1000000) + utcnow.microsecond
+    day_microseconds = (day_seconds * 1000000) + utcnow.microsecond
 
     # Day percentage, 00:00 = 0.0, 24:00=1.0
     day_percentage = round(float(day_microseconds) / 86400000000, 6)
 
     return float(modified_julian_day + day_percentage)
+
 
 def day_milliseconds():
     """Return the milliseconds elapsed since last midnight UTC."""
@@ -126,16 +129,12 @@ def day_milliseconds():
     # Total UTC hours of the day
     day_hours = utcnow.hour
     # Total minutes of the day
-    day_minutes = (day_hours*60) + utcnow.minute
+    day_minutes = (day_hours * 60) + utcnow.minute
     # Total seconds of the day
-    day_seconds = (day_minutes*60) + utcnow.second
+    day_seconds = (day_minutes * 60) + utcnow.second
     # Total microseconds of the day
-    day_microseconds = (day_seconds*1000000) + utcnow.microsecond
-
-    # Total milliseconds of the day
-    day_milliseconds = day_microseconds / 1000
-
-    return day_milliseconds
+    day_microseconds = (day_seconds * 1000000) + utcnow.microsecond
+    return day_microseconds / 1000  # Total milliseconds of the day
 
 
 if __name__ == '__main__':

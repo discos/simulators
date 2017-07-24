@@ -11,10 +11,26 @@ pylint:
   disable:
     - invalid-name
     - too-many-branches
+    - broad-except
+    - too-many-instance-attributes
+    - too-many-public-methods
+    - attribute-defined-outside-init
+    - too-many-return-statements
+    - too-few-public-methods
+    - too-many-boolean-expressions
+    - too-many-locals
+    - wrong-import-position
+    - no-else-return
+    - too-many-nested-blocks
+
+pep8:
+  disable:
+    - W503
+    - E128
 
 mccabe:
   disable:
     - MC0001
 
 python-targets:
-  - 2.7
+  - 2
