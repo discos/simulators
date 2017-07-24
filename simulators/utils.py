@@ -5,8 +5,8 @@ from datetime import datetime
 def checksum(msg):
     """Return the checksum of a string message.
 
-    >>> checksum('foo')
-    187
+    >>> checksum('fooo')
+    'L'
     """
     # Remove the notation.  I.e: '0b1111 -> '1111'
     bin_sum = bin(sum(ord(x) for x in msg))[2:]
@@ -16,7 +16,7 @@ def checksum(msg):
     # I.e. '101010101' (len 9) -> 01010101 (len 8)
     bin_sum_fixed_lenght = bin_sum.zfill(8)[-8:]
     # Eventually we should return the one complement
-    return int(bin_sum_fixed_lenght, 2) ^ 0xFF
+    return chr(int(bin_sum_fixed_lenght, 2) ^ 0xFF)
 
 
 def twos_to_int(binary_string):

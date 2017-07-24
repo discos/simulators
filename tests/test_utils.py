@@ -7,11 +7,11 @@ class TestServer(unittest.TestCase):
     def test_right_checksum(self):
         """Return the sum of bytes that compose the string, capped to 8 bits
         and then inverted (one's complement)."""
-        self.assertEqual(utils.checksum('foo'), 187)
+        self.assertEqual(utils.checksum('fooo'), 'L')
 
     def test_wrong_checksum(self):
         """Compare the actual checksum with a wrong one."""
-        self.assertNotEqual(utils.checksum('foo'), 186)
+        self.assertNotEqual(utils.checksum('fooo'), 'A')
 
     def test_right_twos_to_int(self):
         """Return the signed integer of the given binary string
