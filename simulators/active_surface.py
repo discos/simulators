@@ -1,8 +1,9 @@
 #!/usr/bin/python
 import time
 import Queue
-import utils
-from common import BaseSystem
+from simulators import utils
+from simulators.common import BaseSystem
+
 
 class Driver(object):
 
@@ -18,7 +19,7 @@ class Driver(object):
     }
 
     def __init__(self, driver_reset_delay=0):
-        self.driver_reset_delay = driver_reset_delay  # Actually it should be 100ms
+        self.driver_reset_delay = driver_reset_delay  # Real delay: 100ms
         self._set_default()
 
     def _set_default(self):
@@ -26,7 +27,8 @@ class Driver(object):
         self.current_position = 0
         self.position_queue = Queue.Queue()
 
-        self.delay_multiplier = 0  # x*delay_step. 255=infinite delay (no response)
+        # x*delay_step. 255=infinite delay (no response)
+        self.delay_multiplier = 0
 
         self.version = [1, 3]  # Major, minor
         self.driver_type = 0x20  # 0x20 for USD50xxx, 0x21 for USD60xxx
@@ -36,11 +38,11 @@ class Driver(object):
         self.min_frequency = 20
         self.max_frequency = 10000
 
-        self.IO_dir = [0, 0, 0]  # 0 = input, 1 = output
+        self.io_dir = [0, 0, 0]  # 0 = input, 1 = output
         # The following values show the corresponding I/O line value,
         # but only if the direction of the I/O line is set to output
-        # i.e.: (IO_dir[x] = 1)
-        self.IO_val = [0, 0, 0]
+        # i.e.: (io_dir[x] = 1)
+        self.io_val = [0, 0, 0]
 
         self.running = False
         self.delayed_execution = False
@@ -66,13 +68,13 @@ class Driver(object):
 
         par1 = (
             '0'
-            + str(self.IO_dir[2])
-            + str(self.IO_dir[1])
-            + str(self.IO_dir[0])
+            + str(self.io_dir[2])
+            + str(self.io_dir[1])
+            + str(self.io_dir[0])
             + '0'
-            + str(self.IO_val[2])
-            + str(self.IO_val[1])
-            + str(self.IO_val[0]))
+            + str(self.io_val[2])
+            + str(self.io_val[1])
+            + str(self.io_val[0]))
 
         for key, val in self.resolutions.iteritems():
             if val == self.resolution:
@@ -110,20 +112,20 @@ class Driver(object):
         else:
             self.move_to(self.current_position + position)
 
-    def set_IO_pins(self, param):
+    def set_io_pins(self, param):
         binary_string = bin(param)[2:].zfill(8)
 
-        self.IO_dir[0] = int(binary_string[3], base=2)
-        if self.IO_dir[0] == 1:
-            self.IO_val[0] = int(binary_string[7], base=2)
+        self.io_dir[0] = int(binary_string[3], base=2)
+        if self.io_dir[0] == 1:
+            self.io_val[0] = int(binary_string[7], base=2)
 
-        self.IO_dir[1] = int(binary_string[2], base=2)
-        if self.IO_dir[1] == 1:
-            self.IO_val[1] = int(binary_string[6], base=2)
+        self.io_dir[1] = int(binary_string[2], base=2)
+        if self.io_dir[1] == 1:
+            self.io_val[1] = int(binary_string[6], base=2)
 
-        self.IO_dir[2] = int(binary_string[1], base=2)
-        if self.IO_dir[2] == 1:
-            self.IO_val[2] = int(binary_string[5], base=2)
+        self.io_dir[2] = int(binary_string[1], base=2)
+        if self.io_dir[2] == 1:
+            self.io_val[2] = int(binary_string[5], base=2)
 
     def set_resolution(self, param):
         if int(param[0]) == 1:
@@ -136,6 +138,7 @@ class Driver(object):
     def move_to(self, new_position):
         # ((freq / resolution) / 200)*60 = RPM
         self.current_position = new_position
+
 
 class System(BaseSystem):
 
@@ -151,7 +154,7 @@ class System(BaseSystem):
         0x21: "set_max_frequency",
         0x22: "set_slope_multiplier",
         0x23: "set_reference_position",
-        0x25: "set_IO_pins",
+        0x25: "set_io_pins",
         0x26: "set_resolution",
         0x27: "reduce_current",
         0x28: "set_response_delay",
@@ -161,8 +164,8 @@ class System(BaseSystem):
         0x32: "rotate",
         0x35: "set_velocity",
         0x2A: "hard_stop",
-        0x2B: "set_positioning_IO",
-        0x2C: "set_home_IO",
+        0x2B: "set_positioning_io",
+        0x2C: "set_home_io",
         0x2D: "set_working_mode",
     }
 
@@ -175,7 +178,7 @@ class System(BaseSystem):
 
     def __init__(self, driver_reset_delay=0):
         self._set_default()
-        self.drivers = [Driver(driver_reset_delay) for x in xrange(32)]
+        self.drivers = [Driver(driver_reset_delay) for _ in range(32)]
 
     def _set_default(self):
         self.msg = b''
@@ -184,14 +187,14 @@ class System(BaseSystem):
 
     def parse(self, byte):
         """This method takes a byte (single character string) and returns:
-        False when the given byte is not the header, but the header is expected,
-        True when the given byte is the header or a following expected byte,
-        the response (the string to be sent back to the client) when the message
-        is completed.
-        The method eventually raises a ValueError in one of the following cases:
-        the declared length of the message exceeds the maximum expected length,
-        the sent message carries a wrong checksum,
-        the client asks to execute an unknown command."""
+        False when the given byte is not the header, but the header is
+        expected, True when the given byte is the header or a following
+        expected byte, the response (the string to be sent back to the client)
+        when the message is completed.
+        The method eventually raises a ValueError in one of the following
+        cases: the declared length of the message exceeds the maximum expected
+        length, the sent message carries a wrong checksum, the client asks to
+        execute an unknown command."""
         self.msg += byte
 
         if len(self.msg) == 1:
@@ -214,7 +217,7 @@ class System(BaseSystem):
                     )
             return True
         elif len(self.msg) == 3:
-            if self.msg_to_all == True:
+            if self.msg_to_all is True:
                 self.expected_bytes = ord(self.msg[2])
                 if self.expected_bytes > 7 or self.expected_bytes < 1:
                     exp_bytes = self.expected_bytes
@@ -247,7 +250,7 @@ class System(BaseSystem):
             nparams = ord(msg[2])
             if nparams + 4 != len(msg):
                 return True
-            cparams = msg[4:(4+nparams-1)]
+            cparams = msg[4:(4 + nparams - 1)]
 
             command = ord(msg[3])
         else:
@@ -258,7 +261,7 @@ class System(BaseSystem):
             nparams = int(binary[:3], base=2)
             if nparams + 3 != len(msg):
                 return True
-            cparams = msg[3:(3+nparams-1)]
+            cparams = msg[3:(3 + nparams - 1)]
 
             command = ord(msg[2])
 
@@ -271,15 +274,17 @@ class System(BaseSystem):
                 if self.drivers[driver].delay_multiplier == 255:
                     return True
                 else:
-                    time.sleep(self.drivers[driver].delay_multiplier*self.delay_step)
-                return(retval)
+                    time.sleep(
+                        self.drivers[driver].delay_multiplier
+                        * self.delay_step)
+                return retval
             else:
                 return True
         else:
             raise ValueError("Unknown command: " + hex(command))
 
     def soft_reset(self, params):
-        if len(params[2]) != 0:
+        if params[2]:
             if params[0] == -1:
                 return
             else:
@@ -294,7 +299,7 @@ class System(BaseSystem):
                 return self.byte_ack
 
     def soft_trigger(self, params):
-        if len(params[2]) != 0:
+        if params[2]:
             if params[0] == -1:
                 return
             else:
@@ -311,7 +316,7 @@ class System(BaseSystem):
     def get_version(self, params):
         if params[0] == -1:
             return
-        if len(params[2]) != 0:
+        if params[2]:
             return self.byte_nak
         else:
             retval = self.byte_ack + chr(params[1])
@@ -331,7 +336,7 @@ class System(BaseSystem):
     def soft_stop(self, params):
         if params[0] == -1:
             return
-        if len(params[2]) != 0:
+        if params[2]:
             return self.byte_nak
         else:
             # Software stop event
@@ -340,17 +345,18 @@ class System(BaseSystem):
     def get_position(self, params):
         if params[0] == -1:
             return
-        if len(params[2]) != 0:
+        if params[2]:
             return self.byte_nak
         else:
             retval = self.byte_ack + chr(params[1])
 
-            bin_position = utils.int_to_twos(self.drivers[params[0]].current_position)
+            bin_position = utils.int_to_twos(
+                self.drivers[params[0]].current_position)
 
             val = b''
 
             for i in range(0, len(bin_position), 8):
-                val += chr(int(bin_position[i:i+8], base=2))
+                val += chr(int(bin_position[i:(i + 8)], base=2))
 
             if params[1] == 0xFA:
                 retval += val
@@ -366,7 +372,7 @@ class System(BaseSystem):
     def get_status(self, params):
         if params[0] == -1:
             return
-        if len(params[2]) != 0:
+        if params[2]:
             return self.byte_nak
         else:
             retval = self.byte_ack + chr(params[1])
@@ -386,7 +392,7 @@ class System(BaseSystem):
     def get_driver_type(self, params):
         if params[0] == -1:
             return
-        if len(params[2]) != 0:
+        if params[2]:
             return self.byte_nak
         else:
             retval = self.byte_ack + chr(params[1])
@@ -395,8 +401,8 @@ class System(BaseSystem):
                 retval += chr(self.drivers[params[0]].driver_type)
             elif params[1] == 0xFC:
                 byte_nbyte_address = (
-                    int(bin(1)[2:].zfill(3)
-                    + bin(params[0])[2:].zfill(5), base=2))
+                    int(bin(1)[2:].zfill(3) + bin(params[0])[2:].zfill(5),
+                    base=2))
                 retval += (
                     chr(byte_nbyte_address)
                     + chr(self.drivers[params[0]].driver_type))
@@ -411,7 +417,7 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            frequency = params[2][0]*0x100 + params[2][1]
+            frequency = params[2][0] * 0x100 + params[2][1]
 
             if frequency >= 20 and frequency <= 10000:
                 if params[0] == -1:
@@ -438,7 +444,7 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            frequency = params[2][0]*0x100 + params[2][1]
+            frequency = params[2][0] * 0x100 + params[2][1]
 
             if frequency >= 20 and frequency <= 10000:
                 if params[0] == -1:
@@ -483,9 +489,9 @@ class System(BaseSystem):
                 return self.byte_nak
         else:
             reference_position = utils.twos_to_int(
-                bin(params[2][0]*0x1000000
-                + params[2][1]*0x10000
-                + params[2][2]*0x100
+                bin(params[2][0] * 0x1000000
+                + params[2][1] * 0x10000
+                + params[2][2] * 0x100
                 + params[2][3])[2:].zfill(32))
             if params[0] == -1:
                 for x in range(len(self.drivers)):
@@ -495,7 +501,7 @@ class System(BaseSystem):
                 self.drivers[params[0]].reference_position = reference_position
                 return self.byte_ack
 
-    def set_IO_pins(self, params):
+    def set_io_pins(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
                 return
@@ -504,10 +510,10 @@ class System(BaseSystem):
         else:
             if params[0] == -1:
                 for x in range(len(self.drivers)):
-                    self.drivers[x].set_IO_pins(params[2][0])
+                    self.drivers[x].set_io_pins(params[2][0])
                 return
             else:
-                self.drivers[params[0]].set_IO_pins(params[2][0])
+                self.drivers[params[0]].set_io_pins(params[2][0])
                 return self.byte_ack
 
     def set_resolution(self, params):
@@ -534,11 +540,6 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            binary = bin(params[2][0])[2:].zfill(8)
-
-            current_demultiplier = int(binary[0:2], base=2)
-            delay_multiplier = int(binary[2:], base=2)
-
             # Change values accordingly
             if params[0] == -1:
                 return
@@ -570,16 +571,6 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            byte_par0 = bin(params[2][0])[2:].zfill(8)
-            bit7 = byte_par0[0]  # Delayed execution, 1 = enabled, 0 = disabled
-            bit6 = byte_par0[1]  # Unused
-            bit5 = byte_par0[2]  # I/O2 level
-            bit4 = byte_par0[3]  # I/O1 level
-            bit3 = byte_par0[4]  # I/O0 level
-            bit2 = byte_par0[5]  # I/O2 enabling bit
-            bit1 = byte_par0[6]  # I/O1 enabling bit
-            bit0 = byte_par0[7]  # I/O0 enabling bit
-
             # Change values accordingly
             if params[0] == -1:
                 return
@@ -594,16 +585,16 @@ class System(BaseSystem):
                 return self.byte_nak
         else:
             absolute_position = utils.twos_to_int(
-                bin(params[2][0]*0x1000000
-                + params[2][1]*0x10000
-                + params[2][2]*0x100
+                bin(params[2][0] * 0x1000000
+                + params[2][1] * 0x10000
+                + params[2][2] * 0x100
                 + params[2][3])[2:].zfill(32))
             if params[0] == -1:
-                for x in range(len(drivers)):
-                    self.drivers[x].set_absolute_position(absolute_position)
-                return
+                for driver in self.drivers:
+                    driver.set_absolute_position(absolute_position)
             else:
-                self.drivers[params[0]].set_absolute_position(absolute_position)
+                self.drivers[params[0]].set_absolute_position(
+                    absolute_position)
                 return self.byte_ack
 
     def set_relative_position(self, params):
@@ -614,16 +605,16 @@ class System(BaseSystem):
                 return self.byte_nak
         else:
             relative_position = utils.twos_to_int(
-                bin(params[2][0]*0x1000000
-                + params[2][1]*0x10000
-                + params[2][2]*0x100
+                bin(params[2][0] * 0x1000000
+                + params[2][1] * 0x10000
+                + params[2][2] * 0x100
                 + params[2][3])[2:].zfill(32))
             if params[0] == -1:
-                for x in range(len(drivers)):
-                    self.drivers[x].set_relative_position(relative_position)
-                return
+                for driver in self.drivers:
+                    driver.set_relative_position(relative_position)
             else:
-                self.drivers[params[0]].set_relative_position(relative_position)
+                self.drivers[params[0]].set_relative_position(
+                    relative_position)
                 return self.byte_ack
 
     def rotate(self, params):
@@ -633,8 +624,7 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            speed = utils.twos_to_int(bin(params[2][0])[2:].zfill(8))
-
+            # speed = utils.twos_to_int(bin(params[2][0])[2:].zfill(8))
             # Rotate according to velocity, sign = direction of motor rotation
             if params[0] == -1:
                 return
@@ -649,8 +639,8 @@ class System(BaseSystem):
                 return self.byte_nak
         else:
             velocity = utils.twos_to_int(
-                bin(params[2][0]*0x10000
-                + params[2][1]*0x100
+                bin(params[2][0] * 0x10000
+                + params[2][1] * 0x100
                 + params[2][2])[2:].zfill(24))
             if velocity > 100000 or velocity < -100000:
                 if params[0] == -1:
@@ -671,62 +661,32 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            byte_par0 = bin(params[2][0])[2:].zfill(8)
-            bit7 = byte_par0[0]  # Unused
-            bit6 = byte_par0[1]  # Unused
-            bit5 = byte_par0[2]  # I/O2 level
-            bit4 = byte_par0[3]  # I/O1 level
-            bit3 = byte_par0[4]  # I/O0 level
-            bit2 = byte_par0[5]  # I/O2 enabling bit
-            bit1 = byte_par0[6]  # I/O1 enabling bit
-            bit0 = byte_par0[7]  # I/O0 enabling bit
-
             # Change values accordingly
             if params[0] == -1:
                 return
             else:
                 return self.byte_ack
 
-    def set_positioning_IO(self, params):
+    def set_positioning_io(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
                 return
             else:
                 return self.byte_nak
         else:
-            byte_par0 = bin(params[2][0])[2:].zfill(8)
-            bit7 = byte_par0[0]  # Unused
-            bit6 = byte_par0[1]  # Unused
-            bit5 = byte_par0[2]  # I/O2 level
-            bit4 = byte_par0[3]  # I/O1 level
-            bit3 = byte_par0[4]  # I/O0 level
-            bit2 = byte_par0[5]  # I/O2 enabling bit
-            bit1 = byte_par0[6]  # I/O1 enabling bit
-            bit0 = byte_par0[7]  # I/O0 enabling bit
-
             # Change values accordingly
             if params[0] == -1:
                 return
             else:
                 return self.byte_ack
 
-    def set_home_IO(self, params):
+    def set_home_io(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
                 return
             else:
                 return self.byte_nak
         else:
-            byte_par0 = bin(params[2][0])[2:].zfill(8)
-            bit7 = byte_par0[0]  # Unused
-            bit6 = byte_par0[1]  # Unused
-            bit5 = byte_par0[2]  # I/O2 level
-            bit4 = byte_par0[3]  # I/O1 level
-            bit3 = byte_par0[4]  # I/O0 level
-            bit2 = byte_par0[5]  # I/O2 enabling bit
-            bit1 = byte_par0[6]  # I/O1 enabling bit
-            bit0 = byte_par0[7]  # I/O0 enabling bit
-
             # Change values accordingly
             if params[0] == -1:
                 return
@@ -740,45 +700,7 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            byte_par0 = bin(params[2][0])[2:].zfill(8)
-            bit7 = byte_par0[0]  # Unused
-            bit6 = byte_par0[1]  # Unused
-            bit5 = byte_par0[2]  # Unused
-            bit4 = byte_par0[3]  # Unused
-            bit3 = byte_par0[4]  # Unused
-            bit2 = byte_par0[5]  # Unused
-            bit1 = byte_par0[6]  # Unused
-            bit0 = byte_par0[7]  # BAUD rate, 0 = 9600, 1 = 19200
-
-            byte_par1 = bin(params[2][0])[2:].zfill(8)  # Reserved for future use
-
             if params[0] == -1:
                 return
             else:
                 return self.byte_ack
-
-"""if __name__ == '__main__':
-    AS = System()
-
-    msg = b''
-
-    while True:
-        var = raw_input()
-
-        if var == "c":
-            var = utils.checksum(msg)
-            msg = b''
-        else:
-            var = int(var, base=16)
-            msg += chr(var)
-        try:
-            response = AS.parse(chr(var))
-            if response is not None:
-                if type(response) is bool:
-                    print(response)
-                    if response is False:
-                        msg = b''
-                else:
-                    print([hex(ord(x)) for x in response])
-        except ValueError as ve:
-            print(ve.args[0])"""

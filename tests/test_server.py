@@ -40,11 +40,11 @@ class TestServer(unittest.TestCase):
 
     def test_custom_command_with_parameters(self):
         response = self.get_response(msg='$custom_command:a,b,c!')
-        self.assertEqual(response, 'ok_abc')
+        self.assertRegexpMatches(response, 'ok_abc')
 
     def test_custom_command_withoud_parameters(self):
         response = self.get_response(msg='$custom_command!')
-        self.assertEqual(response, 'no_params')
+        self.assertRegexpMatches(response, 'no_params')
 
     def get_response(self, msg, timeout=2.0, response=True):
         with socket_context(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -78,7 +78,7 @@ class System(BaseSystem):
                 params = params_str.split(',')
                 response = b''
                 for param in params:
-                    response += param*2
+                    response += param * 2
                 return response
             else:
                 return True
@@ -87,7 +87,8 @@ class System(BaseSystem):
 
     def custom_command(self, *params):
         params_str = ''.join(list(params))
-        return 'ok_' + params_str if params else 'no_params'
+        msg = 'ok_' + params_str if params else 'no_params'
+        return '%s (id: %d)' % (msg, id(self))
 
 
 @contextmanager

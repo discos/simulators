@@ -5,7 +5,7 @@ matrix:
   include:
     - python: 2.7
       env:
-          TOXENV=py,codecov,coverage-report,doctest,doc-html,doc-linkcheck,doc-doctest
+          TOXENV=py,codecov,coverage-report,linter,doctest,doc-html,doc-linkcheck,doc-doctest
 
 install:
   - pip install tox

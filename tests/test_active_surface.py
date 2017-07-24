@@ -12,17 +12,17 @@ class TestASParse(unittest.TestCase):
         self.system = active_surface.System()
 
     def test_fa_header(self):
-        """The system returns True when the first byte is the header."""
+        """Return True when the first byte is the 0xFA header."""
         # '\xFA' header -> we do not get the driver address in the response
         self.assertTrue(self.system.parse('\xFA'))
 
     def test_fc_header(self):
-        """The system returns True when the first byte is the 0xFC header."""
+        """Return True when the first byte is the 0xFC header."""
         # '\xFC' header -> we get the driver address in the response
         self.assertTrue(self.system.parse('\xFC'))
 
     def test_wrong_header(self):
-        """The system returns False when the first byte is not an allowed header."""
+        """Return False when the first byte is not an allowed header."""
         self.assertFalse(self.system.parse(b'w'))
 
     def test_broadcast(self):
@@ -92,7 +92,8 @@ class TestASParse(unittest.TestCase):
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(checksum)
-        expected_length = 4  # byte_ack + byte_start + version + byte_checksum
+        # byte_ack + byte_start + version + byte_checksum
+        expected_length = 4
         self.assertEqual(expected_length, len(response))
         self.assertEqual(response[0], byte_ack)
 
@@ -125,7 +126,8 @@ class TestASParse(unittest.TestCase):
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(checksum)
-        expected_length = 6  # byte_ack + byte_start + status 0-2 + byte_checksum
+        # byte_ack + byte_start + status 0-2 + byte_checksum
+        expected_length = 6
         self.assertEqual(expected_length, len(response))
         self.assertEqual(response[0], byte_ack)
 
@@ -138,7 +140,8 @@ class TestASParse(unittest.TestCase):
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(checksum)
-        expected_length = 4  # byte_ack + byte_start + driver_type + byte_checksum
+        # byte_ack + byte_start + driver_type + byte_checksum
+        expected_length = 4
         self.assertEqual(expected_length, len(response))
         self.assertEqual(response[0], byte_ack)
 
@@ -260,8 +263,9 @@ class TestASParse(unittest.TestCase):
         self.assertEqual(self.system.parse(checksum), byte_ack)
 
     def test_set_in_range_velocity(self):
-        """Setting velocity in a range between -100000 and +100000 tenths of Hz.
-        The value is stored in the last 3 bytes (\x00\x00\x00 in this case)"""
+        """Setting velocity in a range between -100000 and +100000
+        tenths of Hz.  The value is stored in the last 3 bytes
+        (\x00\x00\x00 in this case)"""
         msg = b'\xFA\x80\x35\x00\x00\x00'
         checksum = b'\x50'
         for byte in msg:
