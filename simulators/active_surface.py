@@ -7,6 +7,9 @@ from simulators.common import BaseSystem
 
 class Driver(object):
 
+    standby_delay_step = 0.004096
+
+    # Resolution denominator, i.e.: 0 -> 1/1, 1 -> 1/2, ..., 3 -> 1/8, ...
     resolutions = {
         0: 1,
         1: 2,
@@ -16,6 +19,19 @@ class Driver(object):
         5: 32,
         6: 64,
         7: 128,
+    }
+
+    # Current reduction percentage
+    standby_modes = {
+        0: 0,
+        1: 0,
+        2: 0.25,
+        3: 0.50,
+    }
+
+    baud_rates = {
+        0: 9600,
+        1: 19200
     }
 
     def __init__(self, driver_reset_delay=0):
@@ -29,6 +45,10 @@ class Driver(object):
 
         # x*delay_step. 255=infinite delay (no response)
         self.delay_multiplier = 0
+
+        self.standby_delay_multiplier = 0
+        self.standby_mode = self.standby_modes.get(0)
+        self.current_percentage = 1.0
 
         self.version = [1, 3]  # Major, minor
         self.driver_type = 0x20  # 0x20 for USD50xxx, 0x21 for USD60xxx
@@ -44,13 +64,35 @@ class Driver(object):
         # i.e.: (io_dir[x] = 1)
         self.io_val = [0, 0, 0]
 
-        self.running = False
-        self.delayed_execution = False
-        self.ready = False
-        self.standby_status = True
+        # I/O lines combination that automatically raise the TRIGGER event
+        self.trigger_io_level = [0, 0, 0]
+        self.trigger_io_enable = [0, 0, 0]
+
+        # I/O lines combination that automatically raise the STOP event
+        self.stop_io_level = [0, 0, 0]
+        self.stop_io_enable = [0, 0, 0]
+
+        # I/O lines combination assumed by the driver after a positioning event
+        self.pos_io_level = [0, 0, 0]
+        self.pos_io_enable = [0, 0, 0]
+
+        # I/O lines combination assumed by the driver after positioning to HOME
+        self.home_io_level = [0, 0, 0]
+        self.home_io_enable = [0, 0, 0]
+
+        self.running = False  # True = driver is moving
+        self.delayed_execution = False  # True = positioning by TRIGGER event
+        self.ready = False  # True = new position enqueued
+        self.standby_status = True  # True = full current, False = fractioned
 
         self.auto_resolution = True
         self.resolution = self.resolutions.get(0)
+
+        self.velocity = 0
+
+        self.baud_rate = self.baud_rates.get(0)
+
+        self.stop = True
 
         time.sleep(self.driver_reset_delay)
 
@@ -59,7 +101,7 @@ class Driver(object):
 
     def soft_trigger(self):
         if self.ready is True and self.running is False:
-            self.move_to(self.position_queue.get())
+            self._move_to(self.position_queue.get())
             if self.position_queue.empty() is True:
                 self.ready = False
 
@@ -91,53 +133,242 @@ class Driver(object):
 
         return (
             chr(par0)
-            + chr(int(par1, base=2))
-            + chr(int(par2, base=2)))
+            + chr(int(par1, 2))
+            + chr(int(par2, 2)))
 
     def set_reference_position(self, position):
         # Update enqueued position values?
         self.reference_position = position
+
+    def set_io_pins(self, param):
+        binary_string = bin(param)[2:].zfill(8)
+
+        self.io_dir[0] = int(binary_string[3], 2)
+        if self.io_dir[0] == 1:
+            self.io_val[0] = int(binary_string[7], 2)
+        else:
+            self.io_val[0] = 0
+
+        self.io_dir[1] = int(binary_string[2], 2)
+        if self.io_dir[1] == 1:
+            self.io_val[1] = int(binary_string[6], 2)
+        else:
+            self.io_val[1] = 0
+
+        self.io_dir[2] = int(binary_string[1], 2)
+        if self.io_dir[2] == 1:
+            self.io_val[2] = int(binary_string[5], 2)
+        else:
+            self.io_val[2] = 0
+
+    def set_resolution(self, param):
+        binary_string = bin(param)[2:].zfill(4)
+
+        if int(binary_string[0], 2) == 1:
+            self.auto_resolution = True
+            self.resolution = self.resolutions.get(0)
+        else:
+            self.auto_resolution = False
+            self.resolution = self.resolutions.get(int(binary_string[-3:], 2))
+
+    def reduce_current(self, param):
+        binary_string = bin(param)[2:].zfill(8)
+
+        self.standby_mode = self.standby_modes.get(int(binary_string[0:2], 2))
+        self.standby_delay_multiplier = int(binary_string[2:], 2)
+
+    def toggle_delayed_execution(self, param):
+        binary_string = bin(param)[2:].zfill(8)
+
+        self.delayed_execution = bool(binary_string[0])
+        # binary_string[1] is currently unused
+
+        self.trigger_io_enable[0] = int(binary_string[7], 2)
+        if self.trigger_io_enable[0] == 1:
+            self.trigger_io_level[0] = int(binary_string[4], 2)
+        else:
+            self.trigger_io_level[0] = 0
+
+        self.trigger_io_enable[1] = int(binary_string[6], 2)
+        if self.trigger_io_enable[1] == 1:
+            self.trigger_io_level[1] = int(binary_string[3], 2)
+        else:
+            self.trigger_io_level[1] = 0
+
+        self.trigger_io_enable[2] = int(binary_string[5], 2)
+        if self.trigger_io_enable[2] == 1:
+            self.trigger_io_level[2] = int(binary_string[2], 2)
+        else:
+            self.trigger_io_level[2] = 0
+
+        # Empty the position queue
+        self.position_queue = Queue.Queue()
 
     def set_absolute_position(self, position):
         if self.delayed_execution is True:
             self.position_queue.put(self.reference_position + position)
             self.ready = True
         else:
-            self.move_to(self.reference_position + position)
+            self._move_to(self.reference_position + position)
 
     def set_relative_position(self, position):
         if self.delayed_execution is True:
             self.position_queue.put(self.current_position + position)
             self.ready = True
         else:
-            self.move_to(self.current_position + position)
+            self._move_to(self.current_position + position)
 
-    def set_io_pins(self, param):
+    def rotate(self, sign):
+        if self.running:
+            # Failed command, return False so the parser can return a byte_nak
+            return False
+        else:
+            # The following 3 lines should run in a separate thread
+            self._accel_ramp(sign)
+            self._move(sign * self.max_frequency)
+            self._decel_ramp(sign)
+            return True
+
+    def set_velocity(self, velocity):
+        # Start rotating with given velocity without an acceleration ramp
+        self.velocity = velocity
+
+        if velocity != 0:
+            self._move(velocity)
+
+    def set_stop_io(self, param):
         binary_string = bin(param)[2:].zfill(8)
 
-        self.io_dir[0] = int(binary_string[3], base=2)
-        if self.io_dir[0] == 1:
-            self.io_val[0] = int(binary_string[7], base=2)
+        # binary_string[0 - 1] is currently unused
 
-        self.io_dir[1] = int(binary_string[2], base=2)
-        if self.io_dir[1] == 1:
-            self.io_val[1] = int(binary_string[6], base=2)
-
-        self.io_dir[2] = int(binary_string[1], base=2)
-        if self.io_dir[2] == 1:
-            self.io_val[2] = int(binary_string[5], base=2)
-
-    def set_resolution(self, param):
-        if int(param[0]) == 1:
-            self.auto_resolution = True
-            self.resolution = self.resolutions.get(0)
+        self.stop_io_enable[0] = int(binary_string[7], 2)
+        if self.stop_io_enable[0] == 1:
+            self.stop_io_level[0] = int(binary_string[4], 2)
         else:
-            self.auto_resolution = False
-            self.resolution = self.resolutions.get(int(param[-3:], base=2))
+            self.stop_io_level[0] = 0
 
-    def move_to(self, new_position):
+        self.stop_io_enable[1] = int(binary_string[6], 2)
+        if self.stop_io_enable[1] == 1:
+            self.stop_io_level[1] = int(binary_string[3], 2)
+        else:
+            self.stop_io_level[1] = 0
+
+        self.stop_io_enable[2] = int(binary_string[5], 2)
+        if self.stop_io_enable[2] == 1:
+            self.stop_io_level[2] = int(binary_string[2], 2)
+        else:
+            self.stop_io_level[2] = 0
+
+    def set_positioning_io(self, param):
+        binary_string = bin(param)[2:].zfill(8)
+
+        # binary_string[0 - 1] is currently unused
+
+        self.pos_io_enable[0] = int(binary_string[7], 2)
+        if self.pos_io_enable[0] == 1:
+            self.pos_io_level[0] = int(binary_string[4], 2)
+        else:
+            self.pos_io_level[0] = 0
+
+        self.pos_io_enable[1] = int(binary_string[6], 2)
+        if self.pos_io_enable[1] == 1:
+            self.pos_io_level[1] = int(binary_string[3], 2)
+        else:
+            self.pos_io_level[1] = 0
+
+        self.pos_io_enable[2] = int(binary_string[5], 2)
+        if self.pos_io_enable[2] == 1:
+            self.pos_io_level[2] = int(binary_string[2], 2)
+        else:
+            self.pos_io_level[2] = 0
+
+    def set_home_io(self, param):
+        binary_string = bin(param)[2:].zfill(8)
+
+        self.home_io_enable[0] = int(binary_string[7], 2)
+        if self.home_io_enable[0] == 1:
+            self.home_io_level[0] = int(binary_string[4], 2)
+        else:
+            self.home_io_level[0] = 0
+
+        self.home_io_enable[1] = int(binary_string[6], 2)
+        if self.home_io_enable[1] == 1:
+            self.home_io_level[1] = int(binary_string[3], 2)
+        else:
+            self.home_io_level[1] = 0
+
+        self.home_io_enable[2] = int(binary_string[5], 2)
+        if self.home_io_enable[2] == 1:
+            self.home_io_level[2] = int(binary_string[2], 2)
+        else:
+            self.home_io_level[2] = 0
+
+    def set_working_mode(self, param):
+        binary_string = bin(param)[2:].zfill(8)
+
+        # binary_string[0 - 6] is currently unused
+        self.baud_rate = self.baud_rates.get(int(binary_string[7], 2))
+
+    def _accel_ramp(self, sign):
+        # Should gradually accelerate from 0 to min_frequency to max_frequency
+        while False:  # Not yet implemented
+            delta = 0
+            self.current_position += delta * sign
+
+    def _decel_ramp(self, sign):
+        # Should gradually decelerate from max_frequency to min_frequency to 0
+        while False:  # Not yet implemented
+            delta = 0
+            self.current_position += delta * sign
+
+    def _move_to(self, new_position):
+        # Should be launched in a separate thread
         # ((freq / resolution) / 200)*60 = RPM
-        self.current_position = new_position
+
+        self.running = True
+
+        if new_position < self.current_position:
+            sign = -1
+        else:
+            sign = +1
+
+        self._accel_ramp(sign)
+
+        while self.current_position != new_position:
+            if self.stop is False:
+                # Immediate positioning, should be done gradually
+                # i.e.:
+                # delta = sign * ...
+                # self.current_position += delta
+                self.current_position = new_position
+            else:
+                # Stop received, execute the deceleration ramp immediately
+                break
+
+        self._decel_ramp(sign)
+
+        self.stop = False
+        self.running = False
+
+        self._go_standby()
+
+    def _move(self, frequency):
+        self.running = True
+
+        while self.stop is False or self.velocity != 0:
+            frequency = frequency  # Placeholder to avoid linter errors
+            break  # Not yet implemented
+
+        self.running = False
+        self._go_standby()
+
+    def _go_standby(self):
+        time.sleep(self.standby_delay_multiplier * self.standby_delay_step)
+        self.current_percentage = 1.0 - self.standby_mode
+        if self.standby_mode > 0:
+            self.standby_status = False
+        else:
+            self.standby_status = True
 
 
 class System(BaseSystem):
@@ -163,7 +394,7 @@ class System(BaseSystem):
         0x31: "set_relative_position",
         0x32: "rotate",
         0x35: "set_velocity",
-        0x2A: "hard_stop",
+        0x2A: "set_stop_io",
         0x2B: "set_positioning_io",
         0x2C: "set_home_io",
         0x2D: "set_working_mode",
@@ -207,7 +438,7 @@ class System(BaseSystem):
                 self.msg_to_all = True
             else:
                 binary = bin(ord(self.msg[1]))[2:].zfill(8)
-                self.expected_bytes = int(binary[:3], base=2)
+                self.expected_bytes = int(binary[:3], 2)
                 if self.expected_bytes > 7 or self.expected_bytes < 1:
                     exp_bytes = self.expected_bytes
                     self._set_default()
@@ -231,12 +462,12 @@ class System(BaseSystem):
             return True
         else:
             if self.expected_bytes == 0:
-                return self.parser(self.msg)
+                return self._parser(self.msg)
             else:
                 self.expected_bytes -= 1
                 return True
 
-    def parser(self, msg):
+    def _parser(self, msg):
         self._set_default()
 
         if utils.checksum(msg[:-1]) != msg[-1]:
@@ -256,9 +487,9 @@ class System(BaseSystem):
         else:
             binary = bin(ord(msg[1]))[2:].zfill(8)
 
-            driver = int(binary[3:], base=2)
+            driver = int(binary[3:], 2)
 
-            nparams = int(binary[:3], base=2)
+            nparams = int(binary[:3], 2)
             if nparams + 3 != len(msg):
                 return True
             cparams = msg[3:(3 + nparams - 1)]
@@ -291,8 +522,8 @@ class System(BaseSystem):
                 return self.byte_nak
         else:
             if params[0] == -1:
-                for x in range(len(self.drivers)):
-                    self.drivers[x].soft_reset()
+                for driver in self.drivers:
+                    driver.soft_reset()
                 return
             else:
                 self.drivers[params[0]].soft_reset()
@@ -306,8 +537,8 @@ class System(BaseSystem):
                 return self.byte_nak
         else:
             if params[0] == -1:
-                for x in range(len(self.drivers)):
-                    self.drivers[x].soft_trigger()
+                for driver in self.drivers:
+                    driver.soft_trigger()
                 return
             else:
                 self.drivers[params[0]].soft_trigger()
@@ -325,7 +556,7 @@ class System(BaseSystem):
                            + self.drivers[params[0]].version[1]))
             elif params[1] == 0xFC:
                 byte_nbyte_address = (int(bin(1)[2:].zfill(3)
-                                      + bin(params[0])[2:].zfill(5), base=2))
+                                      + bin(params[0])[2:].zfill(5), 2))
                 retval += (chr(byte_nbyte_address)
                            + chr((self.drivers[params[0]].version[0] + 0xF)
                            + self.drivers[params[0]].version[1]))
@@ -334,13 +565,19 @@ class System(BaseSystem):
             return retval + utils.checksum(retval)
 
     def soft_stop(self, params):
-        if params[0] == -1:
-            return
         if params[2]:
-            return self.byte_nak
+            if params[0] == -1:
+                return
+            else:
+                return self.byte_nak
         else:
-            # Software stop event
-            return self.byte_ack
+            if params[0] == -1:
+                for driver in self.drivers:
+                    driver.stop = True
+                return
+            else:
+                self.drivers[params[0]].stop = True
+                return self.byte_ack
 
     def get_position(self, params):
         if params[0] == -1:
@@ -356,13 +593,13 @@ class System(BaseSystem):
             val = b''
 
             for i in range(0, len(bin_position), 8):
-                val += chr(int(bin_position[i:(i + 8)], base=2))
+                val += chr(int(bin_position[i:(i + 8)], 2))
 
             if params[1] == 0xFA:
                 retval += val
             elif params[1] == 0xFC:
                 byte_nbyte_address = (int(bin(4)[2:].zfill(3)
-                                      + bin(params[0])[2:].zfill(5), base=2))
+                                      + bin(params[0])[2:].zfill(5), 2))
                 retval += chr(byte_nbyte_address) + val
             else:
                 return self.byte_nak
@@ -383,7 +620,7 @@ class System(BaseSystem):
                 retval += status
             elif params[1] == 0xFC:
                 byte_nbyte_address = (int(bin(3)[2:].zfill(3)
-                                      + bin(params[0])[2:].zfill(5), base=2))
+                                      + bin(params[0])[2:].zfill(5), 2))
                 retval += chr(byte_nbyte_address) + status
             else:
                 return self.byte_nak
@@ -402,7 +639,7 @@ class System(BaseSystem):
             elif params[1] == 0xFC:
                 byte_nbyte_address = (
                     int(bin(1)[2:].zfill(3) + bin(params[0])[2:].zfill(5),
-                    base=2))
+                    2))
                 retval += (
                     chr(byte_nbyte_address)
                     + chr(self.drivers[params[0]].driver_type))
@@ -421,9 +658,9 @@ class System(BaseSystem):
 
             if frequency >= 20 and frequency <= 10000:
                 if params[0] == -1:
-                    for x in range(len(self.drivers)):
-                        if frequency <= self.drivers[x].max_frequency:
-                            self.drivers[x].min_frequency = frequency
+                    for driver in self.drivers:
+                        if frequency <= driver.max_frequency:
+                            driver.min_frequency = frequency
                     return
                 else:
                     if frequency <= self.drivers[params[0]].max_frequency:
@@ -448,9 +685,9 @@ class System(BaseSystem):
 
             if frequency >= 20 and frequency <= 10000:
                 if params[0] == -1:
-                    for x in range(len(self.drivers)):
-                        if frequency >= self.drivers[x].min_frequency:
-                            self.drivers[x].max_frequency = frequency
+                    for driver in self.drivers:
+                        if frequency >= driver.min_frequency:
+                            driver.max_frequency = frequency
                     return
                 else:
                     if frequency >= self.drivers[params[0]].min_frequency:
@@ -474,8 +711,8 @@ class System(BaseSystem):
             slope_multiplier = params[2][0] + 1
 
             if params[0] == -1:
-                for x in range(len(self.drivers)):
-                    self.drivers[x].slope_multiplier = slope_multiplier
+                for driver in self.drivers:
+                    driver.slope_multiplier = slope_multiplier
                     return
             else:
                 self.drivers[params[0]].slope_multiplier = slope_multiplier
@@ -494,11 +731,12 @@ class System(BaseSystem):
                 + params[2][2] * 0x100
                 + params[2][3])[2:].zfill(32))
             if params[0] == -1:
-                for x in range(len(self.drivers)):
-                    self.drivers[x].reference_position = reference_position
+                for driver in self.drivers:
+                    driver.set_reference_position(reference_position)
                 return
             else:
-                self.drivers[params[0]].reference_position = reference_position
+                self.drivers[params[0]].set_reference_position(
+                    reference_position)
                 return self.byte_ack
 
     def set_io_pins(self, params):
@@ -509,8 +747,8 @@ class System(BaseSystem):
                 return self.byte_nak
         else:
             if params[0] == -1:
-                for x in range(len(self.drivers)):
-                    self.drivers[x].set_io_pins(params[2][0])
+                for driver in self.drivers:
+                    driver.set_io_pins(params[2][0])
                 return
             else:
                 self.drivers[params[0]].set_io_pins(params[2][0])
@@ -523,14 +761,12 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            param = bin(params[2][0])[2:].zfill(4)
-
             if params[0] == -1:
-                for x in range(len(self.drivers)):
-                    self.drivers[x].set_resolution(param)
+                for driver in self.drivers:
+                    driver.set_resolution(params[2][0])
                 return
             else:
-                self.drivers[params[0]].set_resolution(param)
+                self.drivers[params[0]].set_resolution(params[2][0])
                 return self.byte_ack
 
     def reduce_current(self, params):
@@ -540,10 +776,12 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            # Change values accordingly
             if params[0] == -1:
+                for driver in self.drivers:
+                    driver.reduce_current(params[2][0])
                 return
             else:
+                self.drivers[params[0]].reduce_current(params[2][0])
                 return self.byte_ack
 
     def set_response_delay(self, params):
@@ -554,8 +792,8 @@ class System(BaseSystem):
                 return self.byte_nak
         else:
             if params[0] == -1:
-                for x in range(len(self.drivers)):
-                    self.drivers[x].delay_multiplier = params[2][0]
+                for driver in self.drivers:
+                    driver.delay_multiplier = params[2][0]
             else:
                 self.drivers[params[0]].delay_multiplier = params[2][0]
 
@@ -571,10 +809,11 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            # Change values accordingly
             if params[0] == -1:
-                return
+                for driver in self.drivers:
+                    driver.toggle_delayed_execution(params[2][0])
             else:
+                self.drivers[params[0]].toggle_delayed_execution(params[2][0])
                 return self.byte_ack
 
     def set_absolute_position(self, params):
@@ -624,12 +863,20 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            # speed = utils.twos_to_int(bin(params[2][0])[2:].zfill(8))
-            # Rotate according to velocity, sign = direction of motor rotation
-            if params[0] == -1:
-                return
+            param = utils.twos_to_int(bin(params[2][0])[2:].zfill(8))
+            if param >= 0:
+                sign = +1
             else:
-                return self.byte_ack
+                sign = -1
+            # Start an infinite rotation, sign = direction
+            if params[0] == -1:
+                for driver in self.drivers:
+                    driver.rotate(sign)
+            else:
+                if self.drivers[params[0]].rotate(sign):
+                    return self.byte_ack
+                else:
+                    return self.byte_nak
 
     def set_velocity(self, params):
         if len(params[2]) != 3:
@@ -648,23 +895,25 @@ class System(BaseSystem):
                 else:
                     return self.byte_nak
             else:
-                # Set velocity
                 if params[0] == -1:
-                    return
+                    for driver in self.drivers:
+                        driver.set_velocity(velocity)
                 else:
+                    self.drivers[params[0]].set_velocity(velocity)
                     return self.byte_ack
 
-    def hard_stop(self, params):
+    def set_stop_io(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
                 return
             else:
                 return self.byte_nak
         else:
-            # Change values accordingly
             if params[0] == -1:
-                return
+                for driver in self.drivers:
+                    driver.set_stop_io(params[2][0])
             else:
+                self.drivers[params[0]].set_stop_io(params[2][0])
                 return self.byte_ack
 
     def set_positioning_io(self, params):
@@ -674,10 +923,11 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            # Change values accordingly
             if params[0] == -1:
-                return
+                for driver in self.drivers:
+                    driver.set_positioning_io(params[2][0])
             else:
+                self.drivers[params[0]].set_positioning_io(params[2][0])
                 return self.byte_ack
 
     def set_home_io(self, params):
@@ -687,10 +937,11 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            # Change values accordingly
             if params[0] == -1:
-                return
+                for driver in self.drivers:
+                    driver.set_home_io(params[2][0])
             else:
+                self.drivers[params[0]].set_home_io(params[2][0])
                 return self.byte_ack
 
     def set_working_mode(self, params):
@@ -701,6 +952,8 @@ class System(BaseSystem):
                 return self.byte_nak
         else:
             if params[0] == -1:
-                return
+                for driver in self.drivers:
+                    driver.set_working_mode(params[2][0])
             else:
+                self.drivers[params[0]].set_working_mode(params[2][0])
                 return self.byte_ack
