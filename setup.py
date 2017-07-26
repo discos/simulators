@@ -4,9 +4,9 @@ except ImportError:
     from distutils.core import setup
 
 setup(
-    name='srtsim',
+    name='discos-simulators',
     version='0.1',
-    description='Sardinia Radio Telescope simulators',
+    description='Simulators for the DISCOS project',
     packages=[
         'simulators',
     ],
