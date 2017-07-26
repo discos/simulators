@@ -218,7 +218,7 @@ class TestASParse(unittest.TestCase):
         checksum = b'\x7B'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(checksum), byte_nak
+        self.assertEqual(self.system.parse(checksum), byte_nak)
 
     def test_broadcast_set_out_range_min_frequency(self):
         msg = b'\xFA\x00\x03\x20\x00\x0A'
