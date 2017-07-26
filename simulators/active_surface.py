@@ -60,10 +60,10 @@ class Driver(object):
         # but only if the direction of the I/O line is set to output
         # i.e.: (io_dir[x] = 1)
         self.io_val = [0, 0, 0]
-        # I/O lines combination that automatically raise the TRIGGER event
+        # I/O lines combination that automatically raises the TRIGGER event
         self.trigger_io_level = [0, 0, 0]
         self.trigger_io_enable = [0, 0, 0]
-        # I/O lines combination that automatically raise the STOP event
+        # I/O lines combination that automatically raises the STOP event
         self.stop_io_level = [0, 0, 0]
         self.stop_io_enable = [0, 0, 0]
         # I/O lines combination assumed by the driver after a positioning event
@@ -227,7 +227,7 @@ class Driver(object):
     def set_stop_io(self, param):
         binary_string = bin(param)[2:].zfill(8)
 
-        # binary_string[0:1] is currently unused
+        # binary_string[0:2] is currently unused
 
         self.stop_io_enable[0] = int(binary_string[7], 2)
         if self.stop_io_enable[0] == 1:
@@ -250,7 +250,7 @@ class Driver(object):
     def set_positioning_io(self, param):
         binary_string = bin(param)[2:].zfill(8)
 
-        # binary_string[0:1] is currently unused
+        # binary_string[0:2] is currently unused
 
         self.pos_io_enable[0] = int(binary_string[7], 2)
         if self.pos_io_enable[0] == 1:
@@ -294,7 +294,7 @@ class Driver(object):
     def set_working_mode(self, params):
         binary_string = bin(params[0])[2:].zfill(8)
 
-        # binary_string[0:6] is currently unused
+        # binary_string[0:7] is currently unused
         self.baud_rate = self.baud_rates.get(int(binary_string[7], 2))
 
         #  params[1] is currently unused
