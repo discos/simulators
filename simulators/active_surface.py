@@ -303,11 +303,13 @@ class Driver(object):
         else:
             self.home_io_level[2] = 0
 
-    def set_working_mode(self, param):
-        binary_string = bin(param)[2:].zfill(8)
+    def set_working_mode(self, params):
+        binary_string = bin(params[0])[2:].zfill(8)
 
         # binary_string[0 - 6] is currently unused
         self.baud_rate = self.baud_rates.get(int(binary_string[7], 2))
+
+        #  params[1] is currently unused
 
     def _accel_ramp(self, sign):
         # Should gradually accelerate from 0 to min_frequency to max_frequency
@@ -953,7 +955,7 @@ class System(BaseSystem):
         else:
             if params[0] == -1:
                 for driver in self.drivers:
-                    driver.set_working_mode(params[2][0])
+                    driver.set_working_mode(params[2])
             else:
-                self.drivers[params[0]].set_working_mode(params[2][0])
+                self.drivers[params[0]].set_working_mode(params[2])
                 return self.byte_ack
