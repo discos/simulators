@@ -7,9 +7,13 @@ from simulators.common import BaseSystem
 
 class Driver(object):
 
-    standby_delay_step = 0.004096
+    standby_delay_step = 0.004096  # 4096 microseconds
 
-    # Resolution denominator, i.e.: 0 -> 1/1, 1 -> 1/2, ..., 3 -> 1/8, ...
+    #: Resolution denominator, i.e.:
+    #: 0 -> 1/1, full step
+    #: 1 -> 1/2, half step
+    #: ...
+    #: 7 -> 1/128th of step
     resolutions = {
         0: 1,
         1: 2,
@@ -21,7 +25,7 @@ class Driver(object):
         7: 128,
     }
 
-    # Current reduction percentage
+    #: Current reduction percentage
     standby_modes = {
         0: 0,
         1: 0,
@@ -42,56 +46,40 @@ class Driver(object):
         self.reference_position = 0
         self.current_position = 0
         self.position_queue = Queue.Queue()
-
-        # x*delay_step. 255=infinite delay (no response)
-        self.delay_multiplier = 0
-
+        self.delay_multiplier = 0  # x * delay_step. 255: no response
         self.standby_delay_multiplier = 0
         self.standby_mode = self.standby_modes.get(0)
         self.current_percentage = 1.0
-
         self.version = [1, 3]  # Major, minor
-        self.driver_type = 0x20  # 0x20 for USD50xxx, 0x21 for USD60xxx
-
+        self.driver_type = 0x20  # 0x20: USD50xxx, 0x21: USD60xxx
         self.slope_multiplier = 1
-
         self.min_frequency = 20
         self.max_frequency = 10000
-
-        self.io_dir = [0, 0, 0]  # 0 = input, 1 = output
+        self.io_dir = [0, 0, 0]  # 0: input, 1: output
         # The following values show the corresponding I/O line value,
         # but only if the direction of the I/O line is set to output
         # i.e.: (io_dir[x] = 1)
         self.io_val = [0, 0, 0]
-
         # I/O lines combination that automatically raise the TRIGGER event
         self.trigger_io_level = [0, 0, 0]
         self.trigger_io_enable = [0, 0, 0]
-
         # I/O lines combination that automatically raise the STOP event
         self.stop_io_level = [0, 0, 0]
         self.stop_io_enable = [0, 0, 0]
-
         # I/O lines combination assumed by the driver after a positioning event
         self.pos_io_level = [0, 0, 0]
         self.pos_io_enable = [0, 0, 0]
-
         # I/O lines combination assumed by the driver after positioning to HOME
         self.home_io_level = [0, 0, 0]
         self.home_io_enable = [0, 0, 0]
-
-        self.running = False  # True = driver is moving
-        self.delayed_execution = False  # True = positioning by TRIGGER event
-        self.ready = False  # True = new position enqueued
-        self.standby_status = True  # True = full current, False = fractioned
-
+        self.running = False  # True: driver is moving
+        self.delayed_execution = False  # True: positioning by TRIGGER event
+        self.ready = False  # True: new position enqueued
+        self.standby_status = True  # True: full current, False: fractioned
         self.auto_resolution = True
         self.resolution = self.resolutions.get(0)
-
         self.velocity = 0
-
         self.baud_rate = self.baud_rates.get(0)
-
         self.stop = True
 
         time.sleep(self.driver_reset_delay)
@@ -239,7 +227,7 @@ class Driver(object):
     def set_stop_io(self, param):
         binary_string = bin(param)[2:].zfill(8)
 
-        # binary_string[0 - 1] is currently unused
+        # binary_string[0:1] is currently unused
 
         self.stop_io_enable[0] = int(binary_string[7], 2)
         if self.stop_io_enable[0] == 1:
@@ -262,7 +250,7 @@ class Driver(object):
     def set_positioning_io(self, param):
         binary_string = bin(param)[2:].zfill(8)
 
-        # binary_string[0 - 1] is currently unused
+        # binary_string[0:1] is currently unused
 
         self.pos_io_enable[0] = int(binary_string[7], 2)
         if self.pos_io_enable[0] == 1:
@@ -306,34 +294,33 @@ class Driver(object):
     def set_working_mode(self, params):
         binary_string = bin(params[0])[2:].zfill(8)
 
-        # binary_string[0 - 6] is currently unused
+        # binary_string[0:6] is currently unused
         self.baud_rate = self.baud_rates.get(int(binary_string[7], 2))
 
         #  params[1] is currently unused
 
     def _accel_ramp(self, sign):
         # Should gradually accelerate from 0 to min_frequency to max_frequency
-        while False:  # Not yet implemented
-            delta = 0
-            self.current_position += delta * sign
+        # Not yet implemented
+        # while False:
+        #     delta = 0
+        #     self.current_position += delta * sign
+        pass
 
     def _decel_ramp(self, sign):
         # Should gradually decelerate from max_frequency to min_frequency to 0
-        while False:  # Not yet implemented
-            delta = 0
-            self.current_position += delta * sign
+        # Not yet implemented
+        # while False:
+        #     delta = 0
+        #     self.current_position += delta * sign
+        pass
 
     def _move_to(self, new_position):
         # Should be launched in a separate thread
-        # ((freq / resolution) / 200)*60 = RPM
+        # ((freq / resolution) / 200) * 60 = RPM
 
         self.running = True
-
-        if new_position < self.current_position:
-            sign = -1
-        else:
-            sign = +1
-
+        sign = -1 if new_position < self.current_position else +1
         self._accel_ramp(sign)
 
         while self.current_position != new_position:
@@ -348,10 +335,8 @@ class Driver(object):
                 break
 
         self._decel_ramp(sign)
-
         self.stop = False
         self.running = False
-
         self._go_standby()
 
     def _move(self, frequency):
@@ -367,10 +352,7 @@ class Driver(object):
     def _go_standby(self):
         time.sleep(self.standby_delay_multiplier * self.standby_delay_step)
         self.current_percentage = 1.0 - self.standby_mode
-        if self.standby_mode > 0:
-            self.standby_status = False
-        else:
-            self.standby_status = True
+        self.standby_status = False if self.standby_mode > 0 else True
 
 
 class System(BaseSystem):
@@ -406,7 +388,7 @@ class System(BaseSystem):
     byte_ack = '\x06'
     byte_nak = '\x15'
 
-    delay_step = 0.000512
+    delay_step = 0.000512  # 512 microseconds
     slope_time = 10  # msec
 
     def __init__(self, driver_reset_delay=0):
@@ -866,10 +848,7 @@ class System(BaseSystem):
                 return self.byte_nak
         else:
             param = utils.twos_to_int(bin(params[2][0])[2:].zfill(8))
-            if param >= 0:
-                sign = +1
-            else:
-                sign = -1
+            sign = +1 if param >= 0 else -1
             # Start an infinite rotation, sign = direction
             if params[0] == -1:
                 for driver in self.drivers:
