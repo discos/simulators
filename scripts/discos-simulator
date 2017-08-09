@@ -1,4 +1,4 @@
-"""Usage:
+"""Some examples:
 
   $ discos-simulator start -s active_surface
   $ discos-simulator stop -s active_surface
