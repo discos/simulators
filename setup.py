@@ -7,9 +7,8 @@ setup(
     name='discos-simulators',
     version='0.1',
     description='Simulators for the DISCOS project',
-    packages=[
-        'simulators',
-    ],
+    packages=['simulators'],
+    scripts=['scripts/discos-simulator'],
     license='GPL',
     platforms='all',
     classifiers=[

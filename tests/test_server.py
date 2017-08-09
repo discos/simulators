@@ -1,12 +1,13 @@
 import sys
+import time
 import socket
-import logging
+import datetime
 import unittest
 
 from types import ModuleType
 from contextlib import contextmanager
 
-from simulators.server import Server
+from simulators.server import Server, Simulator
 from simulators.common import BaseSystem
 
 
@@ -14,7 +15,12 @@ class TestServer(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.server = Server(('', 10000), 'mymodule')
+        # Create a dummy module to use as a system
+        cls.mymodule = ModuleType('simulators.mymodule')
+        cls.mymodule.System = System
+        sys.modules['simulators.mymodule'] = cls.mymodule
+        cls.address = ('', 10000)
+        cls.server = Server(cls.address, 'mymodule')
         cls.server.start()
 
     @classmethod
@@ -22,12 +28,12 @@ class TestServer(unittest.TestCase):
         cls.server.stop()
 
     def test_proper_request(self):
-        response = self.get_response(msg='#command:a,b,c!')
+        response = get_response(self.address, msg='#command:a,b,c!')
         self.assertEqual(response, 'aabbcc')
 
     def test_wrong_request(self):
         """Wrong request but expected by the protocol"""
-        response = self.get_response('#wrong_command:foo!')
+        response = get_response(self.address, '#wrong_command:foo!')
         self.assertRegexpMatches(response, 'you sent a wrong command')
 
     def _test_value_error(self):
@@ -39,19 +45,59 @@ class TestServer(unittest.TestCase):
         # TODO
 
     def test_custom_command_with_parameters(self):
-        response = self.get_response(msg='$custom_command:a,b,c!')
+        response = get_response(
+            self.address,
+            msg='$custom_command:a,b,c!'
+        )
         self.assertRegexpMatches(response, 'ok_abc')
 
     def test_custom_command_withoud_parameters(self):
-        response = self.get_response(msg='$custom_command!')
+        response = get_response(self.address, msg='$custom_command!')
         self.assertRegexpMatches(response, 'no_params')
 
-    def get_response(self, msg, timeout=2.0, response=True):
-        with socket_context(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.settimeout(timeout)
-            sock.connect(self.server.server_address)
-            sock.sendall(msg)
-            return sock.recv(1024) if response else b''
+    def test_create_server_from_module(self):
+        """Server should be also take a module not just a name."""
+        server = Server(('', 10001), self.mymodule)
+        server.start()
+        server.stop()
+
+
+class TestSimulator(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        # Create a dummy module to use as a system
+        cls.mymodule = ModuleType('simulators.mymodule')
+        cls.mymodule.System = System
+        sys.modules['simulators.mymodule'] = cls.mymodule
+        cls.simulator = Simulator(cls.mymodule)
+
+    def test_start_and_stop(self):
+        address = ('127.0.0.1', 10002)
+        self.mymodule.servers = [(address, ())]
+        self.simulator.start(daemon=True)
+        response = get_response(address, msg='#command:a,b,c!')
+        self.assertEqual(response, 'aabbcc')
+        self.simulator.stop()
+        wait_until_connection_closed(address)
+
+
+def wait_until_connection_closed(address, timeout=2):
+    t0 = datetime.datetime.now()
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    while sock.connect_ex(address):  # Connection succeeded
+        if (datetime.datetime.now() - t0).seconds < timeout:
+            time.sleep(0.01)
+        else:
+            break
+
+
+def get_response(server_address, msg, timeout=2.0, response=True):
+    with socket_context(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(timeout)
+        sock.connect(server_address)
+        sock.sendall(msg)
+        return sock.recv(1024) if response else b''
 
 
 class System(BaseSystem):
@@ -71,6 +117,7 @@ class System(BaseSystem):
             self.msg += byte
             if byte == self.tail:
                 name, params_str = self.msg[1:-1].split(':')
+                self.msg = b''
                 if name == 'wrong_command':
                     return b'you sent a wrong command'
                 elif name == 'unexpected':
@@ -98,32 +145,6 @@ def socket_context(*args, **kw):
         yield sock
     finally:
         sock.close()
-
-
-# Create a dummy module to use as a system
-mymodule = ModuleType('simulators.mymodule')
-mymodule.System = System
-sys.modules['simulators.mymodule'] = mymodule
-
-
-class MockLoggingHandler(logging.Handler):
-    """Mock logging handler to check for expected logs."""
-
-    def __init__(self, *args, **kwargs):
-        self.reset()
-        logging.Handler.__init__(self, *args, **kwargs)
-
-    def emit(self, record):
-        self.messages[record.levelname.lower()].append(record.getMessage())
-
-    def reset(self):
-        self.messages = {
-            'debug': [],
-            'info': [],
-            'warning': [],
-            'error': [],
-            'critical': [],
-        }
 
 
 if __name__ == '__main__':
