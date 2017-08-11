@@ -13,15 +13,6 @@ Developers documentation
    should read the :ref:`user` chapter.  This project requires Python 2.7.
 
 
-Development workflow
-====================
-
-.. todo:: Write a workflow schema.
-   open an issue, create a branch, write a test, write the code and
-   related doc, execute the linter, execute the tests, push your branch,
-   open a pull request.
-
-
 Testing environment
 ===================
 In the contiunuos deployment workflow, the tests are executed more than
@@ -241,3 +232,71 @@ command will be in the form ``$system_commandname:par1,par2,par3!``.
 
 To avoid name clashing, do not head other methods with ``system_``,
 so use this convention only for custom commands.
+
+
+.. _api:
+
+API
+===
+This part of the documentation covers all interfaces.  For
+parts where Simulators depends on external libraries, we document the most
+important right here and provide links to the canonical documentation.
+
+Server module
+-------------
+
+.. module:: simulators.server
+
+
+Handler class
+~~~~~~~~~~~~~
+
+.. autoclass:: Handler
+   :members:
+   :inherited-members:
+
+
+Server class
+~~~~~~~~~~~~
+
+.. autoclass:: Server
+   :members:
+   :inherited-members:
+
+
+Active Surface module
+---------------------
+
+.. module:: simulators.active_surface
+
+
+Driver class
+~~~~~~~~~~~~
+
+.. autoclass:: Driver
+   :members:
+   :inherited-members:
+
+
+System class
+~~~~~~~~~~~~
+
+.. autoclass:: System
+   :members:
+   :inherited-members:
+
+
+Useful Functions and Classes
+----------------------------
+
+.. module:: simulators.utils
+
+.. autofunction:: checksum
+
+.. autofunction:: twos_to_int
+
+.. autofunction:: int_to_twos
+
+.. autofunction:: mjd
+
+.. autofunction:: day_milliseconds
