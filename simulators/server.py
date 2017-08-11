@@ -1,8 +1,12 @@
+from __future__ import print_function
 import os
+import types
+import socket
 import logging
 import importlib
 import threading
 
+from multiprocessing import Process
 from SocketServer import (
     ThreadingMixIn, ThreadingTCPServer, BaseRequestHandler
 )
@@ -79,19 +83,19 @@ class Handler(BaseRequestHandler):
 
 class Server(ThreadingMixIn, ThreadingTCPServer):
 
-    def __init__(self, server_address, system_name, *args):
-        """system_name should be: 'as', 'roach', 'xarcos', etc."""
-        module = importlib.import_module('simulators.%s' % system_name)
-        Handler.system = module.System(*args)
+    def __init__(self, server_address, system, *args):
+        """
+        :param server_address: a tuple (ip, port) of the server
+        :param system: the module that implements the system (acu,
+                       active_surface, etc.).  It could also be a module
+                       name ('acu', 'active_surface', ect.), and
+                       in that case the module will be loaded dynamically.
+        :param args: a tuple of extra arguments for the Server class
+        """
+        if not isinstance(system, types.ModuleType):
+            system = importlib.import_module('simulators.%s' % system)
+        Handler.system = system.System(*args)
         ThreadingTCPServer.__init__(self, server_address, Handler)
-
-    @property
-    def msg_header(self):
-        return Handler.system.msg_header
-
-    @property
-    def msg_tail(self):
-        return Handler.system.msg_tail
 
     def start(self):
         """Start a thread with the server.
@@ -104,6 +108,39 @@ class Server(ThreadingMixIn, ThreadingTCPServer):
 
     def stop(self):
         self.shutdown()
+
+
+class Simulator(object):
+    """This class represents the whole simulator, composed of one
+    or more servers."""
+
+    def __init__(self, system_module):
+        """
+        :param system_module: the module that implements the system.
+        """
+        self.system_module = system_module
+
+    def start(self, daemon=False):
+        processes = []
+        for address, args in self.system_module.servers:
+            s = Server(address, self.system_module, *args)
+            p = Process(target=s.serve_forever)
+            p.daemon = daemon
+            processes.append(p)
+            p.start()
+            print('\nServer %s up and running.' % (address,))
+
+    def stop(self):
+        for address, _ in self.system_module.servers:
+            try:
+                sockobj = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sockobj.settimeout(1)
+                sockobj.connect(address)
+                sockobj.sendall('$__stop!')
+            except Exception, ex:
+                logging.debug(ex)
+            finally:
+                sockobj.close()
 
 
 if __name__ == '__main__':

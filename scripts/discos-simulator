@@ -1,0 +1,37 @@
+"""Some examples:
+
+  $ discos-simulator start -s active_surface
+  $ discos-simulator stop -s active_surface
+"""
+import importlib
+from argparse import ArgumentParser, ArgumentTypeError
+
+from simulators.server import Simulator
+
+
+def system_from_arg(system_name):
+    try:
+        return importlib.import_module('simulators.%s' % system_name)
+    except ImportError:
+        raise ArgumentTypeError('system "%s" unavailable' % system_name)
+
+
+parser = ArgumentParser()
+parser.add_argument(
+    '-s', '--system',
+    type=system_from_arg,
+    required=True,
+    help='System name: active_surface, acu, ...',
+)
+parser.add_argument(
+    'action',
+    choices=['start', 'stop'])
+args = parser.parse_args()
+
+
+
+simulator = Simulator(args.system)
+if args.action == 'start':
+    simulator.start()
+elif args.action == 'stop':
+    simulator.stop()
