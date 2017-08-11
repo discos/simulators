@@ -176,7 +176,7 @@ The ``System.parse()`` interface is described in `issue #1
 * the reponse, a non empty string, when there is a response to send back to the
   client.
 
-If the system has nothing to send to the client, as in the case of brodcast
+If the system has nothing to send to the client, as in the case of broadcast
 requests, ``System.parse()`` has to return ``True``.
 It eventually raises a ``ValueError`` in case there is an unexpected error (not
 considered by the protocol).
@@ -223,7 +223,7 @@ The active surface system is composed of 96 servers, and in fact its
 
 Custom commands
 ---------------
-Custom commands are useful in several use cases.  For instance,
+Custom commands are useful for several use cases.  For instance,
 let's suppose we want the simulator to reproduce some error conditions
 by changing the ``System`` state.  We just need to define a method that
 starts with double underscore.  I.e::
