@@ -5,5 +5,5 @@ import signal
 class BaseSystem(object):
 
     @staticmethod
-    def __stop():
+    def system_stop():
         os.kill(os.getpid(), signal.SIGHUP)  # Send myself SIGHUP

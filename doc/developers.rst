@@ -226,15 +226,18 @@ Custom commands
 Custom commands are useful for several use cases.  For instance,
 let's suppose we want the simulator to reproduce some error conditions
 by changing the ``System`` state.  We just need to define a method that
-starts with double underscore.  I.e::
+starts with ``system_``.  I.e::
 
     class System(BaseSystem):
 
-        def __generate_error_x(self):
+        def system_generate_error_x(self):
             # Change the state of the System
             ...
 
 After implementing this method, the clients are able to call it
-by sending the custom command ``$__generate_error_x!``.  We can
+by sending the custom command ``$system_generate_error_x!``.  We can
 also define methods with parameters.  In this case the custom
-command will be in the form ``$__command:par1,par2,par3!``.
+command will be in the form ``$system_commandname:par1,par2,par3!``.
+
+To avoid name clashing, do not head other methods with ``system_``,
+so use this convention only for custom commands.
