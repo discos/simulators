@@ -128,7 +128,7 @@ class Simulator(object):
             p.daemon = daemon
             processes.append(p)
             p.start()
-            print('\nServer %s up and running.' % (address,))
+            print('Server %s up and running.' % (address,))
 
     def stop(self):
         for address, _ in self.system_module.servers:
@@ -136,7 +136,7 @@ class Simulator(object):
                 sockobj = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sockobj.settimeout(1)
                 sockobj.connect(address)
-                sockobj.sendall('$__stop!')
+                sockobj.sendall('$system_stop!')
             except Exception, ex:
                 logging.debug(ex)
             finally:
