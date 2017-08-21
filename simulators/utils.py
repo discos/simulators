@@ -70,6 +70,21 @@ def int_to_twos(val):
     return ("{0:0>%s}" % 32).format(binary_string)
 
 
+def binary_to_bytes(binary_string):
+    """Convert a binary string in a string of bytes.
+
+    >>> binary_to_bytes('0110100001100101011011000110110001101111')
+    '\x68\x65\x6C\x6C\x6F'
+    """
+
+    byte_string = b''
+
+    for i in range(0, len(binary_string), 8):
+        byte_string += chr(int(binary_string[i:i + 8], 2))
+
+    return byte_string
+
+
 def mjd():
     """Return the modified julian date. https://bowie.gsfc.nasa.gov/time/"""
     utcnow = datetime.utcnow()

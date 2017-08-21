@@ -48,6 +48,18 @@ class TestServer(unittest.TestCase):
         self.assertGreaterEqual(day_milliseconds, 0)
         self.assertLess(day_milliseconds, 86400000)
 
+    def test_binary_to_bytes_correct(self):
+        """Convert a binary string into a string of bytes."""
+        binary_string = '00000101000110100010100011010010'
+        byte_string = utils.binary_to_bytes(binary_string)
+        expected_byte_string = b'\x05\x1A\x28\xD2'
+        self.assertEqual(byte_string, expected_byte_string)
+
+    def test_binary_to_bytes_wrong(self):
+        binary_string = '00000101000110100010100011010010'
+        byte_string = utils.binary_to_bytes(binary_string)
+        expected_byte_string = b'\x05\x1A\x28\xD3'
+        self.assertNotEqual(byte_string, expected_byte_string)
 
 if __name__ == '__main__':
     unittest.main()
