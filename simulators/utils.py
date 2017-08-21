@@ -73,8 +73,8 @@ def int_to_twos(val):
 def binary_to_bytes(binary_string):
     """Convert a binary string in a string of bytes.
 
-    >>> binary_to_bytes('00000000000000000000000000101110')
-    '\x00\x00\x00.'
+    >>> binary_to_bytes('0110100001100101011011000110110001101111')
+    '\x68\x65\x6C\x6C\x6F'
     """
 
     byte_string = b''
