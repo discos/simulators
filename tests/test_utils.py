@@ -61,5 +61,18 @@ class TestServer(unittest.TestCase):
         expected_byte_string = b'\x05\x1A\x28\xD3'
         self.assertNotEqual(byte_string, expected_byte_string)
 
+    def test_bytes_to_int_correct(self):
+        """Convert a string of bytes into an integer (like C atoi function)"""
+        byte_string = b'\x00\x00\xFA\xFF'
+        result = utils.bytes_to_int(byte_string)
+        expected_result = 64255
+        self.assertEqual(result, expected_result)
+
+    def test_bytes_to_int_wrong(self):
+        byte_string = b'\x00\x00\xFA\xFF'
+        result = utils.bytes_to_int(byte_string)
+        expected_result = -1281
+        self.assertNotEqual(result, expected_result)
+
 if __name__ == '__main__':
     unittest.main()
