@@ -633,7 +633,10 @@ class System(BaseSystem):
         self.start_status_thread(queue_sampling_time, n)
 
     def start_status_thread(self, queue_sampling_time, n):
-        thread.start_new_thread(self._enqueue_status_msg, (queue_sampling_time, n,))
+        thread.start_new_thread(
+            self._enqueue_status_msg,
+            (queue_sampling_time, n,)
+        )
 
     def _set_default(self):
         self.msg = b''
