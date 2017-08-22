@@ -30,6 +30,10 @@ class TestServer(unittest.TestCase):
             utils.int_to_twos(5),
             '00000000000000000000000000000101'
         )
+        self.assertEqual(
+            utils.int_to_twos(5, 2),
+            '0000000000000101'
+        )
 
     def test_out_of_range_int_to_twos(self):
         """Raise a ValueError in case of out of range integer value"""
