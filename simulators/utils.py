@@ -88,8 +88,8 @@ def binary_to_bytes(binary_string):
 def bytes_to_int(byte_string):
     """Convert a string of bytes to an integer (like C atoi function).
 
-    >>> bytes_to_int('\x00\x00\xFA\xFF')
-    64255
+    >>> bytes_to_int(b'\x10\x05\xFA\xFF')
+    268827391
     """
     binary_string = ''
 
