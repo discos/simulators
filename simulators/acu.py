@@ -641,9 +641,11 @@ class System(BaseSystem):
     def _set_default(self):
         self.msg = b''
         self.msg_length = 0
+        self.cmd_counter = 0
+        self.cmds_counter = 0
 
     def parse(self, byte):
-        self.msg += chr(byte)
+        self.msg += byte
 
         while self.msg and len(self.msg) <= 4:
             if self.msg != self.start_flag[:len(self.msg)]:
@@ -651,7 +653,8 @@ class System(BaseSystem):
             else:
                 break
 
-        print([hex(ord(x)) for x in self.msg])
+        if not self.msg:
+            return False
 
         if len(self.msg) == 8:
             self.msg_length = (
@@ -661,26 +664,43 @@ class System(BaseSystem):
                 + ord(self.msg[-1])
             )
 
-        if len(self.msg) > 8 and len(self.msg) == self.msg_length:
-            if self.msg[-4:] == self.end_flag:
-                self._parser(self.msg)
-                self.__init__()
-            else:
-                print "msg error"
-                self.__init__()
+        if len(self.msg) == 12:
+            self.cmd_counter = (
+                ord(self.msg[-4]) * 0x1000000
+                + ord(self.msg[-3]) * 0x10000
+                + ord(self.msg[-2]) * 0x100
+                + ord(self.msg[-1])
+            )
 
-        return
+        if len(self.msg) == 16:
+            self.cmds_counter = (
+                ord(self.msg[-4]) * 0x1000000
+                + ord(self.msg[-3]) * 0x10000
+                + ord(self.msg[-2]) * 0x100
+                + ord(self.msg[-1])
+            )
+
+        if len(self.msg) > 16 and len(self.msg) == self.msg_length:
+            msg = self.msg
+            self._set_default()
+            if msg[-4:] == self.end_flag:
+                return self._parser(msg)
+            else:
+                raise ValueError(
+                    "Wrong end flag: got %s, expected %s."
+                    % (msg[-4:], self.end_flag)
+                )
+
+        return True
 
     def _parser(self, msg):
-        print [hex(ord(x)) for x in msg]
-        self._set_default()
-        return
+        return [hex(ord(x)) for x in msg]
 
     def _enqueue_status_msg(self, queue_sampling_time, n):
         """
         param n: maximum number of status messages to put in the queue
         """
-        while n:
+        while n is not None:
             self.msg_queue.put(self.get_status())
             if self.status_counter == n:
                 break
