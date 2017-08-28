@@ -5,6 +5,8 @@ from simulators import acu, utils
 class TestACU(unittest.TestCase):
 
     n = 10
+    start_flag = b'\x1D\xFC\xCF\x1A'
+    end_flag = b'\xA1\xFC\xCF\xD1'
 
     def setUp(self):
         self.system = acu.System()
@@ -41,6 +43,53 @@ class TestACU(unittest.TestCase):
                 + ord(status[11])
             )
             self.assertEqual(msg_counter, i)
+
+    def test_parse(self):
+        msg_length = bin(46)[2:].zfill(32)
+        cmd_counter = bin(utils.day_milliseconds())[2:].zfill(32)
+        cmds_counter = bin(1)[2:].zfill(32)
+
+        # Command
+        cmd_id = bin(1)[2:].zfill(16)
+        sub_id = bin(1)[2:].zfill(16)
+        counter = bin(utils.day_milliseconds())[2:].zfill(32)
+        mode_id = bin(1)[2:].zfill(16)
+        par_1 = bin(0)[2:].zfill(64)
+        par_2 = bin(0)[2:].zfill(64)
+
+        command = (
+            cmd_id
+            + sub_id
+            + counter
+            + mode_id
+            + par_1
+            + par_2
+        )
+
+        commands = command  # Could be more than one command
+
+        binary_msg = (
+            msg_length
+            + cmd_counter
+            + cmds_counter
+            + commands
+        )
+
+        msg = self.start_flag
+
+        for i in range(0, len(binary_msg), 8):
+            msg += chr(int(binary_msg[i:i + 8], 2))
+
+        msg += self.end_flag
+
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+
+        self.assertEqual(
+            self.system.parse(msg[-1]),
+            [hex(ord(x)) for x in msg]
+        )
+
 
 if __name__ == '__main__':
     unittest.main()
