@@ -34,7 +34,7 @@ class TestACU(unittest.TestCase):
             msg_counter = utils.bytes_to_int(status[8:12])
             self.assertEqual(msg_counter, i)
 
-    def test_parse(self):
+    def test_parse_correct_end_flag(self):
         msg_length = utils.int_to_twos(46)
         cmd_counter = utils.int_to_twos(utils.day_milliseconds())
         cmds_counter = utils.int_to_twos(1)
@@ -79,6 +79,51 @@ class TestACU(unittest.TestCase):
             [hex(ord(x)) for x in msg]
         )
 
+    def test_parse_wrong_end_flag(self):
+        msg_length = utils.int_to_twos(46)
+        cmd_counter = utils.int_to_twos(utils.day_milliseconds())
+        cmds_counter = utils.int_to_twos(1)
+
+        # Command
+        cmd_id = utils.int_to_twos(1, 2)
+        sub_id = utils.int_to_twos(1, 2)
+        counter = utils.int_to_twos(utils.day_milliseconds())
+        mode_id = utils.int_to_twos(1, 2)
+        par_1 = utils.int_to_twos(0, 8)
+        par_2 = utils.int_to_twos(0, 8)
+
+        command = (
+            cmd_id
+            + sub_id
+            + counter
+            + mode_id
+            + par_1
+            + par_2
+        )
+
+        commands = command  # Could be more than one command
+
+        binary_msg = (
+            msg_length
+            + cmd_counter
+            + cmds_counter
+            + commands
+        )
+
+        msg = self.start_flag
+
+        msg += utils.binary_to_bytes(binary_msg)
+
+        msg += self.end_flag
+
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+
+        with self.assertRaises(ValueError):
+            self.system.parse('\x00'),  # Wrong ending byte
+
+    def test_parse_wrong_start_flag(self):
+        self.assertFalse(self.system.parse('\x00'))
 
 if __name__ == '__main__':
     unittest.main()
