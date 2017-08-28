@@ -683,17 +683,17 @@ class System(BaseSystem):
         if len(self.msg) > 16 and len(self.msg) == self.msg_length:
             msg = self.msg
             self._set_default()
-            if msg[-4:] == self.end_flag:
-                return self._parser(msg)
-            else:
+            if msg[-4:] != self.end_flag:
                 raise ValueError(
                     "Wrong end flag: got %s, expected %s."
                     % (msg[-4:], self.end_flag)
                 )
+            return self._parser(msg)
 
         return True
 
     def _parser(self, msg):
+        self._set_default()
         return [hex(ord(x)) for x in msg]
 
     def _enqueue_status_msg(self, queue_sampling_time, n):
