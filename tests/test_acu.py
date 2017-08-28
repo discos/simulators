@@ -120,7 +120,7 @@ class TestACU(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
 
         with self.assertRaises(ValueError):
-            self.system.parse('\x00'),  # Wrong ending byte
+            self.system.parse('\x00')  # Wrong ending byte
 
     def test_parse_wrong_start_flag(self):
         self.assertFalse(self.system.parse('\x00'))
