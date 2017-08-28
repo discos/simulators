@@ -2,6 +2,7 @@
 import time
 import thread
 import Queue
+from simulators import utils
 from simulators.common import BaseSystem
 
 
@@ -286,15 +287,15 @@ class AxisStatus(object):
             + self.get_errors()
             + bin(self.axis_state)[2:].zfill(16)
             + bin(self.axis_trajectory_state)[2:].zfill(16)
-            + bin(self.p_Soll)[2:].zfill(32)
-            + bin(self.p_Bahn)[2:].zfill(32)
-            + bin(self.p_Ist)[2:].zfill(32)
-            + bin(self.p_AbwFil)[2:].zfill(32)
-            + bin(self.v_Soll)[2:].zfill(32)
-            + bin(self.v_Bahn)[2:].zfill(32)
-            + bin(self.v_Ist)[2:].zfill(32)
-            + bin(self.a_Bahn)[2:].zfill(32)
-            + bin(self.p_Offset)[2:].zfill(32)
+            + utils.int_to_twos(self.p_Soll)
+            + utils.int_to_twos(self.p_Bahn)
+            + utils.int_to_twos(self.p_Ist)
+            + utils.int_to_twos(self.p_AbwFil)
+            + utils.int_to_twos(self.v_Soll)
+            + utils.int_to_twos(self.v_Bahn)
+            + utils.int_to_twos(self.v_Ist)
+            + utils.int_to_twos(self.a_Bahn)
+            + utils.int_to_twos(self.p_Offset)
             + bin(self.motor_selection)[2:].zfill(16)
             + bin(self.brakes_open)[2:].zfill(16)
             + bin(self.power_module_ok)[2:].zfill(16)
@@ -515,21 +516,21 @@ class PointingStatus(object):
         response = (
             bin(self.confVersion)[2:].zfill(64)
             + bin(self.confOk)[2:].zfill(8)
-            + bin(self.posEncAz)[2:].zfill(32)
-            + bin(self.pointOffsetAz)[2:].zfill(32)
-            + bin(self.posCalibChartAz)[2:].zfill(32)
-            + bin(self.posCorrTableAz_F_plst_El)[2:].zfill(32)
+            + utils.int_to_twos(self.posEncAz)
+            + utils.int_to_twos(self.pointOffsetAz)
+            + utils.int_to_twos(self.posCalibChartAz)
+            + utils.int_to_twos(self.posCorrTableAz_F_plst_El)
             + bin(self.posCorrTableAzOn)[2:].zfill(8)
             + bin(self.encAzFault)[2:].zfill(8)
             + bin(self.sectorSwitchAz)[2:].zfill(8)
-            + bin(self.posEncEl)[2:].zfill(32)
-            + bin(self.pointOffsetEl)[2:].zfill(32)
-            + bin(self.posCalibChartEl)[2:].zfill(32)
-            + bin(self.posCorrTableEl_F_plst_Az)[2:].zfill(32)
+            + utils.int_to_twos(self.posEncEl)
+            + utils.int_to_twos(self.pointOffsetEl)
+            + utils.int_to_twos(self.posCalibChartEl)
+            + utils.int_to_twos(self.posCorrTableEl_F_plst_Az)
             + bin(self.posCorrTableElOn)[2:].zfill(8)
             + bin(self.encElFault)[2:].zfill(8)
-            + bin(self.posEncCw)[2:].zfill(32)
-            + bin(self.posCalibChartCw)[2:].zfill(32)
+            + utils.int_to_twos(self.posEncCw)
+            + utils.int_to_twos(self.posCalibChartCw)
             + bin(self.encCwFault)[2:].zfill(8)
             + bin(self.timeSource)[2:].zfill(16)
             + bin(self.actTime)[2:].zfill(64)
@@ -542,11 +543,11 @@ class PointingStatus(object):
             + bin(self.hour)[2:].zfill(16)
             + bin(self.minute)[2:].zfill(16)
             + bin(self.second)[2:].zfill(16)
-            + bin(self.actPtPos_Azimuth)[2:].zfill(32)
-            + bin(self.actPtPos_Elevation)[2:].zfill(32)
+            + utils.int_to_twos(self.actPtPos_Azimuth)
+            + utils.int_to_twos(self.actPtPos_Elevation)
             + bin(self.ptState)[2:].zfill(16)
             + self.get_errors()
-            + bin(self.actTimeOffset)[2:].zfill(32)
+            + utils.int_to_twos(self.actTimeOffset)
             + bin(self.ptInterpolMode)[2:].zfill(16)
             + bin(self.ptTrackingType)[2:].zfill(16)
             + bin(self.ptTrackingMode)[2:].zfill(16)
@@ -607,12 +608,7 @@ class ACUStatus(object):
             + self.FS.get_facility_status()
         )
 
-        response = b''
-
-        for i in range(0, len(response_string), 8):
-            response += chr(int(response_string[i:i + 8], 2))
-
-        return response
+        return utils.binary_to_bytes(response_string)
 
 
 class System(BaseSystem):
@@ -657,28 +653,13 @@ class System(BaseSystem):
             return False
 
         if len(self.msg) == 8:
-            self.msg_length = (
-                ord(self.msg[-4]) * 0x1000000
-                + ord(self.msg[-3]) * 0x10000
-                + ord(self.msg[-2]) * 0x100
-                + ord(self.msg[-1])
-            )
+            self.msg_length = utils.bytes_to_int(self.msg[-4:])
 
         if len(self.msg) == 12:
-            self.cmd_counter = (
-                ord(self.msg[-4]) * 0x1000000
-                + ord(self.msg[-3]) * 0x10000
-                + ord(self.msg[-2]) * 0x100
-                + ord(self.msg[-1])
-            )
+            self.cmd_counter = utils.bytes_to_int(self.msg[-4:])
 
         if len(self.msg) == 16:
-            self.cmds_counter = (
-                ord(self.msg[-4]) * 0x1000000
-                + ord(self.msg[-3]) * 0x10000
-                + ord(self.msg[-2]) * 0x100
-                + ord(self.msg[-1])
-            )
+            self.cmds_counter = utils.bytes_to_int(self.msg[-4:])
 
         if len(self.msg) > 16 and len(self.msg) == self.msg_length:
             msg = self.msg
@@ -713,13 +694,8 @@ class System(BaseSystem):
         self.status_counter += 1
 
         message = self.start_flag
-
-        for i in range(0, len(msg_length), 8):
-            message += chr(int(msg_length[i:i + 8], 2))
-
-        for i in range(0, len(msg_counter), 8):
-            message += chr(int(msg_counter[i:i + 8], 2))
-
+        message += utils.binary_to_bytes(msg_length)
+        message += utils.binary_to_bytes(msg_counter)
         message += status + self.end_flag
         return message
 
