@@ -30,6 +30,10 @@ class TestServer(unittest.TestCase):
             utils.int_to_twos(5),
             '00000000000000000000000000000101'
         )
+        self.assertEqual(
+            utils.int_to_twos(5, 2),
+            '0000000000000101'
+        )
 
     def test_out_of_range_int_to_twos(self):
         """Raise a ValueError in case of out of range integer value"""
@@ -60,6 +64,19 @@ class TestServer(unittest.TestCase):
         byte_string = utils.binary_to_bytes(binary_string)
         expected_byte_string = b'\x05\x1A\x28\xD3'
         self.assertNotEqual(byte_string, expected_byte_string)
+
+    def test_bytes_to_int_correct(self):
+        """Convert a string of bytes into an integer (like C atoi function)"""
+        byte_string = b'\x00\x00\xFA\xFF'
+        result = utils.bytes_to_int(byte_string)
+        expected_result = 64255
+        self.assertEqual(result, expected_result)
+
+    def test_bytes_to_int_wrong(self):
+        byte_string = b'\x00\x00\xFA\xFF'
+        result = utils.bytes_to_int(byte_string)
+        expected_result = -1281
+        self.assertNotEqual(result, expected_result)
 
 if __name__ == '__main__':
     unittest.main()

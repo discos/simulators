@@ -46,28 +46,38 @@ def twos_to_int(binary_string):
     return val
 
 
-def int_to_twos(val):
+def int_to_twos(val, n_bytes=4):
     """Return the two's complement of the given integer as a string of zeroes
-    and ones with len = 32.
+    and ones with len = 8*n_bytes.
 
     >>> int_to_twos(5)
     '00000000000000000000000000000101'
 
+    >>> int_to_twos(5, 2)
+    '0000000000000101'
+
     >>> int_to_twos(-1625)
     '11111111111111111111100110100111'
+
+    >>> int_to_twos(-1625, 2)
+    '1111100110100111'
 
     >>> int_to_twos(4294967295)
     Traceback (most recent call last):
         ...
     ValueError: 4294967295 out of range (-2147483648, 2147483647).
     """
-    if val < -2147483648 or val > 2147483647:
+    n_bits = 8 * n_bytes
+    min_range = -int(math.pow(2, n_bits - 1))
+    max_range = int(math.pow(2, n_bits - 1)) - 1
+
+    if val < min_range or val > max_range:
         raise ValueError(
             "%d out of range (%d, %d)."
-            % (val, -2147483648, 2147483647)
+            % (val, min_range, max_range)
         )
-    binary_string = bin(val & int("1" * 32, 2))[2:]
-    return ("{0:0>%s}" % 32).format(binary_string)
+    binary_string = bin(val & int("1" * n_bits, 2))[2:]
+    return ("{0:0>%s}" % n_bits).format(binary_string)
 
 
 def binary_to_bytes(binary_string):
@@ -83,6 +93,20 @@ def binary_to_bytes(binary_string):
         byte_string += chr(int(binary_string[i:i + 8], 2))
 
     return byte_string
+
+
+def bytes_to_int(byte_string):
+    """Convert a string of bytes to an integer (like C atoi function).
+
+    >>> bytes_to_int(b'\x10\x05\xFA\xFF')
+    268827391
+    """
+    binary_string = ''
+
+    for char in byte_string:
+        binary_string += bin(ord(char))[2:].zfill(8)
+
+    return twos_to_int(binary_string)
 
 
 def mjd():
