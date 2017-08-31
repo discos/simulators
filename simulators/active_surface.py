@@ -46,7 +46,7 @@ class Driver(object):
         self.reference_position = 0
         self.current_position = 0
         self.position_queue = Queue.Queue()
-        self.delay_multiplier = 0  # x * delay_step. 255: no response
+        self.delay_multiplier = 5  # x * delay_step. 255: no response
         self.standby_delay_multiplier = 0
         self.standby_mode = self.standby_modes.get(0)
         self.current_percentage = 1.0
