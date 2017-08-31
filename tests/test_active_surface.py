@@ -371,6 +371,13 @@ class TestASParse(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         self.assertTrue(self.system.parse(utils.checksum(msg)))
 
+    def test_set_exceeding_min_frequency(self):
+        self.test_set_in_range_max_frequency()
+        msg = b'\xFA\x60\x20\x27\x10'
+        for byte in msg:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+
     def test_set_in_range_max_frequency(self):
         """Setting max freq to 9000Hz (\x23\x28), allowed range is 20-10000Hz,
         so the system returns the byte_ack"""
@@ -410,6 +417,13 @@ class TestASParse(unittest.TestCase):
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertTrue(self.system.parse(utils.checksum(msg)))
+
+    def test_set_exceeding_max_frequency(self):
+        self.test_set_in_range_min_frequency()
+        msg = b'\xFA\x60\x21\x00\x14'
+        for byte in msg:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
 
     def test_set_slope(self):
         msg = b'\xFA\x40\x22\x00'
