@@ -547,8 +547,6 @@ class System(BaseSystem):
                 retval += (chr(byte_nbyte_address)
                            + chr((self.drivers[params[0]].version[0] + 0xF)
                            + self.drivers[params[0]].version[1]))
-            else:
-                return self.byte_nak
             return retval + utils.checksum(retval)
 
     def soft_stop(self, params):
@@ -588,8 +586,6 @@ class System(BaseSystem):
                 byte_nbyte_address = (int(bin(4)[2:].zfill(3)
                                       + bin(params[0])[2:].zfill(5), 2))
                 retval += chr(byte_nbyte_address) + val
-            else:
-                return self.byte_nak
 
             return retval + utils.checksum(retval)
 
@@ -609,8 +605,6 @@ class System(BaseSystem):
                 byte_nbyte_address = (int(bin(3)[2:].zfill(3)
                                       + bin(params[0])[2:].zfill(5), 2))
                 retval += chr(byte_nbyte_address) + status
-            else:
-                return self.byte_nak
             return retval + utils.checksum(retval)
 
     def get_driver_type(self, params):
@@ -630,8 +624,6 @@ class System(BaseSystem):
                 retval += (
                     chr(byte_nbyte_address)
                     + chr(self.drivers[params[0]].driver_type))
-            else:
-                return self.byte_nak
             return retval + utils.checksum(retval)
 
     def set_min_frequency(self, params):
