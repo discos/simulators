@@ -57,11 +57,11 @@ class TestASParse(unittest.TestCase):
             self.system.parse('\x01')
 
     def test_unknown_command(self):
-        msg = b'\xFA\x20\x00\xC5'
-        for byte in msg[:-1]:
+        msg = b'\xFA\x20\x00'
+        for byte in msg:
             self.system.parse(byte)
         with self.assertRaises(ValueError):
-            self.system.parse(msg[-1])
+            self.system.parse(utils.checksum(msg))
 
     def test_too_high_message_length(self):
         msg = b'\xFA\x00\x08'
@@ -201,7 +201,7 @@ class TestASParse(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         self.assertTrue(self.system.parse(utils.checksum(msg)))
 
-    def test_get_position(self):
+    def test_get_position_1(self):
         """The system returns True for every proper byte, and
         returns the byte_ack followed by the current driver position
         expressed as 4 bytes when the message is completed."""
@@ -210,6 +210,16 @@ class TestASParse(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(utils.checksum(msg))
         expected_length = 7  # byte_ack + byte_start + pos 3-0 + byte_checksum
+        self.assertEqual(expected_length, len(response))
+        self.assertEqual(response[0], byte_ack)
+
+    def test_get_position_2(self):
+        msg = b'\xFC\x20\x12'
+        for byte in msg:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(utils.checksum(msg))
+        expected_length = 8
+        # byte_ack + byte_start + byte_nbyte_address + pos 3-0 + byte_checksum
         self.assertEqual(expected_length, len(response))
         self.assertEqual(response[0], byte_ack)
 
@@ -231,7 +241,7 @@ class TestASParse(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         self.assertTrue(self.system.parse(utils.checksum(msg)))
 
-    def test_get_status(self):
+    def test_get_status_1(self):
         """The system returns True for every proper byte, and
         returns the byte_ack followed by the current driver status
         expressed as 3 bytes when the message is completed."""
@@ -241,6 +251,20 @@ class TestASParse(unittest.TestCase):
         response = self.system.parse(utils.checksum(msg))
         # byte_ack + byte_start + status 0-2 + byte_checksum
         expected_length = 6
+        self.assertEqual(expected_length, len(response))
+        self.assertEqual(response[0], byte_ack)
+
+    def test_get_status_2(self):
+        msg = b'\xFC\x20\x13'
+        for byte in msg:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(utils.checksum(msg))
+        # byte_ack
+        # + byte_start
+        # + byte_nbyte_address
+        # + status 0-2
+        # + byte_checksum
+        expected_length = 7
         self.assertEqual(expected_length, len(response))
         self.assertEqual(response[0], byte_ack)
 
@@ -262,7 +286,7 @@ class TestASParse(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         self.assertTrue(self.system.parse(utils.checksum(msg)))
 
-    def test_get_driver_type(self):
+    def test_get_driver_type_1(self):
         """The system returns True for every proper byte, and
         returns the byte_ack followed by the current driver type
         expressed as a byte when the message is completed."""
@@ -272,6 +296,20 @@ class TestASParse(unittest.TestCase):
         response = self.system.parse(utils.checksum(msg))
         # byte_ack + byte_start + driver_type + byte_checksum
         expected_length = 4
+        self.assertEqual(expected_length, len(response))
+        self.assertEqual(response[0], byte_ack)
+
+    def test_get_driver_type_2(self):
+        msg = b'\xFC\x20\x14'
+        for byte in msg:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(utils.checksum(msg))
+        # byte_ack
+        # + byte_start
+        # + byte_nbyte_address
+        # + driver_type
+        # + byte_checksum
+        expected_length = 5
         self.assertEqual(expected_length, len(response))
         self.assertEqual(response[0], byte_ack)
 
@@ -801,6 +839,13 @@ class TestASParse(unittest.TestCase):
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertTrue(self.system.parse(utils.checksum(msg)))
+
+    def test_delayed_execution(self):
+        self.test_toggle_delayed_execution_1()
+        self.test_set_relative_position()
+        self.test_set_absolute_position()
+        self.test_soft_trigger()
+        self.test_soft_trigger()
 
 
 if __name__ == '__main__':
