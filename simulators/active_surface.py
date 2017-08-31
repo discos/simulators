@@ -466,8 +466,6 @@ class System(BaseSystem):
             driver = -1
 
             nparams = ord(msg[2])
-            if nparams + 4 != len(msg):
-                return True
             cparams = msg[4:(4 + nparams - 1)]
 
             command = ord(msg[3])
@@ -477,8 +475,6 @@ class System(BaseSystem):
             driver = int(binary[3:], 2)
 
             nparams = int(binary[:3], 2)
-            if nparams + 3 != len(msg):
-                return True
             cparams = msg[3:(3 + nparams - 1)]
 
             command = ord(msg[2])
