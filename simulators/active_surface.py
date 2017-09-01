@@ -490,7 +490,8 @@ class System(BaseSystem):
                 else:
                     time.sleep(
                         self.drivers[driver].delay_multiplier
-                        * self.delay_step)
+                        * self.delay_step
+                    )
                 return retval
             else:
                 return True
@@ -535,14 +536,16 @@ class System(BaseSystem):
         else:
             retval = self.byte_ack + chr(params[1])
             if params[1] == 0xFA:
-                retval += (chr((self.drivers[params[0]].version[0] + 0xF)
-                           + self.drivers[params[0]].version[1]))
+                retval += chr(sum(self.drivers[params[0]].version) + 0xF)
             elif params[1] == 0xFC:
-                byte_nbyte_address = (int(bin(1)[2:].zfill(3)
-                                      + bin(params[0])[2:].zfill(5), 2))
-                retval += (chr(byte_nbyte_address)
-                           + chr((self.drivers[params[0]].version[0] + 0xF)
-                           + self.drivers[params[0]].version[1]))
+                byte_nbyte_address = (
+                    int(bin(1)[2:].zfill(3)
+                    + bin(params[0])[2:].zfill(5), 2)
+                )
+                retval += (
+                    chr(byte_nbyte_address)
+                    + chr(sum(self.drivers[params[0]].version) + 0xF)
+                )
             return retval + utils.checksum(retval)
 
     def soft_stop(self, params):
@@ -568,19 +571,19 @@ class System(BaseSystem):
         else:
             retval = self.byte_ack + chr(params[1])
 
-            bin_position = utils.int_to_twos(
-                self.drivers[params[0]].current_position)
+            binary_position = utils.int_to_twos(
+                self.drivers[params[0]].current_position
+            )
 
-            val = b''
-
-            for i in range(0, len(bin_position), 8):
-                val += chr(int(bin_position[i:(i + 8)], 2))
+            val = utils.binary_to_bytes(binary_position)
 
             if params[1] == 0xFA:
                 retval += val
             elif params[1] == 0xFC:
-                byte_nbyte_address = (int(bin(4)[2:].zfill(3)
-                                      + bin(params[0])[2:].zfill(5), 2))
+                byte_nbyte_address = (
+                    int(bin(4)[2:].zfill(3)
+                    + bin(params[0])[2:].zfill(5), 2)
+                )
                 retval += chr(byte_nbyte_address) + val
 
             return retval + utils.checksum(retval)
@@ -598,9 +601,12 @@ class System(BaseSystem):
             if params[1] == 0xFA:
                 retval += status
             elif params[1] == 0xFC:
-                byte_nbyte_address = (int(bin(3)[2:].zfill(3)
-                                      + bin(params[0])[2:].zfill(5), 2))
+                byte_nbyte_address = (
+                    int(bin(3)[2:].zfill(3)
+                    + bin(params[0])[2:].zfill(5), 2)
+                )
                 retval += chr(byte_nbyte_address) + status
+
             return retval + utils.checksum(retval)
 
     def get_driver_type(self, params):
@@ -615,11 +621,14 @@ class System(BaseSystem):
                 retval += chr(self.drivers[params[0]].driver_type)
             elif params[1] == 0xFC:
                 byte_nbyte_address = (
-                    int(bin(1)[2:].zfill(3) + bin(params[0])[2:].zfill(5),
-                    2))
+                    int(bin(1)[2:].zfill(3)
+                    + bin(params[0])[2:].zfill(5), 2)
+                )
                 retval += (
                     chr(byte_nbyte_address)
-                    + chr(self.drivers[params[0]].driver_type))
+                    + chr(self.drivers[params[0]].driver_type)
+                )
+
             return retval + utils.checksum(retval)
 
     def set_min_frequency(self, params):
@@ -629,7 +638,7 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            frequency = params[2][0] * 0x100 + params[2][1]
+            frequency = utils.bytes_to_int([chr(x) for x in params[2]])
 
             if frequency >= 20 and frequency <= 10000:
                 if params[0] == -1:
@@ -656,7 +665,7 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            frequency = params[2][0] * 0x100 + params[2][1]
+            frequency = utils.bytes_to_int([chr(x) for x in params[2]])
 
             if frequency >= 20 and frequency <= 10000:
                 if params[0] == -1:
@@ -700,11 +709,10 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            reference_position = utils.twos_to_int(
-                bin(params[2][0] * 0x1000000
-                + params[2][1] * 0x10000
-                + params[2][2] * 0x100
-                + params[2][3])[2:].zfill(32))
+            reference_position = utils.bytes_to_int(
+                [chr(x) for x in params[2]]
+            )
+
             if params[0] == -1:
                 for driver in self.drivers:
                     driver.set_reference_position(reference_position)
@@ -798,11 +806,8 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            absolute_position = utils.twos_to_int(
-                bin(params[2][0] * 0x1000000
-                + params[2][1] * 0x10000
-                + params[2][2] * 0x100
-                + params[2][3])[2:].zfill(32))
+            absolute_position = utils.bytes_to_int([chr(x) for x in params[2]])
+
             if params[0] == -1:
                 for driver in self.drivers:
                     driver.set_absolute_position(absolute_position)
@@ -818,11 +823,8 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            relative_position = utils.twos_to_int(
-                bin(params[2][0] * 0x1000000
-                + params[2][1] * 0x10000
-                + params[2][2] * 0x100
-                + params[2][3])[2:].zfill(32))
+            relative_position = utils.bytes_to_int([chr(x) for x in params[2]])
+
             if params[0] == -1:
                 for driver in self.drivers:
                     driver.set_relative_position(relative_position)
@@ -857,10 +859,8 @@ class System(BaseSystem):
             else:
                 return self.byte_nak
         else:
-            velocity = utils.twos_to_int(
-                bin(params[2][0] * 0x10000
-                + params[2][1] * 0x100
-                + params[2][2])[2:].zfill(24))
+            velocity = utils.bytes_to_int([chr(x) for x in params[2]])
+
             if velocity > 100000 or velocity < -100000:
                 if params[0] == -1:
                     return
@@ -931,7 +931,7 @@ class System(BaseSystem):
                 return self.byte_ack
 
 # Each system module (like active_surface.py, acu.py, etc.) has to
-# define a list called servers.  This list contains tuples (address, args).
+# define a list called servers.s This list contains tuples (address, args).
 # address is the tuple (ip, port) that defines the node, while args is a tuple
 # of optional extra arguments.
 servers = []
