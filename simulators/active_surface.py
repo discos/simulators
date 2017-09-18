@@ -6,6 +6,8 @@ from simulators.common import BaseSystem
 
 
 class Driver(object):
+    """This class represents a single USD actuator. It is completely handled by
+    the active surface System class."""
 
     standby_delay_step = 0.004096  # 4096 microseconds
 
@@ -55,7 +57,7 @@ class Driver(object):
         self.slope_multiplier = 1
         self.min_frequency = 20
         self.max_frequency = 10000
-        self.io_dir = [0, 0, 0]  # 0: input, 1: output
+        self.io_dir = [0, 1, 0]  # 0: input, 1: output
         # The following values show the corresponding I/O line value,
         # but only if the direction of the I/O line is set to output
         # i.e.: (io_dir[x] = 1)
