@@ -297,6 +297,10 @@ Useful Functions and Classes
 
 .. autofunction:: int_to_twos
 
+.. autofunction:: binary_to_bytes
+
+.. autofunction:: bytes_to_int
+
 .. autofunction:: mjd
 
 .. autofunction:: day_milliseconds

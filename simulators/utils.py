@@ -98,8 +98,8 @@ def binary_to_bytes(binary_string):
 def bytes_to_int(byte_string):
     """Convert a string of bytes to an integer (like C atoi function).
 
-    >>> bytes_to_int(b'\x10\x05\xFA\xFF')
-    268827391
+    >>> bytes_to_int(b'hello')
+    448378203247
     """
     binary_string = ''
 
@@ -110,7 +110,9 @@ def bytes_to_int(byte_string):
 
 
 def mjd():
-    """Return the modified julian date. https://bowie.gsfc.nasa.gov/time/"""
+    """Return the modified julian date.
+    For more informations about modified julian date check the following link:
+    https://bowie.gsfc.nasa.gov/time/"""
     utcnow = datetime.utcnow()
 
     year = utcnow.year
