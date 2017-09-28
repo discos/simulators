@@ -83,15 +83,6 @@ class TestIFDistributorParse(unittest.TestCase):
             self.system.parse(byte)
         self.assertEqual(self.system.ATT_0, value)
 
-    def _test_set_and_get_value(self):
-        value = self.system.devices['ATT'][0][1]
-        # Set the value
-        for byte in b'#ATT 00 001\n':
-            self.system.parse(byte)
-        print value
-        # Get the value
-
-
     def test_wrong_command(self):
         # #aaa99999\n
         pass
