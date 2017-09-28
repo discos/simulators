@@ -23,6 +23,9 @@ class System(BaseSystem):
 
     def __init__(self):
         self.msg = b''
+        self._set_default()
+
+    def _set_default(self):
         for device in self.devices:
             for address in self.devices[device]:
                 attr_name = '%s_%s' % (device, address)
@@ -116,6 +119,12 @@ class System(BaseSystem):
             if command == b'*IDN?':
                 return self.version
 
+            # RST command
+            if command == b'*RST':
+                self._set_default()
+
+            # Not expected command
+            return b'#COMMAND UNKNOW\n'
 
 # Each system module (like active_surface.py, acu.py, etc.) has to
 # define a list called servers.s This list contains tuples (address, args).
