@@ -19,6 +19,7 @@ class System(BaseSystem):
             0: {0: 0, 1: 1}
         },
     }
+    version = b'SRT IF Distributor 4.6.5 5.4.3'
 
     def __init__(self):
         self.msg = b''
@@ -110,6 +111,10 @@ class System(BaseSystem):
                 else:
                     attr_name = '%s_%s' % (device, device_address)
                     return b'#%s\n' % getattr(self, attr_name)
+
+            # IDN request
+            if command == b'*IDN?':
+                return self.version
 
 
 # Each system module (like active_surface.py, acu.py, etc.) has to

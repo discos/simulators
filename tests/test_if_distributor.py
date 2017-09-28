@@ -134,6 +134,13 @@ class TestIFDistributorParse(unittest.TestCase):
         response = self.system.parse(msg[-1])
         self.assertEqual(response, b'#%s\n' % value)
 
+    def test_idn_command(self):
+        version = self.system.version
+        # Get the value
+        for byte in b'#*IDN?\n':
+            response = self.system.parse(byte)
+        self.assertEqual(response, version)
+
     def test_wrong_command(self):
         # #aaa99999\n
         pass
