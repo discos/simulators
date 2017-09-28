@@ -2,6 +2,8 @@
 
   $ discos-simulator start -s active_surface
   $ discos-simulator stop -s active_surface
+  $ discos-simulator start -s if_distributor
+  $ discos-simulator stop -s if_distributor
 """
 import importlib
 from argparse import ArgumentParser, ArgumentTypeError
