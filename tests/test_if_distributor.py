@@ -141,9 +141,32 @@ class TestIFDistributorParse(unittest.TestCase):
             response = self.system.parse(byte)
         self.assertEqual(response, version)
 
+    def test_rst(self):
+        # Set a non-default value
+        value = self.system.devices['ATT'][0][1]
+        for byte in b'#ATT 00 001\n':
+            self.system.parse(byte)
+        # Get the value
+        msg = b'#ATT 00?\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1])
+        self.assertEqual(response, b'#%s\n' % value)
+        # Set the default values
+        for byte in b'#*RST\n':
+            self.system.parse(byte)
+        # Get the value
+        msg = b'#ATT 00?\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        default_value = self.system.devices['ATT'][0][0]
+        response = self.system.parse(msg[-1])
+        self.assertEqual(response, '#%s\n' % default_value)
+
     def test_wrong_command(self):
-        # #aaa99999\n
-        pass
+        for byte in b'#abcdefg\n':
+            response = self.system.parse(byte)
+        self.assertEqual(response, b'#COMMAND UNKNOW\n')
 
 
 if __name__ == '__main__':
