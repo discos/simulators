@@ -34,3 +34,6 @@ To stop the simulator:
 .. code-block:: bash
 
    $ discos-simulator stop -s active_surface
+
+Currently only two simulators are available: ``active_surface`` and
+``if_distributor``.
