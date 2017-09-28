@@ -66,7 +66,7 @@ class TestServer(unittest.TestCase):
         self.assertNotEqual(byte_string, expected_byte_string)
 
     def test_bytes_to_int_correct(self):
-        """Convert a string of bytes into an integer (like C atoi function)"""
+        """Convert a string of bytes into an integer (like C atoi function)."""
         byte_string = b'\x00\x00\xFA\xFF'
         result = utils.bytes_to_int(byte_string)
         expected_result = 64255
@@ -76,6 +76,23 @@ class TestServer(unittest.TestCase):
         byte_string = b'\x00\x00\xFA\xFF'
         result = utils.bytes_to_int(byte_string)
         expected_result = -1281
+        self.assertNotEqual(result, expected_result)
+
+    def test_double_to_binary(self):
+        """Convert a double to its binary representation."""
+        number = 3.14159265358979323846264338327950288419716939937510582097494
+        result = utils.double_to_binary(number)
+        expected_result = (
+            '0100000000001001001000011111101101010100010001000010110100011000'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_double_to_binary_wrong(self):
+        number = 3.14159265358979323846264338327950288419716939937510582097494
+        result = utils.double_to_binary(number)
+        expected_result = (
+            '0100000000001001001010011111101101010100010001000010110100011000'
+        )
         self.assertNotEqual(result, expected_result)
 
 if __name__ == '__main__':

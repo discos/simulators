@@ -1,4 +1,5 @@
 import math
+import struct
 from datetime import datetime
 
 
@@ -109,10 +110,32 @@ def bytes_to_int(byte_string):
     return twos_to_int(binary_string)
 
 
+def double_to_binary(num):
+    """Return the binary representation of a double-precision floating-point
+    number (IEEE 754 standard). A format description can be found here:
+    https://en.wikipedia.org/wiki/Double-precision_floating-point_format.
+
+    >>> double_to_binary(1)
+    '0011111111110000000000000000000000000000000000000000000000000000'
+
+    >>> double_to_binary(0.56734)
+    '0011111111100010001001111010011000110111001101101100110111110010'
+
+    >>> double_to_binary(619.34000405413)
+    '0100000010000011010110101011100001010100000010111010011111110111'
+    """
+
+    return ''.join(
+        bin(ord(c)).replace('0b', '').rjust(8, '0')
+        for c in struct.pack('!d', num)
+    )
+
+
 def mjd():
     """Return the modified julian date.
     For more informations about modified julian date check the following link:
     https://bowie.gsfc.nasa.gov/time/"""
+
     utcnow = datetime.utcnow()
 
     year = utcnow.year
