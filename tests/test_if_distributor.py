@@ -42,7 +42,7 @@ class TestIFDistributorParse(unittest.TestCase):
         with self.assertRaisesRegexp(ValueError, 'device aaa not in'):
             self.system.parse(msg[-1])
 
-    def test_setup_id_not_integer(self):
+    def test_setup_address_not_integer(self):
         """Raise ValueError in case the device ID is not an integer."""
         msg = b'#ATT XX 999\n'  # The ID XX is not an integer
         for byte in msg[:-1]:
@@ -51,7 +51,7 @@ class TestIFDistributorParse(unittest.TestCase):
                 ValueError, 'the device ID must be an integer'):
             self.system.parse(msg[-1])
 
-    def test_setup_id_not_allowed(self):
+    def test_setup_address_not_allowed(self):
         """Raise ValueError in case of wrong device ID."""
         msg = b'#ATT 99 999\n'  # The ID 99 does not exist
         for byte in msg[:-1]:
@@ -82,6 +82,57 @@ class TestIFDistributorParse(unittest.TestCase):
         for byte in b'#ATT 00 001\n':
             self.system.parse(byte)
         self.assertEqual(self.system.ATT_0, value)
+
+    def test_default_setup(self):
+        """The device must have a default value."""
+        defalut_value = self.system.devices['ATT'][0][0]
+        self.assertEqual(self.system.ATT_0, defalut_value)
+
+    def test_wong_number_of_get_items(self):
+        """Raise ValueError in case the GET has wrong number of items."""
+        msg = b'#aaa 99 99?\n'  # Two items required, three given
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        with self.assertRaisesRegexp(ValueError, 'must have two items'):
+            self.system.parse(msg[-1])
+
+    def test_wong_get_device(self):
+        """Raise ValueError in case the GET device is unknown."""
+        # The device type has to be ATT or SWT
+        msg = b'#aaa 99?\n'  # aaa is not a valid device type
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        with self.assertRaisesRegexp(ValueError, 'device aaa not in'):
+            self.system.parse(msg[-1])
+
+    def test_get_address_not_integer(self):
+        """Raise ValueError in case the device ID is not an integer."""
+        msg = b'#ATT XX?\n'  # The ID XX is not an integer
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        with self.assertRaisesRegexp(
+                ValueError, 'the device ID must be an integer'):
+            self.system.parse(msg[-1])
+
+    def test_get_address_not_allowed(self):
+        """Raise ValueError in case of wrong device ID."""
+        msg = b'#ATT 99?\n'  # The ID 99 does not exist
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        with self.assertRaisesRegexp(ValueError, 'device 99 does not exist'):
+            self.system.parse(msg[-1])
+
+    def test_set_and_get_value(self):
+        value = self.system.devices['ATT'][0][1]
+        # Set the value
+        for byte in b'#ATT 00 001\n':
+            self.system.parse(byte)
+        # Get the value
+        msg = b'#ATT 00?\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1])
+        self.assertEqual(response, b'#%s\n' % value)
 
     def test_wrong_command(self):
         # #aaa99999\n

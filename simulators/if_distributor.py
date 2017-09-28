@@ -22,6 +22,11 @@ class System(BaseSystem):
 
     def __init__(self):
         self.msg = b''
+        for device in self.devices:
+            for address in self.devices[device]:
+                attr_name = '%s_%s' % (device, address)
+                value = self.devices[device][address][0]
+                setattr(self, attr_name, value)
 
     def parse(self, byte):
         self.msg += byte
@@ -41,8 +46,8 @@ class System(BaseSystem):
         elif byte == self.tail:
             command = self.msg[1:-1]  # Remove the header and tail
             self.msg = b''
-            # Check if the command is a setup
-            if b' ' in command:
+            # Setup command
+            if b' ' in command and b'?' not in command:
                 try:
                     device, address, value = command.split()
                 except ValueError:
@@ -77,6 +82,34 @@ class System(BaseSystem):
                     values = self.devices[device][device_address]
                     attr_value = values[device_value]
                     setattr(self, attr_name, attr_value)
+                    return b''
+
+            # Get request
+            if b' ' in command and b'?' in command:
+                command = command.rstrip('?')
+                try:
+                    device, address = command.split()
+                except ValueError:
+                    raise ValueError(
+                        'the get command must have two items: '
+                        'device and address.'
+                    )
+
+                if device not in self.devices:
+                    raise ValueError(
+                        'device %s not in %s' % (device, self.devices.keys()))
+
+                try:
+                    device_address = int(address)
+                except ValueError:
+                    raise ValueError('the device ID must be an integer.')
+
+                if device_address not in self.devices[device]:
+                    raise ValueError(
+                        'device %d does not exist.' % device_address)
+                else:
+                    attr_name = '%s_%s' % (device, device_address)
+                    return b'#%s\n' % getattr(self, attr_name)
 
 
 # Each system module (like active_surface.py, acu.py, etc.) has to
