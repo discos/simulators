@@ -107,7 +107,7 @@ class TestServer(unittest.TestCase):
     def test_real_to_binary_unknown_precision(self):
         number = 3.14159265358979323846264338327950288419716939937510582097494
         with self.assertRaises(ValueError):
-            result = utils.real_to_binary(number, 3)
+            utils.real_to_binary(number, 3)
 
 if __name__ == '__main__':
     unittest.main()
