@@ -110,25 +110,38 @@ def bytes_to_int(byte_string):
     return twos_to_int(binary_string)
 
 
-def double_to_binary(num):
-    """Return the binary representation of a double-precision floating-point
-    number (IEEE 754 standard). A format description can be found here:
+def real_to_binary(num, precision=1):
+    """Return the binary representation of a floating-point number
+    (IEEE 754 standard).
+    A single-precision format description can be found here:
+    https://en.wikipedia.org/wiki/Single-precision_floating-point_format
+    A double-precision format description can be found here:
     https://en.wikipedia.org/wiki/Double-precision_floating-point_format.
 
-    >>> double_to_binary(1)
-    '0011111111110000000000000000000000000000000000000000000000000000'
+    >>> real_to_binary(619.34000405413)
+    '01000100000110101101010111000011'
 
-    >>> double_to_binary(0.56734)
-    '0011111111100010001001111010011000110111001101101100110111110010'
-
-    >>> double_to_binary(619.34000405413)
+    >>> real_to_binary(619.34000405413, 2)
     '0100000010000011010110101011100001010100000010111010011111110111'
-    """
 
-    return ''.join(
-        bin(ord(c)).replace('0b', '').rjust(8, '0')
-        for c in struct.pack('!d', num)
-    )
+    >>> real_to_binary(0.56734, 1)
+    '00111111000100010011110100110010'
+    """
+    if precision == 1:
+        return ''.join(
+            bin(ord(c)).replace('0b', '').rjust(8, '0')
+            for c in struct.pack('!f', num)
+        )
+    elif precision == 2:
+        return ''.join(
+            bin(ord(c)).replace('0b', '').rjust(8, '0')
+            for c in struct.pack('!d', num)
+        )
+    else:
+        raise ValueError(
+            "Unknown precision %d."
+            % (precision)
+        )
 
 
 def mjd():

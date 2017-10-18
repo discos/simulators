@@ -78,22 +78,36 @@ class TestServer(unittest.TestCase):
         expected_result = -1281
         self.assertNotEqual(result, expected_result)
 
-    def test_double_to_binary(self):
-        """Convert a double to its binary representation."""
+    def test_real_to_binary_single_precision(self):
+        """Convert a real number to its binary representation."""
         number = 3.14159265358979323846264338327950288419716939937510582097494
-        result = utils.double_to_binary(number)
+        result = utils.real_to_binary(number)
+        expected_result = (
+            '01000000010010010000111111011011'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_real_to_binary_double_precision(self):
+        """Convert a real number to its binary representation."""
+        number = 3.14159265358979323846264338327950288419716939937510582097494
+        result = utils.real_to_binary(number, 2)
         expected_result = (
             '0100000000001001001000011111101101010100010001000010110100011000'
         )
         self.assertEqual(result, expected_result)
 
-    def test_double_to_binary_wrong(self):
+    def test_real_to_binary_wrong(self):
         number = 3.14159265358979323846264338327950288419716939937510582097494
-        result = utils.double_to_binary(number)
+        result = utils.real_to_binary(number)
         expected_result = (
             '0100000000001001001010011111101101010100010001000010110100011000'
         )
         self.assertNotEqual(result, expected_result)
+
+    def test_real_to_binary_unknown_precision(self):
+        number = 3.14159265358979323846264338327950288419716939937510582097494
+        with self.assertRaises(ValueError):
+            utils.real_to_binary(number, 3)
 
 if __name__ == '__main__':
     unittest.main()
