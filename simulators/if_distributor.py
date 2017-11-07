@@ -9,16 +9,12 @@ class System(BaseSystem):
     # The dictionary devices has the device types as keys,
     # and a dictionary as value.  The value has the address as
     # key and the allowed values as value
-    devices = {
-        'ATT': {
-            0: {0: 0, 1: 0.025, 2: 0.05},
-            1: {0: 0.035, 1: 0.70},
-            2: {0: 0.01}
-        },
-        'SWT': {
-            0: {0: 0, 1: 1}
-        },
-    }
+    allowed_commands = ['ATT', 'SWT']
+    max_channels = 96
+    max_att_multiplier = 126
+    att_step = 0.025
+    channels = [max_att_multiplier] * max_channels
+    switched = False
     version = b'SRT IF Distributor 4.6.5 5.4.3'
 
     def __init__(self):
@@ -26,11 +22,8 @@ class System(BaseSystem):
         self._set_default()
 
     def _set_default(self):
-        for device in self.devices:
-            for address in self.devices[device]:
-                attr_name = '%s_%s' % (device, address)
-                value = self.devices[device][address][0]
-                setattr(self, attr_name, value)
+        self.channels = [self.max_att_multiplier] * self.max_channels
+        self.switched = False
 
     def parse(self, byte):
         self.msg += byte
@@ -48,79 +41,86 @@ class System(BaseSystem):
                 self.max_msg_length
             )
         elif byte == self.tail:
-            command = self.msg[1:-1]  # Remove the header and tail
+            msg = self.msg[1:-1]  # Remove the header and tail
             self.msg = b''
             # Setup command
-            if b' ' in command and b'?' not in command:
+            if b' ' in msg and b'?' not in msg:
                 try:
-                    device, address, value = command.split()
+                    command, channel, value = msg.split()
                 except ValueError:
                     raise ValueError(
-                        'the setup command must have three items: '
-                        'device, address, and value.'
+                        'the setup message must have three items: '
+                        'command, channel, and value.'
                     )
 
-                if device not in self.devices:
+                if command not in self.allowed_commands:
                     raise ValueError(
-                        'device %s not in %s' % (device, self.devices.keys()))
+                        'command %s not in %s' % (command, self.allowed_commands))
 
                 try:
-                    device_address = int(address)
+                    channel = int(channel)
                 except ValueError:
-                    raise ValueError('the device ID must be an integer.')
+                    raise ValueError('the channel ID must be an integer.')
 
-                if device_address not in self.devices[device]:
+                if channel >= self.max_channels or channel < 0:
                     raise ValueError(
-                        'device %d does not exist.' % device_address)
+                        'channel %d does not exist.' % channel)
 
                 try:
-                    device_value = int(value)
+                    value = int(value)
                 except ValueError:
-                    raise ValueError('the device value must be an integer.')
+                    raise ValueError('the command value must be an integer.')
 
-                if device_value not in self.devices[device][device_address]:
-                    raise ValueError(
-                        'device value %d not allowed' % device_value)
-                else:
-                    attr_name = '%s_%s' % (device, device_address)
-                    values = self.devices[device][device_address]
-                    attr_value = values[device_value]
-                    setattr(self, attr_name, attr_value)
-                    return b''
+                if command == 'ATT':
+                    if value < 0 or value >= self.max_att_multiplier:
+                        raise ValueError('value %d not allowed' % value)
+                    else:
+                        self.channels[channel] = value
+                elif command == 'SWT':
+                    if value == 0:
+                        self.switched = False
+                    elif value == 1:
+                        self.switched = True
+                    else:
+                        raise ValueError(
+                            'SWT command accepts only values 00 or 01')
+                return b''
 
             # Get request
-            if b' ' in command and b'?' in command:
-                command = command.rstrip('?')
+            if b' ' in msg and b'?' in msg:
+                msg = msg.rstrip('?')
                 try:
-                    device, address = command.split()
+                    command, channel = msg.split()
                 except ValueError:
                     raise ValueError(
-                        'the get command must have two items: '
-                        'device and address.'
+                        'the get message must have two items: '
+                        'command and channel.'
                     )
 
-                if device not in self.devices:
-                    raise ValueError(
-                        'device %s not in %s' % (device, self.devices.keys()))
-
                 try:
-                    device_address = int(address)
+                    channel = int(channel)
                 except ValueError:
-                    raise ValueError('the device ID must be an integer.')
+                    raise ValueError('the channel ID must be an integer.')
 
-                if device_address not in self.devices[device]:
+                if channel >= self.max_channels or channel < 0:
                     raise ValueError(
-                        'device %d does not exist.' % device_address)
+                        'channel %d does not exist.' % channel)
                 else:
-                    attr_name = '%s_%s' % (device, device_address)
-                    return b'#%s\n' % getattr(self, attr_name)
+                    if command == 'ATT':
+                        return b'#%s\n' % str(self.channels[channel] * self.att_step)
+                    elif command == 'SWT':
+                        return b'#%s\n' % (1 if self.switched else 0)
+                    else:
+                        raise ValueError(
+                            'command %s not in %s'
+                            % (command, self.allowed_commands))
 
             # IDN request
-            if command == b'*IDN?':
+            if msg == b'*IDN?':
                 return self.version
 
             # RST command
-            if command == b'*RST':
+            if msg == b'*RST':
                 self._set_default()
 
             # Not expected command

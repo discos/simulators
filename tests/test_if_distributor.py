@@ -25,7 +25,7 @@ class TestIFDistributorParse(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.system.parse(msg[-1])
 
-    def test_wong_number_of_setup_items(self):
+    def test_wrong_number_of_setup_items(self):
         """Raise ValueError in case the setup has wrong number of items."""
         msg = b'#aaa 99999\n'  # Three items required, two given
         for byte in msg[:-1]:
@@ -33,30 +33,30 @@ class TestIFDistributorParse(unittest.TestCase):
         with self.assertRaisesRegexp(ValueError, 'must have three items'):
             self.system.parse(msg[-1])
 
-    def test_wong_setup_device(self):
-        """Raise ValueError in case the setup device is unknown."""
-        # The device type has to be ATT or SWT
-        msg = b'#aaa 99 999\n'  # aaa is not a valid device type
+    def test_wrong_setup_command(self):
+        """Raise ValueError in case the setup command is unknown."""
+        # The command type has to be ATT or SWT
+        msg = b'#aaa 99 999\n'  # aaa is not a valid command type
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
-        with self.assertRaisesRegexp(ValueError, 'device aaa not in'):
+        with self.assertRaisesRegexp(ValueError, 'command aaa not in'):
             self.system.parse(msg[-1])
 
-    def test_setup_address_not_integer(self):
-        """Raise ValueError in case the device ID is not an integer."""
+    def test_setup_channel_not_integer(self):
+        """Raise ValueError in case the channel ID is not an integer."""
         msg = b'#ATT XX 999\n'  # The ID XX is not an integer
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         with self.assertRaisesRegexp(
-                ValueError, 'the device ID must be an integer'):
+                ValueError, 'the channel ID must be an integer'):
             self.system.parse(msg[-1])
 
-    def test_setup_address_not_allowed(self):
-        """Raise ValueError in case of wrong device ID."""
+    def test_setup_channel_not_allowed(self):
+        """Raise ValueError in case of wrong channel ID."""
         msg = b'#ATT 99 999\n'  # The ID 99 does not exist
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
-        with self.assertRaisesRegexp(ValueError, 'device 99 does not exist'):
+        with self.assertRaisesRegexp(ValueError, 'channel 99 does not exist'):
             self.system.parse(msg[-1])
 
     def test_setup_value_not_integer(self):
@@ -65,7 +65,7 @@ class TestIFDistributorParse(unittest.TestCase):
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         with self.assertRaisesRegexp(
-                ValueError, 'the device value must be an integer'):
+                ValueError, 'the command value must be an integer'):
             self.system.parse(msg[-1])
 
     def test_setup_value_not_allowed(self):
@@ -77,18 +77,18 @@ class TestIFDistributorParse(unittest.TestCase):
             self.system.parse(msg[-1])
 
     def test_setup_sets_the_value(self):
-        """The setup has to set the device value."""
-        value = self.system.devices['ATT'][0][1]
-        for byte in b'#ATT 00 001\n':
+        """The setup has to set the channel value."""
+        value = 100
+        for byte in b'#ATT 00 %03d\n' % value:
             self.system.parse(byte)
-        self.assertEqual(self.system.ATT_0, value)
+        self.assertEqual(self.system.channels[0], value)
 
     def test_default_setup(self):
-        """The device must have a default value."""
-        defalut_value = self.system.devices['ATT'][0][0]
-        self.assertEqual(self.system.ATT_0, defalut_value)
+        """The channel must have a default value."""
+        default_value = self.system.max_att_multiplier
+        self.assertEqual(self.system.channels[0], default_value)
 
-    def test_wong_number_of_get_items(self):
+    def test_wrong_number_of_get_items(self):
         """Raise ValueError in case the GET has wrong number of items."""
         msg = b'#aaa 99 99?\n'  # Two items required, three given
         for byte in msg[:-1]:
@@ -96,43 +96,43 @@ class TestIFDistributorParse(unittest.TestCase):
         with self.assertRaisesRegexp(ValueError, 'must have two items'):
             self.system.parse(msg[-1])
 
-    def test_wong_get_device(self):
-        """Raise ValueError in case the GET device is unknown."""
-        # The device type has to be ATT or SWT
-        msg = b'#aaa 99?\n'  # aaa is not a valid device type
+    def test_wrong_get_channel(self):
+        """Raise ValueError in case the GET command is unknown."""
+        # The command type has to be ATT or SWT
+        msg = b'#aaa 00?\n'  # aaa is not a valid command type
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
-        with self.assertRaisesRegexp(ValueError, 'device aaa not in'):
+        with self.assertRaisesRegexp(ValueError, 'command aaa not in'):
             self.system.parse(msg[-1])
 
-    def test_get_address_not_integer(self):
-        """Raise ValueError in case the device ID is not an integer."""
+    def test_get_channel_not_integer(self):
+        """Raise ValueError in case the channel ID is not an integer."""
         msg = b'#ATT XX?\n'  # The ID XX is not an integer
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         with self.assertRaisesRegexp(
-                ValueError, 'the device ID must be an integer'):
+                ValueError, 'the channel ID must be an integer'):
             self.system.parse(msg[-1])
 
-    def test_get_address_not_allowed(self):
-        """Raise ValueError in case of wrong device ID."""
+    def test_get_channel_not_allowed(self):
+        """Raise ValueError in case of wrong channel ID."""
         msg = b'#ATT 99?\n'  # The ID 99 does not exist
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
-        with self.assertRaisesRegexp(ValueError, 'device 99 does not exist'):
+        with self.assertRaisesRegexp(ValueError, 'channel 99 does not exist'):
             self.system.parse(msg[-1])
 
     def test_set_and_get_value(self):
-        value = self.system.devices['ATT'][0][1]
+        value = 100
         # Set the value
-        for byte in b'#ATT 00 001\n':
+        for byte in b'#ATT 00 %03d\n' % value:
             self.system.parse(byte)
         # Get the value
         msg = b'#ATT 00?\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1])
-        self.assertEqual(response, b'#%s\n' % value)
+        self.assertEqual(response, b'#%s\n' % (value * self.system.att_step))
 
     def test_idn_command(self):
         version = self.system.version
@@ -143,15 +143,15 @@ class TestIFDistributorParse(unittest.TestCase):
 
     def test_rst(self):
         # Set a non-default value
-        value = self.system.devices['ATT'][0][1]
-        for byte in b'#ATT 00 001\n':
+        value = 100
+        for byte in b'#ATT 00 %03d\n' % value:
             self.system.parse(byte)
         # Get the value
         msg = b'#ATT 00?\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1])
-        self.assertEqual(response, b'#%s\n' % value)
+        self.assertEqual(response, b'#%s\n' % (value * self.system.att_step))
         # Set the default values
         for byte in b'#*RST\n':
             self.system.parse(byte)
@@ -159,7 +159,7 @@ class TestIFDistributorParse(unittest.TestCase):
         msg = b'#ATT 00?\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
-        default_value = self.system.devices['ATT'][0][0]
+        default_value = self.system.max_att_multiplier * self.system.att_step
         response = self.system.parse(msg[-1])
         self.assertEqual(response, '#%s\n' % default_value)
 
