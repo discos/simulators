@@ -55,7 +55,9 @@ class System(BaseSystem):
 
                 if command not in self.allowed_commands:
                     raise ValueError(
-                        'command %s not in %s' % (command, self.allowed_commands))
+                        'command %s not in %s'
+                        % (command, self.allowed_commands)
+                    )
 
                 try:
                     channel = int(channel)
@@ -107,7 +109,8 @@ class System(BaseSystem):
                         'channel %d does not exist.' % channel)
                 else:
                     if command == 'ATT':
-                        return b'#%s\n' % str(self.channels[channel] * self.att_step)
+                        return b'#%s\n' % str(
+                            self.channels[channel] * self.att_step)
                     elif command == 'SWT':
                         return b'#%s\n' % (1 if self.switched else 0)
                     else:
