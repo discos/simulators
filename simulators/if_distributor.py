@@ -11,8 +11,9 @@ class System(BaseSystem):
     # key and the allowed values as value
     allowed_commands = ['ATT', 'SWT']
     max_channels = 96
-    max_att_multiplier = 126
-    att_step = 0.025
+    max_att = 31.75
+    att_step = 0.25
+    max_att_multiplier = max_att / att_step
     channels = [max_att_multiplier] * max_channels
     switched = False
     version = b'SRT IF Distributor 4.6.5 5.4.3'
