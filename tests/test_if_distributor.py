@@ -174,6 +174,16 @@ class TestIFDistributorParse(unittest.TestCase):
             self.system.parse(byte)
         self.assertTrue(self.system.switched)
 
+    def test_enable_and_disable_switch(self):
+        msg = b'#SWT 00 001\n'
+        for byte in msg:
+            self.system.parse(byte)
+        self.assertTrue(self.system.switched)
+        msg = b'#SWT 00 000\n'
+        for byte in msg:
+            self.system.parse(byte)
+        self.assertFalse(self.system.switched)
+
     def test_get_switch(self):
         msg = b'#SWT 00?\n'
         for byte in msg:
@@ -190,6 +200,14 @@ class TestIFDistributorParse(unittest.TestCase):
             response = self.system.parse(byte)
         expected_response = b'#1\n'
         self.assertEqual(expected_response, response)
+
+    def test_set_wrong_switch(self):
+        msg = b'#SWT 00 002\n'  # Only 000 and 001 are accepted
+        for byte in msg[:-1]:
+            self.system.parse(byte)
+        with self.assertRaisesRegexp(
+            ValueError, 'SWT command accepts only values 00 or 01'):
+            self.system.parse(msg[-1])
 
 
 if __name__ == '__main__':
