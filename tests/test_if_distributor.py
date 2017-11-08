@@ -168,6 +168,29 @@ class TestIFDistributorParse(unittest.TestCase):
             response = self.system.parse(byte)
         self.assertEqual(response, b'#COMMAND UNKNOW\n')
 
+    def test_set_switch(self):
+        msg = b'#SWT 00 001\n'
+        for byte in msg:
+            self.system.parse(byte)
+        self.assertTrue(self.system.switched)
+
+    def test_get_switch(self):
+        msg = b'#SWT 00?\n'
+        for byte in msg:
+            response = self.system.parse(byte)
+        expected_response = b'#0\n'
+        self.assertEqual(expected_response, response)
+
+    def test_set_and_get_switch(self):
+        msg = b'#SWT 00 001\n'
+        for byte in msg:
+            self.system.parse(byte)
+        msg = b'#SWT 00?\n'
+        for byte in msg:
+            response = self.system.parse(byte)
+        expected_response = b'#1\n'
+        self.assertEqual(expected_response, response)
+
 
 if __name__ == '__main__':
     unittest.main()
