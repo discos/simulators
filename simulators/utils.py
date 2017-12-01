@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import math
 import struct
 from datetime import datetime
@@ -142,6 +143,35 @@ def real_to_binary(num, precision=1):
             "Unknown precision %d."
             % (precision)
         )
+
+
+def real_to_bytes(num, precision=1):
+    binary_number = real_to_binary(num, precision)
+    return binary_to_bytes(binary_number)
+
+
+def bytes_to_real(bytes_real, precision=1):
+    if precision == 1:
+        return struct.unpack('!f', bytes_real)[0]
+    elif precision == 2:
+        return struct.unpack('!d', bytes_real)[0]
+    else:
+        raise ValueError(
+            "Unknown precision %d."
+            % (precision)
+        )
+
+
+def bool_to_binary(boolean=False):
+    return '00000001' if boolean else '00000000'
+
+
+def int_to_bytes(val, n_bytes=4):
+    return binary_to_bytes(int_to_twos(val, n_bytes))
+
+
+def uint_to_bytes(val, n_bytes=4):
+    return binary_to_bytes(bin(val)[2:].zfill(n_bytes * 8))
 
 
 def mjd():
