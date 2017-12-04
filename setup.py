@@ -1,5 +1,5 @@
 try:
-    from setuptools import setup
+    from setuptools import setup, find_packages
 except ImportError:
     from distutils.core import setup
 
@@ -7,7 +7,8 @@ setup(
     name='discos-simulators',
     version='0.1',
     description='Simulators for the DISCOS project',
-    packages=['simulators'],
+    # packages=['simulators'],
+    packages=find_packages(),
     scripts=['scripts/discos-simulator'],
     license='GPL',
     platforms='all',
