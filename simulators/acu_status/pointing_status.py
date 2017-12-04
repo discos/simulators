@@ -212,3 +212,6 @@ class PointingStatus(object):
                 + utils.uint_to_bytes(self.ptEndTableIndex)
                 + utils.uint_to_bytes(self.ptTableLength)
                 + self.parameter_command_status.get_status())
+
+    def parameter_command(self, command):
+        pass
