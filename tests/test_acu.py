@@ -226,6 +226,47 @@ class TestACU(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.system.parse(msg[-1])
 
+    def test_mode_command_unknown_mode_id(self):
+        msg_length = utils.int_to_twos(46)
+        cmd_counter = utils.int_to_twos(utils.day_milliseconds())
+        cmds_number = utils.int_to_twos(1)
+
+        # Command
+        cmd_id = utils.int_to_twos(1, 2)
+        sub_id = utils.int_to_twos(1, 2)
+        counter = utils.int_to_twos(utils.day_milliseconds())
+        mode_id = utils.int_to_twos(0, 2)
+        par_1 = utils.int_to_twos(0, 8)
+        par_2 = utils.int_to_twos(0, 8)
+
+        command = (
+            cmd_id
+            + sub_id
+            + counter
+            + mode_id
+            + par_1
+            + par_2
+        )
+
+        commands = command  # Could be more than one command
+
+        binary_msg = (
+            msg_length
+            + cmd_counter
+            + cmds_number
+            + commands
+        )
+
+        msg = start_flag
+        msg += utils.binary_to_bytes(binary_msg)
+        msg += end_flag
+
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+
+        with self.assertRaises(ValueError):
+            self.system.parse(msg[-1])
+
     def test_parameter_command_azimut(self):
         msg_length = utils.int_to_twos(46)
         cmd_counter = utils.int_to_twos(utils.day_milliseconds())
