@@ -22,7 +22,7 @@ class TestACU(unittest.TestCase):
 
     def test_status_message_sampling_time(self):
         self.system = acu.System(0.001)
-        time.sleep(0.01)
+        time.sleep(0.1)
         status = self.system.get_status()
         msg_counter = utils.bytes_to_int(status[8:12])
         self.assertGreater(msg_counter, 1)
