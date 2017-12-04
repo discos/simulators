@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import math
 import struct
 from datetime import datetime
@@ -144,16 +145,59 @@ def real_to_binary(num, precision=1):
         )
 
 
-def mjd():
-    """Return the modified julian date.
+def real_to_bytes(num, precision=1):
+    """Return the bytestring representation of a floating-point number
+    (IEEE 754 standard)."""
+    binary_number = real_to_binary(num, precision)
+    return binary_to_bytes(binary_number)
+
+
+def bytes_to_real(bytes_real, precision=1):
+    """Return the floating-point representation (IEEE 754 standard)
+    of bytestring number."""
+    if precision == 1:
+        return struct.unpack('!f', bytes_real)[0]
+    elif precision == 2:
+        return struct.unpack('!d', bytes_real)[0]
+    else:
+        raise ValueError(
+            "Unknown precision %d."
+            % (precision)
+        )
+
+
+def int_to_bytes(val, n_bytes=4):
+    """Return the bytestring representation of a given signed integer."""
+    return binary_to_bytes(int_to_twos(val, n_bytes))
+
+
+def uint_to_bytes(val, n_bytes=4):
+    """Return the bytestring representation of a given unsigned integer."""
+    n_bits = 8 * n_bytes
+    min_range = 0
+    max_range = int(math.pow(2, n_bits)) - 1
+
+    if val < min_range or val > max_range:
+        raise ValueError(
+            "%d out of range (%d, %d)."
+            % (val, min_range, max_range)
+        )
+
+    return binary_to_bytes(bin(val)[2:].zfill(n_bytes * 8))
+
+
+def mjd(time=datetime.utcnow()):
+    """Returns the modified julian date (MJD) of a given datetime object.
+    If no datetime object is given, it returns the current MJD.
     For more informations about modified julian date check the following link:
     https://bowie.gsfc.nasa.gov/time/"""
-
-    utcnow = datetime.utcnow()
-
-    year = utcnow.year
-    month = utcnow.month
-    day = utcnow.day
+    year = time.year
+    month = time.month
+    day = time.day
+    hour = time.hour
+    minute = time.minute
+    second = time.second
+    microsecond = time.microsecond
 
     if month == 1 or month == 2:
         yearp = year - 1
@@ -173,11 +217,7 @@ def mjd():
         a = math.trunc(yearp / 100.)
         b = 2 - a + math.trunc(a / 4.)
 
-    if yearp < 0:
-        c = math.trunc((365.25 * yearp) - 0.75)
-    else:
-        c = math.trunc(365.25 * yearp)
-
+    c = math.trunc(365.25 * yearp)
     d = math.trunc(30.6001 * (monthp + 1))
 
     jd = b + c + d + day + 1720994.5
@@ -185,13 +225,13 @@ def mjd():
     modified_julian_day = jd - 2400000.5
 
     # Total UTC hours of the day
-    day_hours = utcnow.hour
+    day_hours = hour
     # Total minutes of the day
-    day_minutes = (day_hours * 60) + utcnow.minute
+    day_minutes = (day_hours * 60) + minute
     # Total seconds of the day
-    day_seconds = (day_minutes * 60) + utcnow.second
+    day_seconds = (day_minutes * 60) + second
     # Total microseconds of the day
-    day_microseconds = (day_seconds * 1000000) + utcnow.microsecond
+    day_microseconds = (day_seconds * 1000000) + microsecond
 
     # Day percentage, 00:00 = 0.0, 24:00=1.0
     day_percentage = round(float(day_microseconds) / 86400000000, 6)
