@@ -21,6 +21,45 @@ def checksum(msg):
     return chr(int(bin_sum_fixed_lenght, 2) ^ 0xFF)
 
 
+def binary_complement(bin_string, mask=''):
+    """Return the binary complement of bin_string, with bits masked by mask.
+
+    >>> binary_complement('11010110')
+    '00101001'
+
+    >>> binary_complement('10110', '10111')
+    '00001'
+    """
+
+    if len(mask) > len(bin_string):
+        mask = mask[-len(bin_string):]
+    else:
+        mask = '1' * (len(bin_string) - len(mask)) + mask
+
+    retval = ''
+
+    for index, value in enumerate(bin_string):
+        if mask[index] == '1':
+            if value == '0':
+                retval += '1'
+            elif value == '1':
+                retval += '0'
+            else:
+                raise ValueError(
+                    'String %s is not expressed in binary notation.' %
+                    bin_string
+                )
+        elif mask[index] == '0':
+            retval += '0'
+        else:
+            raise ValueError(
+                'Mask %s is not expressed in binary notation.' %
+                mask
+            )
+
+    return retval
+
+
 def twos_to_int(binary_string):
     """Return the two's complement of binary_string.
 
@@ -147,14 +186,30 @@ def real_to_binary(num, precision=1):
 
 def real_to_bytes(num, precision=1):
     """Return the bytestring representation of a floating-point number
-    (IEEE 754 standard)."""
+    (IEEE 754 standard).
+
+    >>> [hex(ord(x)) for x in real_to_bytes(436.56, 1)]
+    ['0x43', '0xda', '0x47', '0xae']
+
+    >>> [hex(ord(x)) for x in real_to_bytes(436.56, 2)]
+    ['0x40', '0x7b', '0x48', '0xf5', '0xc2', '0x8f', '0x5c', '0x29']
+    """
+
     binary_number = real_to_binary(num, precision)
     return binary_to_bytes(binary_number)
 
 
 def bytes_to_real(bytes_real, precision=1):
     """Return the floating-point representation (IEEE 754 standard)
-    of bytestring number."""
+    of bytestring number.
+
+    >>> round(bytes_to_real('\x43\xDA\x47\xAE', 1), 2)
+    436.56
+
+    >>> round(bytes_to_real('\x40\x7B\x48\xF5\xC2\x8F\x5C\x29', 2), 2)
+    436.56
+    """
+
     if precision == 1:
         return struct.unpack('!f', bytes_real)[0]
     elif precision == 2:
@@ -167,12 +222,22 @@ def bytes_to_real(bytes_real, precision=1):
 
 
 def int_to_bytes(val, n_bytes=4):
-    """Return the bytestring representation of a given signed integer."""
+    """Return the bytestring representation of a given signed integer.
+
+    >>> [hex(ord(x)) for x in int_to_bytes(354)]
+    ['0x0', '0x0', '0x1', '0x62']
+    """
+
     return binary_to_bytes(int_to_twos(val, n_bytes))
 
 
 def uint_to_bytes(val, n_bytes=4):
-    """Return the bytestring representation of a given unsigned integer."""
+    """Return the bytestring representation of a given unsigned integer.
+
+    >>> [hex(ord(x)) for x in uint_to_bytes(657)]
+    ['0x0', '0x0', '0x2', '0x91']
+    """
+
     n_bits = 8 * n_bytes
     min_range = 0
     max_range = int(math.pow(2, n_bits)) - 1
@@ -186,11 +251,41 @@ def uint_to_bytes(val, n_bytes=4):
     return binary_to_bytes(bin(val)[2:].zfill(n_bytes * 8))
 
 
-def mjd(time=datetime.utcnow()):
+def sign(number):
+    """Returns the sign (-1, 0, 1) of a given number (int or float).
+
+    >>> sign(5632)
+    1
+
+    >>> sign(0)
+    0
+
+    >>> sign(-264)
+    -1
+    """
+
+    if not isinstance(number, (int, long, float)):
+        raise ValueError(
+            '%s is not of a valid datatype. Use only int, long or float.'
+            % str(number)
+        )
+    return number and (1, -1)[number < 0]
+
+
+def mjd(time=None):
     """Returns the modified julian date (MJD) of a given datetime object.
     If no datetime object is given, it returns the current MJD.
     For more informations about modified julian date check the following link:
-    https://bowie.gsfc.nasa.gov/time/"""
+    https://bowie.gsfc.nasa.gov/time/
+
+    >>> d = datetime(2018, 1, 20, 10, 30, 45, 100000)
+    >>> mjd(d)
+    58138.43802199074
+    """
+
+    if not time:
+        time = datetime.utcnow()
+
     year = time.year
     month = time.month
     day = time.day
@@ -234,9 +329,70 @@ def mjd(time=datetime.utcnow()):
     day_microseconds = (day_seconds * 1000000) + microsecond
 
     # Day percentage, 00:00 = 0.0, 24:00=1.0
-    day_percentage = round(float(day_microseconds) / 86400000000, 6)
+    day_percentage = float(day_microseconds) / 86400000000
 
     return float(modified_julian_day + day_percentage)
+
+
+def mjd_to_date(original_mjd_date):
+    """Returns the UTC date representation of a modified julian date one.
+
+    >>> mjd_to_date(58138.43802199074)
+    datetime.datetime(2018, 1, 20, 10, 30, 45, 100000)
+    """
+    str_d = str(original_mjd_date)
+    mjdate = int(str_d[:str_d.find('.')])
+    millisecond = int(float('0.' + str_d[str_d.find('.') + 1:]) * 86400000)
+
+    mjdate += 2400000.5
+
+    mjdate = mjdate + 0.5
+
+    f, i = math.modf(mjdate)
+    i = int(i)
+
+    a = math.trunc((i - 1867216.25) / 36524.25)
+
+    if i > 2299160:
+        b = i + 1 + a - math.trunc(a / 4.)
+    else:
+        b = i
+
+    c = b + 1524
+
+    d = math.trunc((c - 122.1) / 365.25)
+
+    e = math.trunc(365.25 * d)
+
+    g = math.trunc((c - e) / 30.6001)
+
+    day = int(c - e + f - math.trunc(30.6001 * g))
+
+    if g < 13.5:
+        month = g - 1
+    else:
+        month = g - 13
+
+    if month > 2.5:
+        year = d - 4716
+    else:
+        year = d - 4715
+
+    second, millisecond = divmod(millisecond, 1000)
+    minute, second = divmod(second, 60)
+    hour, minute = divmod(minute, 60)
+
+    result_date = datetime(
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        second,
+        millisecond * 1000
+    )
+
+    return result_date
 
 
 def day_milliseconds():

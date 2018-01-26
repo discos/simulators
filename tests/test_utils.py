@@ -14,6 +14,30 @@ class TestServer(unittest.TestCase):
         """Compare the actual checksum with a wrong one."""
         self.assertNotEqual(utils.checksum('fooo'), 'A')
 
+    def test_right_binary_complement(self):
+        """Performs the one's complement of a given binary string."""
+        self.assertEqual(utils.binary_complement('10110'), '01001')
+
+    def test_wrong_binary_complement(self):
+        self.assertNotEqual(utils.binary_complement('10100'), '01001')
+
+    def test_wrong_type_binary_complement(self):
+        with self.assertRaises(ValueError):
+            utils.binary_complement('string')
+
+    def test_binary_complement_shorter_equal_mask(self):
+        """The one's complement is performed through a binary mask."""
+        self.assertEqual(utils.binary_complement('11010', '00010'), '00000')
+        self.assertEqual(utils.binary_complement('11010', '0010'), '00000')
+
+    def test_binary_complement_longer_mask(self):
+        """The mask is longer than the actual string, so it is capped."""
+        self.assertEqual(utils.binary_complement('11010', '000010'), '00000')
+
+    def test_wrong_type_mask_binary_complement(self):
+        with self.assertRaises(ValueError):
+            utils.binary_complement('01101', 'mask')
+
     def test_right_twos_to_int(self):
         """Return the signed integer of the given binary string
         (two's complement)"""
@@ -41,52 +65,27 @@ class TestServer(unittest.TestCase):
         with self.assertRaises(ValueError):
             utils.int_to_twos(4294967295)
 
-    def test_mjd_now(self):
-        """Make sure that the datatype of the response is the correct one."""
-        self.assertIsInstance(utils.mjd(), float)
-
-    def test_mjd_given_date(self):
-        """Return the modified julian date of a given datetime object."""
-        time = datetime(2017, 12, 4, 13, 51, 10, 162534)
-        result = utils.mjd(time)
-        expected_result = 58091.577201
-        self.assertEqual(result, expected_result)
-
-    def test_mjd_old_date(self):
-        time = datetime(1500, 1, 1, 12, 0, 0, 0)
-        result = utils.mjd(time)
-        expected_result = -131067.5
-        self.assertEqual(result, expected_result)
-
-    def test_day_milliseconds(self):
-        """Make sure that the datatype of the response is the correct one.
-        Also make sure that the returned value is inside the expected range."""
-        day_milliseconds = utils.day_milliseconds()
-        self.assertIsInstance(day_milliseconds, int)
-        self.assertGreaterEqual(day_milliseconds, 0)
-        self.assertLess(day_milliseconds, 86400000)
-
-    def test_binary_to_bytes_correct(self):
+    def test_right_binary_to_bytes(self):
         """Convert a binary string into a string of bytes."""
         binary_string = '00000101000110100010100011010010'
         byte_string = utils.binary_to_bytes(binary_string)
         expected_byte_string = b'\x05\x1A\x28\xD2'
         self.assertEqual(byte_string, expected_byte_string)
 
-    def test_binary_to_bytes_wrong(self):
+    def test_wrong_binary_to_bytes(self):
         binary_string = '00000101000110100010100011010010'
         byte_string = utils.binary_to_bytes(binary_string)
         expected_byte_string = b'\x05\x1A\x28\xD3'
         self.assertNotEqual(byte_string, expected_byte_string)
 
-    def test_bytes_to_int_correct(self):
+    def test_right_bytes_to_int(self):
         """Convert a string of bytes into an integer (like C atoi function)."""
         byte_string = b'\x00\x00\xFA\xFF'
         result = utils.bytes_to_int(byte_string)
         expected_result = 64255
         self.assertEqual(result, expected_result)
 
-    def test_bytes_to_int_wrong(self):
+    def test_wrong_bytes_to_int(self):
         byte_string = b'\x00\x00\xFA\xFF'
         result = utils.bytes_to_int(byte_string)
         expected_result = -1281
@@ -109,7 +108,7 @@ class TestServer(unittest.TestCase):
         )
         self.assertEqual(result, expected_result)
 
-    def test_real_to_binary_wrong(self):
+    def test_wrong_real_to_binary(self):
         number = 3.14159265358979323846264338327950288419716939937510582097494
         result = utils.real_to_binary(number)
         expected_result = (
@@ -201,6 +200,53 @@ class TestServer(unittest.TestCase):
         result = utils.uint_to_bytes(number)
         wrong_expected_result = b'\x00\x34\xAE\xDD'
         self.assertNotEqual(result, wrong_expected_result)
+
+    def test_sign_positive(self):
+        self.assertEqual(utils.sign(15263), 1)
+        self.assertNotEqual(utils.sign(-1632), 1)
+
+    def test_sign_zero(self):
+        self.assertEqual(utils.sign(-12367), -1)
+        self.assertNotEqual(utils.sign(2362), -1)
+
+    def test_sign_negative(self):
+        self.assertEqual(utils.sign(0), 0)
+        self.assertNotEqual(utils.sign(132), 0)
+        self.assertNotEqual(utils.sign(-325), 0)
+
+    def test_wrong_datatype_sign(self):
+        with self.assertRaises(ValueError):
+            utils.sign('string')
+
+    def test_mjd_now(self):
+        """Make sure that the datatype of the response is the correct one."""
+        self.assertIsInstance(utils.mjd(), float)
+
+    def test_mjd_given_date(self):
+        """Return the modified julian date of a given datetime object."""
+        time = datetime(2017, 12, 4, 13, 51, 10, 162534)
+        result = utils.mjd(time)
+        expected_result = 58091.57720095525
+        self.assertEqual(result, expected_result)
+
+    def test_mjd_old_date(self):
+        time = datetime(1500, 1, 1, 12, 0, 0, 0)
+        result = utils.mjd(time)
+        expected_result = -131067.5
+        self.assertEqual(result, expected_result)
+
+    def test_mjd_to_date(self):
+        """Return the datetime object of a given modified julian date."""
+        expected_date = datetime(2018, 1, 20, 10, 30, 45, 100000)
+        self.assertEqual(utils.mjd_to_date(58138.43802199074), expected_date)
+
+    def test_day_milliseconds(self):
+        """Make sure that the datatype of the response is the correct one.
+        Also make sure that the returned value is inside the expected range."""
+        day_milliseconds = utils.day_milliseconds()
+        self.assertIsInstance(day_milliseconds, int)
+        self.assertGreaterEqual(day_milliseconds, 0)
+        self.assertLess(day_milliseconds, 86400000)
 
 
 if __name__ == '__main__':
