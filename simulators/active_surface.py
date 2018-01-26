@@ -494,14 +494,14 @@ class System(BaseSystem):
     def soft_reset(self, params):
         if params[2]:
             if params[0] == -1:
-                return None
+                return
             else:
                 return self.byte_nak
         else:
             if params[0] == -1:
                 for driver in self.drivers:
                     driver.soft_reset()
-                return None
+                return
             else:
                 self.drivers[params[0]].soft_reset()
                 return self.byte_ack
@@ -509,21 +509,21 @@ class System(BaseSystem):
     def soft_trigger(self, params):
         if params[2]:
             if params[0] == -1:
-                return None
+                return
             else:
                 return self.byte_nak
         else:
             if params[0] == -1:
                 for driver in self.drivers:
                     driver.soft_trigger()
-                return None
+                return
             else:
                 self.drivers[params[0]].soft_trigger()
                 return self.byte_ack
 
     def get_version(self, params):
         if params[0] == -1:
-            return None
+            return
         if params[2]:
             return self.byte_nak
         else:
@@ -544,21 +544,21 @@ class System(BaseSystem):
     def soft_stop(self, params):
         if params[2]:
             if params[0] == -1:
-                return None
+                return
             else:
                 return self.byte_nak
         else:
             if params[0] == -1:
                 for driver in self.drivers:
                     driver.stop = True
-                return None
+                return
             else:
                 self.drivers[params[0]].stop = True
                 return self.byte_ack
 
     def get_position(self, params):
         if params[0] == -1:
-            return None
+            return
         if params[2]:
             return self.byte_nak
         else:
@@ -583,7 +583,7 @@ class System(BaseSystem):
 
     def get_status(self, params):
         if params[0] == -1:
-            return None
+            return
         if params[2]:
             return self.byte_nak
         else:
@@ -604,7 +604,7 @@ class System(BaseSystem):
 
     def get_driver_type(self, params):
         if params[0] == -1:
-            return None
+            return
         if params[2]:
             return self.byte_nak
         else:
@@ -627,7 +627,7 @@ class System(BaseSystem):
     def set_min_frequency(self, params):
         if len(params[2]) != 2:
             if params[0] == -1:
-                return None
+                return
             else:
                 return self.byte_nak
         else:
@@ -638,7 +638,7 @@ class System(BaseSystem):
                     for driver in self.drivers:
                         if frequency <= driver.max_frequency:
                             driver.min_frequency = frequency
-                    return None
+                    return
                 else:
                     if frequency <= self.drivers[params[0]].max_frequency:
                         self.drivers[params[0]].min_frequency = frequency
@@ -647,14 +647,14 @@ class System(BaseSystem):
                         return self.byte_nak
             else:
                 if params[0] == -1:
-                    return None
+                    return
                 else:
                     return self.byte_nak
 
     def set_max_frequency(self, params):
         if len(params[2]) != 2:
             if params[0] == -1:
-                return None
+                return
             else:
                 return self.byte_nak
         else:
@@ -665,7 +665,7 @@ class System(BaseSystem):
                     for driver in self.drivers:
                         if frequency >= driver.min_frequency:
                             driver.max_frequency = frequency
-                    return None
+                    return
                 else:
                     if frequency >= self.drivers[params[0]].min_frequency:
                         self.drivers[params[0]].max_frequency = frequency
@@ -674,14 +674,14 @@ class System(BaseSystem):
                         return self.byte_nak
             else:
                 if params[0] == -1:
-                    return None
+                    return
                 else:
                     return self.byte_nak
 
     def set_slope_multiplier(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
-                return None
+                return
             else:
                 return self.byte_nak
         else:
@@ -690,7 +690,7 @@ class System(BaseSystem):
             if params[0] == -1:
                 for driver in self.drivers:
                     driver.slope_multiplier = slope_multiplier
-                    return None
+                    return
             else:
                 self.drivers[params[0]].slope_multiplier = slope_multiplier
                 return self.byte_ack
@@ -698,7 +698,7 @@ class System(BaseSystem):
     def set_reference_position(self, params):
         if len(params[2]) != 4:
             if params[0] == -1:
-                return None
+                return
             else:
                 return self.byte_nak
         else:
@@ -709,7 +709,7 @@ class System(BaseSystem):
             if params[0] == -1:
                 for driver in self.drivers:
                     driver.set_reference_position(reference_position)
-                return None
+                return
             else:
                 self.drivers[params[0]].set_reference_position(
                     reference_position)
@@ -718,14 +718,14 @@ class System(BaseSystem):
     def set_io_pins(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
-                return None
+                return
             else:
                 return self.byte_nak
         else:
             if params[0] == -1:
                 for driver in self.drivers:
                     driver.set_io_pins(params[2][0])
-                return None
+                return
             else:
                 self.drivers[params[0]].set_io_pins(params[2][0])
                 return self.byte_ack
@@ -733,14 +733,14 @@ class System(BaseSystem):
     def set_resolution(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
-                return None
+                return
             else:
                 return self.byte_nak
         else:
             if params[0] == -1:
                 for driver in self.drivers:
                     driver.set_resolution(params[2][0])
-                return None
+                return
             else:
                 self.drivers[params[0]].set_resolution(params[2][0])
                 return self.byte_ack
@@ -748,14 +748,14 @@ class System(BaseSystem):
     def reduce_current(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
-                return None
+                return
             else:
                 return self.byte_nak
         else:
             if params[0] == -1:
                 for driver in self.drivers:
                     driver.reduce_current(params[2][0])
-                return None
+                return
             else:
                 self.drivers[params[0]].reduce_current(params[2][0])
                 return self.byte_ack
@@ -763,7 +763,7 @@ class System(BaseSystem):
     def set_response_delay(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
-                return None
+                return
             else:
                 return self.byte_nak
         else:
@@ -774,21 +774,20 @@ class System(BaseSystem):
                 self.drivers[params[0]].delay_multiplier = params[2][0]
 
             if params[0] == -1:
-                return None
+                return
             else:
                 return self.byte_ack
 
     def toggle_delayed_execution(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
-                return None
+                return
             else:
                 return self.byte_nak
         else:
             if params[0] == -1:
                 for driver in self.drivers:
                     driver.toggle_delayed_execution(params[2][0])
-                return None
             else:
                 self.drivers[params[0]].toggle_delayed_execution(params[2][0])
                 return self.byte_ack
@@ -796,7 +795,7 @@ class System(BaseSystem):
     def set_absolute_position(self, params):
         if len(params[2]) != 4:
             if params[0] == -1:
-                return None
+                return
             else:
                 return self.byte_nak
         else:
@@ -805,7 +804,6 @@ class System(BaseSystem):
             if params[0] == -1:
                 for driver in self.drivers:
                     driver.set_absolute_position(absolute_position)
-                return None
             else:
                 self.drivers[params[0]].set_absolute_position(
                     absolute_position)
@@ -814,7 +812,7 @@ class System(BaseSystem):
     def set_relative_position(self, params):
         if len(params[2]) != 4:
             if params[0] == -1:
-                return None
+                return
             else:
                 return self.byte_nak
         else:
@@ -823,7 +821,6 @@ class System(BaseSystem):
             if params[0] == -1:
                 for driver in self.drivers:
                     driver.set_relative_position(relative_position)
-                return None
             else:
                 self.drivers[params[0]].set_relative_position(
                     relative_position)
@@ -832,7 +829,7 @@ class System(BaseSystem):
     def rotate(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
-                return None
+                return
             else:
                 return self.byte_nak
         else:
@@ -842,7 +839,6 @@ class System(BaseSystem):
             if params[0] == -1:
                 for driver in self.drivers:
                     driver.rotate(sign)
-                return None
             else:
                 if self.drivers[params[0]].rotate(sign):
                     return self.byte_ack
@@ -852,7 +848,7 @@ class System(BaseSystem):
     def set_velocity(self, params):
         if len(params[2]) != 3:
             if params[0] == -1:
-                return None
+                return
             else:
                 return self.byte_nak
         else:
@@ -860,14 +856,13 @@ class System(BaseSystem):
 
             if velocity > 100000 or velocity < -100000:
                 if params[0] == -1:
-                    return None
+                    return
                 else:
                     return self.byte_nak
             else:
                 if params[0] == -1:
                     for driver in self.drivers:
                         driver.set_velocity(velocity)
-                    return None
                 else:
                     self.drivers[params[0]].set_velocity(velocity)
                     return self.byte_ack
@@ -875,14 +870,13 @@ class System(BaseSystem):
     def set_stop_io(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
-                return None
+                return
             else:
                 return self.byte_nak
         else:
             if params[0] == -1:
                 for driver in self.drivers:
                     driver.set_stop_io(params[2][0])
-                return None
             else:
                 self.drivers[params[0]].set_stop_io(params[2][0])
                 return self.byte_ack
@@ -890,14 +884,13 @@ class System(BaseSystem):
     def set_positioning_io(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
-                return None
+                return
             else:
                 return self.byte_nak
         else:
             if params[0] == -1:
                 for driver in self.drivers:
                     driver.set_positioning_io(params[2][0])
-                return None
             else:
                 self.drivers[params[0]].set_positioning_io(params[2][0])
                 return self.byte_ack
@@ -905,14 +898,13 @@ class System(BaseSystem):
     def set_home_io(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
-                return None
+                return
             else:
                 return self.byte_nak
         else:
             if params[0] == -1:
                 for driver in self.drivers:
                     driver.set_home_io(params[2][0])
-                return None
             else:
                 self.drivers[params[0]].set_home_io(params[2][0])
                 return self.byte_ack
@@ -920,14 +912,13 @@ class System(BaseSystem):
     def set_working_mode(self, params):
         if len(params[2]) != 2:
             if params[0] == -1:
-                return None
+                return
             else:
                 return self.byte_nak
         else:
             if params[0] == -1:
                 for driver in self.drivers:
                     driver.set_working_mode(params[2])
-                return None
             else:
                 self.drivers[params[0]].set_working_mode(params[2])
                 return self.byte_ack
