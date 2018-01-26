@@ -44,7 +44,8 @@ class System(BaseSystem):
         elif byte == self.tail:
             msg = self.msg[1:-1]  # Remove the header and tail
             self.msg = b''
-            if b' ' in msg and b'?' not in msg:  # Setup request
+            # Setup command
+            if b' ' in msg and b'?' not in msg:
                 try:
                     command, channel, value = msg.split()
                 except ValueError:
@@ -87,7 +88,9 @@ class System(BaseSystem):
                         raise ValueError(
                             'SWT command accepts only values 00 or 01')
                 return b''
-            elif b' ' in msg and b'?' in msg:  # Get request
+
+            # Get request
+            if b' ' in msg and b'?' in msg:
                 msg = msg.rstrip('?')
                 try:
                     command, channel = msg.split()
@@ -115,15 +118,17 @@ class System(BaseSystem):
                         raise ValueError(
                             'command %s not in %s'
                             % (command, self.allowed_commands))
-            elif msg == b'*IDN?':  # IDN request
+
+            # IDN request
+            if msg == b'*IDN?':
                 return self.version
-            elif msg == b'*RST':  # RST command
+
+            # RST command
+            if msg == b'*RST':
                 self._set_default()
-                return None
-            else:  # Not expected command
-                return b'#COMMAND UNKNOW\n'
-        else:
-            return None
+
+            # Not expected command
+            return b'#COMMAND UNKNOW\n'
 
 # Each system module (like active_surface.py, acu.py, etc.) has to
 # define a list called servers.s This list contains tuples (address, args).
