@@ -2,10 +2,88 @@ from simulators import utils
 
 
 class GeneralStatus(object):
+    def __init__(self):
+        # Version, UINT16, ACU software version (10 -> v1.0)
+        self.major_version = 1
+        self.minor_version = 0
 
-    # Version, UINT16, ACU software version (10 -> v1.0)
-    major_version = 1
-    minor_version = 0
+        # master, UINT8, Control of the ACU
+        # 0: MT diagnosis
+        # 1: Handheld panel active
+        # 2: Host (remote) computer (automatic)
+        # 3: Local control panel active
+        # 4: Primary control panel active
+        # 5: Secondary control panel active
+        self.master = 0
+
+        # Status HMI, UINT16
+        # In bit mode coded status of the human machine interfaces
+        self.LCP_connected = 0               # bit 0
+        self.remote_computer_connected = 0   # bit 1
+        self.HBG_connected = 0               # bit 2
+        #                               # bit 3 not used
+        self.LCP_initialization_OK = 0       # bit 4
+        self.remote_initialization_OK = 0    # bit 5
+        self.HBG_initialization_OK = 0       # bit 6
+        #                               # bits 7:15 not used
+
+        self.software_IO = 0  # BOOL, 0: LCP inactive, 1: active
+        self.simulation = 0  # BOOL, 0: simulation inactive, 1: active
+        self.control_system = 0  # BOOL, 0: control system off, 1: on
+        self.service = 0  # BOOL, 0: service mode off, 1: on
+
+        # HW_interlock, DWORD, in bit mode coded HW interlock
+        self.EStop_Device = 0
+        self.ES_SP = 0  # Box 40
+        self.ES_Drive_AZ1_2 = 0
+        self.ES_Drive_AZ3_4 = 0
+        self.ES_Drive_AZ5_6 = 0
+        self.ES_Drive_AZ7_8 = 0
+        self.ES_Drive_EL1_2 = 0
+        self.ES_Drive_EL3_4 = 0
+        self.ES_LCP = 0
+        self.ES_Cablewrap = 0
+        self.ES_AER1 = 0  # Stairs
+        self.ES_AER2 = 0  # Lift
+        self.ES_HHP = 0
+        self.ES_PCP = 0
+        self.ES_EER = 0
+        self.ES_EER_Key = 0
+        self.ES_EER_Door = 0
+        self.ES_BOX_10 = 0
+        self.ES_SFR_1 = 0
+        self.ES_SFR_2 = 0
+        # bits 20:31 = 0, not used
+
+        # SW_interlock, DWORD, in bit mode coded SW interlock
+        self.Control_System_Off = 0
+        self.Power_Control_Sys = 0
+        self.Power_Drive_Cab = 0
+        self.Power_Supply_DC = 0
+        # bit 4 = 0, not used
+        self.Fieldbus_Error = 0
+        self.Interlock_Cmd = 0
+        self.SaDev_ES_FbErr = 0
+        self.SaDev_ES_CommErr = 0
+        self.SaDev_ES_OutErr = 0
+        self.SaDev_MD_FbErr = 0
+        self.SaDev_MD_CommErr = 0
+        self.SaDev_MD_OutErr = 0
+        self.Emergency_Stop = 0
+        # bit 14 = 0, not used
+        self.Power_UPS = 0
+        self.Power_UPS_Alarm = 0
+        self.ACU_DI_Power = 0
+        self.ECU_DI_Power = 0
+        self.Power_DO_Int = 0
+        self.Main_Power = 0
+        self.Overvoltage_Prot = 0
+        self.Temp_Error_Rack = 0
+        # bits 23:31 = 0, not used
+
+        # self.diag_signal, REAL64
+        # signal output of the function generator [deg]
+        self.diag_signal = 0
 
     def _version(self):
         binary_version = (
@@ -13,26 +91,6 @@ class GeneralStatus(object):
             + utils.int_to_twos(self.minor_version, 1)
         )
         return utils.binary_to_bytes(binary_version)
-
-    # master, UINT8, Control of the ACU
-    # 0: MT diagnosis
-    # 1: Handheld panel active
-    # 2: Host (remote) computer (automatic)
-    # 3: Local control panel active
-    # 4: Primary control panel active
-    # 5: Secondary control panel active
-    master = 0
-
-    # Status HMI, UINT16
-    # In bit mode coded status of the human machine interfaces
-    LCP_connected = 0               # bit 0
-    remote_computer_connected = 0   # bit 1
-    HBG_connected = 0               # bit 2
-    #                               # bit 3 not used
-    LCP_initialization_OK = 0       # bit 4
-    remote_initialization_OK = 0    # bit 5
-    HBG_initialization_OK = 0       # bit 6
-    #                               # bits 7:15 not used
 
     def _status_hmi(self):
         binary_string = (
@@ -46,34 +104,6 @@ class GeneralStatus(object):
             + '0' * 9
         )
         return utils.binary_to_bytes(binary_string)
-
-    software_IO = 0  # BOOL, 0: LCP inactive, 1: active
-    simulation = 0  # BOOL, 0: simulation inactive, 1: active
-    control_system = 0  # BOOL, 0: control system off, 1: on
-    service = 0  # BOOL, 0: service mode off, 1: on
-
-    # HW_interlock, DWORD, in bit mode coded HW interlock
-    EStop_Device = 0
-    ES_SP = 0  # Box 40
-    ES_Drive_AZ1_2 = 0
-    ES_Drive_AZ3_4 = 0
-    ES_Drive_AZ5_6 = 0
-    ES_Drive_AZ7_8 = 0
-    ES_Drive_EL1_2 = 0
-    ES_Drive_EL3_4 = 0
-    ES_LCP = 0
-    ES_Cablewrap = 0
-    ES_AER1 = 0  # Stairs
-    ES_AER2 = 0  # Lift
-    ES_HHP = 0
-    ES_PCP = 0
-    ES_EER = 0
-    ES_EER_Key = 0
-    ES_EER_Door = 0
-    ES_BOX_10 = 0
-    ES_SFR_1 = 0
-    ES_SFR_2 = 0
-    # bits 20:31 = 0, not used
 
     def _hardware_interlock(self):
         binary_string = (
@@ -100,32 +130,6 @@ class GeneralStatus(object):
             + '0' * 12
         )
         return utils.binary_to_bytes(binary_string)
-
-    # SW_interlock, DWORD, in bit mode coded SW interlock
-    Control_System_Off = 0
-    Power_Control_Sys = 0
-    Power_Drive_Cab = 0
-    Power_Supply_DC = 0
-    # bit 4 = 0, not used
-    Fieldbus_Error = 0
-    Interlock_Cmd = 0
-    SaDev_ES_FbErr = 0
-    SaDev_ES_CommErr = 0
-    SaDev_ES_OutErr = 0
-    SaDev_MD_FbErr = 0
-    SaDev_MD_CommErr = 0
-    SaDev_MD_OutErr = 0
-    Emergency_Stop = 0
-    # bit 14 = 0, not used
-    Power_UPS = 0
-    Power_UPS_Alarm = 0
-    ACU_DI_Power = 0
-    ECU_DI_Power = 0
-    Power_DO_Int = 0
-    Main_Power = 0
-    Overvoltage_Prot = 0
-    Temp_Error_Rack = 0
-    # bits 23:31 = 0, not used
 
     def _software_interlock(self):
         binary_string = (
@@ -155,8 +159,6 @@ class GeneralStatus(object):
             + '0' * 9
         )
         return utils.binary_to_bytes(binary_string)
-
-    diag_signal = 0  # REAL64, signal output of the function generator [deg]
 
     def get_status(self):
         return (self._version()

@@ -2,52 +2,52 @@ from simulators import utils
 
 
 class MotorStatus(object):
+    def __init__(self):
+        self.actual_position = 0  # REAL32, [rot]
+        self.actual_velocity = 0  # REAL32, [rot/min]
+        self.actual_torque = 0  # REAL32, [Nm]
+        self.rate_of_utilization = 0  # REAL32, [+- 200 %]
+        self.active = 0  # UINT8, 0: motor inactive, 1: motor active
 
-    actual_position = 0  # REAL32, [rot]
-    actual_velocity = 0  # REAL32, [rot/min]
-    actual_torque = 0  # REAL32, [Nm]
-    rate_of_utilization = 0  # REAL32, [+- 200 %]
-    active = 0  # UINT8, 0: motor inactive, 1: motor active
+        # speed_of_rotation, UINT8
+        # 0: speed of rotation unequal 0
+        # 1: speed of rotation equal 0
+        self.speed_of_rotation = 0
 
-    # speed_of_rotation, UINT8
-    # 0: speed of rotation unequal 0
-    # 1: speed of rotation equal 0
-    speed_of_rotation = 0
+        # speed_of_rotation_ok, UINT8
+        # 0: speed of rotation failure
+        # 1: speed of rotation ok
+        self.speed_of_rotation_ok = 0
 
-    # speed_of_rotation_ok, UINT8
-    # 0: speed of rotation failure
-    # 1: speed of rotation ok
-    speed_of_rotation_ok = 0
+        # position, UINT8
+        # 0: desired position not reached
+        # 1: desired position reached
+        self.position = 0
 
-    # position, UINT8
-    # 0: desired position not reached
-    # 1: desired position reached
-    position = 0
+        self.bus = 0  # UINT8, 0: bus ok, 1: bus error
+        self.servo = 0  # UINT8, 0: servo ok, 1: servo error
+        self.sensor = 0  # UINT8, 0: sensor ok, 1: sensor error
 
-    bus = 0  # UINT8, 0: bus ok, 1: bus error
-    servo = 0  # UINT8, 0: servo ok, 1: servo error
-    sensor = 0  # UINT8, 0: sensor ok, 1: sensor error
-
-    # motWarnCode, DWORD, in bit mode coded warning status of the motor
-    wa_iQuad_t = 0
-    wa_Temp_Amplifier = 0
-    wa_Temp_Mot = 0
-    wa_v_Max_Exceeded = 0
-    wa_M_Max_Exceeded = 0
-    wa_Mot_Overload = 0
-    wa_Temp_Cooling = 0
-    wa_Temp_Extern = 0
-    wa_Temp_Pow_Supply = 0
-    wa_Temp_ERM_Module = 0
-    wa_U_Max = 0
-    wa_U_Min = 0
-    wa_Intermed_Circ_Voltage = 0
-    wa_Wrong_Mode = 0
-    wa_err_cmd_M = 0
-    wa_err_sts_SBM = 0
-    wa_err_sts_EF = 0
-    wa_err_sts_RF = 0
-    # bits 18:31 = 0, not used
+        # motWarnCode, DWORD, in bit mode coded warning status of the motor
+        self.wa_iQuad_t = 0
+        self.wa_Temp_Amplifier = 0
+        self.wa_Temp_Mot = 0
+        self.wa_v_Max_Exceeded = 0
+        self.wa_M_Max_Exceeded = 0
+        self.wa_Mot_Overload = 0
+        self.wa_Temp_Cooling = 0
+        self.wa_Temp_Extern = 0
+        self.wa_Temp_Pow_Supply = 0
+        self.wa_Temp_ERM_Module = 0
+        self.wa_U_Max = 0
+        self.wa_U_Min = 0
+        self.wa_Intermed_Circ_Voltage = 0
+        self.wa_Wrong_Mode = 0
+        self.wa_err_cmd_M = 0
+        self.wa_err_sts_SBM = 0
+        self.wa_err_sts_EF = 0
+        self.wa_err_sts_RF = 0
+        # bits 18:31 = 0, not used
 
     def _motor_warning_code(self):
         binary_string = (
@@ -89,3 +89,39 @@ class MotorStatus(object):
             + self._motor_warning_code()
         )
         return response
+
+    def _inactive(self):
+        pass
+
+    def _active(self):
+        pass
+
+    def _preset_absolute(self, angle, rate):
+        pass
+
+    def _preset_relative(self, angle, rate):
+        pass
+
+    def _slew(self, percentage, rate):
+        pass
+
+    def _stop(self):
+        pass
+
+    def _program_track(self, rate):
+        pass
+
+    def _interlock(self):
+        pass
+
+    def _reset(self):
+        pass
+
+    def _stow(self):
+        pass
+
+    def _unstow(self):
+        pass
+
+    def _drive_to_stow(self, stow_position, rate):
+        pass
