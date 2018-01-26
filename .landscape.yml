@@ -23,6 +23,7 @@ pylint:
     - no-else-return
     - too-many-nested-blocks
     - too-many-statements
+    - too-many-arguments
 
 pep8:
   disable:
