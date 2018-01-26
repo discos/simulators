@@ -21,9 +21,22 @@ class TestServer(unittest.TestCase):
     def test_wrong_binary_complement(self):
         self.assertNotEqual(utils.binary_complement('10100'), '01001')
 
-    def test_masked_binary_complement(self):
+    def test_wrong_type_binary_complement(self):
+        with self.assertRaises(ValueError):
+            utils.binary_complement('string')
+
+    def test_binary_complement_shorter_equal_mask(self):
         """The one's complement is performed through a binary mask."""
         self.assertEqual(utils.binary_complement('11010', '00010'), '00000')
+        self.assertEqual(utils.binary_complement('11010', '0010'), '00000')
+
+    def test_binary_complement_longer_mask(self):
+        """The mask is longer than the actual string, so it is capped."""
+        self.assertEqual(utils.binary_complement('11010', '000010'), '00000')
+
+    def test_wrong_type_mask_binary_complement(self):
+        with self.assertRaises(ValueError):
+            utils.binary_complement('01101', 'mask')
 
     def test_right_twos_to_int(self):
         """Return the signed integer of the given binary string
@@ -201,6 +214,10 @@ class TestServer(unittest.TestCase):
         self.assertNotEqual(utils.sign(132), 0)
         self.assertNotEqual(utils.sign(-325), 0)
 
+    def test_wrong_datatype_sign(self):
+        with self.assertRaises(ValueError):
+            utils.sign('string')
+
     def test_mjd_now(self):
         """Make sure that the datatype of the response is the correct one."""
         self.assertIsInstance(utils.mjd(), float)
@@ -217,6 +234,11 @@ class TestServer(unittest.TestCase):
         result = utils.mjd(time)
         expected_result = -131067.5
         self.assertEqual(result, expected_result)
+
+    def test_mjd_to_date(self):
+        """Return the datetime object of a given modified julian date."""
+        expected_date = datetime(2018, 1, 20, 10, 30, 45, 100000)
+        self.assertEqual(utils.mjd_to_date(58138.43802199074), expected_date)
 
     def test_day_milliseconds(self):
         """Make sure that the datatype of the response is the correct one.

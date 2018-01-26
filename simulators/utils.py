@@ -32,7 +32,7 @@ def binary_complement(bin_string, mask=''):
     """
 
     if len(mask) > len(bin_string):
-        mask = mask[-len(bin_string)]
+        mask = mask[-len(bin_string):]
     else:
         mask = '1' * (len(bin_string) - len(mask)) + mask
 
@@ -46,14 +46,14 @@ def binary_complement(bin_string, mask=''):
                 retval += '0'
             else:
                 raise ValueError(
-                    'String %s is not expressed in binary notation.',
+                    'String %s is not expressed in binary notation.' %
                     bin_string
                 )
         elif mask[index] == '0':
             retval += '0'
         else:
             raise ValueError(
-                'Mask %s is not expressed in binary notation.',
+                'Mask %s is not expressed in binary notation.' %
                 mask
             )
 
@@ -265,7 +265,10 @@ def sign(number):
     """
 
     if not isinstance(number, (int, long, float)):
-        raise ValueError('%d is not of a valid datatype.', number)
+        raise ValueError(
+            '%s is not of a valid datatype. Use only int, long or float.'
+            % str(number)
+        )
     return number and (1, -1)[number < 0]
 
 
