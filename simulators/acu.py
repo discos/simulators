@@ -2,7 +2,7 @@ import thread
 import time
 from simulators import utils
 from simulators.acu_status import general_status
-from simulators.acu_status import subsystem
+from simulators.acu_status import axis_status
 from simulators.acu_status import pointing_status
 from simulators.acu_status import facility_status
 from simulators.common import BaseSystem
@@ -13,12 +13,12 @@ end_flag = b'\xA1\xFC\xCF\xD1'
 
 
 class System(BaseSystem):
-    def __init__(self, queue_sampling_time=0.2):
+    def __init__(self, sampling_time=0.2):
         """
-        param queue_sampling_time: seconds between the sending of consecutive
+        param sampling_time: seconds between the sending of consecutive
         status messages
         """
-        self.acu = ACU(queue_sampling_time)
+        self.acu = ACU(sampling_time)
         self._set_default()
 
     def _set_default(self):
@@ -63,6 +63,9 @@ class System(BaseSystem):
     def get_status(self):
         return self.acu.get_status()
 
+    def __del__(self):
+        self.acu.stop()
+
 
 class ACU(object):
 
@@ -72,23 +75,24 @@ class ACU(object):
         4: "program_track_parameter_command",
     }
 
-    def __init__(self, status_sampling_time=0.2):
+    def __init__(self, sampling_time=0.2):
         """
-        param status_sampling_time: seconds between the sending of consecutive
+        param sampling_time: seconds between the sending of consecutive
         status messages
         """
         self.GS = general_status.GeneralStatus()
-        self.Azimuth = subsystem.Subsystem()
-        self.Elevation = subsystem.Subsystem()
-        self.AzimuthCableWrap = subsystem.Subsystem()
+        self.Azimuth = axis_status.AxisStatus(8, 0.85, 0.4, (-90, 450), [180])
+        self.Elevation = axis_status.AxisStatus(4, 0.5, 0.25, (5, 90), [90])
+        self.AzimuthCableWrap = axis_status.AxisStatus()
         self.PS = pointing_status.PointingStatus()
         self.FS = facility_status.FacilityStatus()
 
         self.status_counter = 0
         self.status_message = None
 
-        if status_sampling_time > 0:
-            self.status_sampling_time = status_sampling_time
+        if sampling_time > 0:
+            self.sampling_time = sampling_time
+            self.run = True
             thread.start_new_thread(self._update_status, ())
 
     def get_status(self):
@@ -113,7 +117,7 @@ class ACU(object):
             + self.FS.get_status()
         )
 
-        msg_length = utils.uint_to_bytes(len(status) + 12)
+        msg_length = utils.uint_to_bytes(len(status) + 16)
         msg_counter = utils.uint_to_bytes(self.status_counter)
 
         status_message = start_flag
@@ -127,9 +131,9 @@ class ACU(object):
         return status_message
 
     def _update_status(self):
-        while True:
+        while self.run:
             self.status_message = self._status_message()
-            time.sleep(self.status_sampling_time)
+            time.sleep(self.sampling_time)
 
     def parse_commands(self, msg):
         cmds_number = utils.bytes_to_int(msg[12:16])
@@ -186,3 +190,12 @@ class ACU(object):
 
     def program_track_parameter_command(self, command):
         pass
+
+    def stop(self):
+        self.Azimuth.stop()
+        self.Elevation.stop()
+        self.AzimuthCableWrap.stop()
+        self.run = False
+
+servers = []
+servers.append((('127.0.0.1', 13000), ()))

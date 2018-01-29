@@ -141,8 +141,3 @@ class Simulator(object):
                 logging.debug(ex)
             finally:
                 sockobj.close()
-
-
-if __name__ == '__main__':
-    server = Server(('', 10000), 'as')
-    server.serve_forever()
