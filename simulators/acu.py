@@ -1,4 +1,5 @@
 import thread
+import time
 from simulators import utils
 from simulators.acu_status import general_status
 from simulators.acu_status import axis_status
@@ -132,6 +133,7 @@ class ACU(object):
     def _update_status(self):
         while self.run:
             self.status_message = self._status_message()
+            time.sleep(self.sampling_time)
 
     def parse_commands(self, msg):
         cmds_number = utils.bytes_to_int(msg[12:16])

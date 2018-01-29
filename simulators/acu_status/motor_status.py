@@ -89,39 +89,3 @@ class MotorStatus(object):
             + self._motor_warning_code()
         )
         return response
-
-    def _inactive(self):
-        pass
-
-    def _active(self):
-        pass
-
-    def _preset_absolute(self, angle, rate):
-        pass
-
-    def _preset_relative(self, angle, rate):
-        pass
-
-    def _slew(self, percentage, rate):
-        pass
-
-    def _stop(self):
-        pass
-
-    def _program_track(self, rate):
-        pass
-
-    def _interlock(self):
-        pass
-
-    def _reset(self):
-        pass
-
-    def _stow(self):
-        pass
-
-    def _unstow(self):
-        pass
-
-    def _drive_to_stow(self, stow_position, rate):
-        pass
