@@ -1,7 +1,18 @@
 from simulators import utils
 
+parameter_command_functions = {
+    0: '_ignore',
+    11: '_absolute_position_offset',
+    12: '_relative_position_offset',
+    50: '_time_source',
+    51: '_time_offset',
+    60: '_program_track_time_correction',
+    61: '_load_program_track_table',
+}
+
 
 class ParameterCommandStatus(object):
+
     def __init__(self):
         self.parameter_command_counter = 0  # UINT32, command serial number
 

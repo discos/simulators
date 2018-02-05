@@ -165,7 +165,7 @@ class TestACU(unittest.TestCase):
         command_counter = commands.command_list[-1].command_counter
 
         # We let the system start executing the given command
-        time.sleep(0.1)
+        time.sleep(0.2)
 
         mcs = self.system.acu.Azimuth.mcs
 
@@ -218,7 +218,7 @@ class TestACU(unittest.TestCase):
         command_counter = commands.command_list[-1].command_counter
 
         # We let the system start executing the given command
-        time.sleep(0.1)
+        time.sleep(0.2)
 
         mcs = self.system.acu.Azimuth.mcs
 
@@ -269,7 +269,7 @@ class TestACU(unittest.TestCase):
         command_counter = commands.command_list[-1].command_counter
 
         # We let the system start executing the given command
-        time.sleep(0.1)
+        time.sleep(0.2)
 
         mcs = self.system.acu.Azimuth.mcs
 
@@ -462,7 +462,7 @@ class TestACU(unittest.TestCase):
         command_counter = commands.command_list[-1].command_counter
 
         # We let the system execute the given command
-        time.sleep(0.1)
+        time.sleep(0.2)
 
         mcs = self.system.acu.Azimuth.mcs
 

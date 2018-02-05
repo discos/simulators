@@ -317,7 +317,7 @@ class AxisStatus(object):
 
         command = mode_command_functions.get(mode_id)
 
-        if command is None:
+        if command is None or command == '_ignore':
             self.mcs.received_mode_command_counter = cmd_cnt
             self.mcs.received_mode_command = 0
             self.mcs.received_command_answer = 0

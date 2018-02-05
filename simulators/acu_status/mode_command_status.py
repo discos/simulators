@@ -1,18 +1,19 @@
 from simulators import utils
 
 mode_command_functions = {
-    1: "_inactive",
-    2: "_active",
-    3: "_preset_absolute",
-    4: "_preset_relative",
-    5: "_slew",
-    7: "_stop",
-    8: "_program_track",
-    14: "_interlock",
-    15: "_reset",
-    50: "_stow",
-    51: "_unstow",
-    52: "_drive_to_stow"
+    0: '_ignore',
+    1: '_inactive',
+    2: '_active',
+    3: '_preset_absolute',
+    4: '_preset_relative',
+    5: '_slew',
+    7: '_stop',
+    8: '_program_track',
+    14: '_interlock',
+    15: '_reset',
+    50: '_stow',
+    51: '_unstow',
+    52: '_drive_to_stow',
 }
 
 
