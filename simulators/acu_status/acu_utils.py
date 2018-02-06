@@ -113,9 +113,9 @@ class ProgramTrackCommand(object):
             + utils.uint_to_bytes(1, 2)  # 1: coordinates in azimuth/elevation
             + utils.uint_to_bytes(self.load_mode, 2)
             + utils.uint_to_bytes(len(self.sequence), 2)
-            + utils.uint_to_bytes(self.start_time)
-            + utils.uint_to_bytes(self.azimuth_rate)
-            + utils.uint_to_bytes(self.elevation_rate)
+            + utils.real_to_bytes(self.start_time, 2)
+            + utils.real_to_bytes(self.azimuth_rate, 2)
+            + utils.real_to_bytes(self.elevation_rate, 2)
             + sequence_bytes
             + end_flag
         )

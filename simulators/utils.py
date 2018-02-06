@@ -150,6 +150,20 @@ def bytes_to_int(byte_string):
     return twos_to_int(binary_string)
 
 
+def bytes_to_uint(byte_string):
+    """Convert a string of bytes to an unsigned integer.
+
+    >>> bytes_to_uint(b'hi')
+    26729
+    """
+    binary_string = ''
+
+    for char in byte_string:
+        binary_string += bin(ord(char))[2:].zfill(8)
+
+    return int(binary_string, 2)
+
+
 def real_to_binary(num, precision=1):
     """Return the binary representation of a floating-point number
     (IEEE 754 standard).
