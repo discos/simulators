@@ -660,7 +660,7 @@ class TestACU(unittest.TestCase):
 
     def test_utils_macro_command_wrong_type_init(self):
         with self.assertRaises(ValueError):
-            command = Command('dummy')
+            Command('dummy')
 
     def test_utils_macro_command_append(self):
         command = Command()
