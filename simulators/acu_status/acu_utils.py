@@ -124,12 +124,14 @@ class ProgramTrackCommand(object):
 class Command(object):
 
     def __init__(self, *command_list):
+        self.command_list = []
         for command in command_list:
             if not self._check_command(command):
                 raise ValueError(
                     "Wrong command type: '%s'." % type(command)
                 )
-        self.command_list = command_list
+            else:
+                self.command_list.append(command)
 
     @staticmethod
     def _check_command(command):

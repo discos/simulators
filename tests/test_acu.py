@@ -645,6 +645,31 @@ class TestACU(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.system.parse(commands[-1])
 
+    def test_utils_program_track_command_wrong_entry(self):
+        command = ProgramTrackCommand(1, 0, (0, 0))
+
+        with self.assertRaises(ValueError):
+            command.append_entry('dummy')
+
+    def test_utils_program_track_get_empty_table(self):
+        command = ProgramTrackCommand(1, 0, (0, 0))
+        fake_cmd_counter = 0
+
+        with self.assertRaises(ValueError):
+            command.get(fake_cmd_counter)
+
+    def test_utils_macro_command_wrong_type_init(self):
+        with self.assertRaises(ValueError):
+            command = Command('dummy')
+
+    def test_utils_macro_command_append(self):
+        command = Command()
+
+        command.append(ModeCommand(1, 1)) # This should not raise an exception
+
+        with self.assertRaises(ValueError):
+            command.append('dummy')
+
 
 if __name__ == '__main__':
     unittest.main()
