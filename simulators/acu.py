@@ -1,10 +1,12 @@
 import thread
 import time
 from simulators import utils
-from simulators.acu_status import general_status
-from simulators.acu_status import axis_status
-from simulators.acu_status import pointing_status
-from simulators.acu_status import facility_status
+from simulators.acu_status.general_status import GeneralStatus
+from simulators.acu_status.axis_status import (
+    AzimuthAxisStatus, ElevationAxisStatus
+)
+from simulators.acu_status.pointing_status import PointingStatus
+from simulators.acu_status.facility_status import FacilityStatus
 from simulators.common import BaseSystem
 
 
@@ -20,11 +22,11 @@ class System(BaseSystem):
         """
         self.acu = ACU(sampling_time)
         self._set_default()
+        self.cmd_counter = None
 
     def _set_default(self):
         self.msg = b''
         self.msg_length = 0
-        self.cmd_counter = 0
         self.cmds_number = 0
 
     def parse(self, byte):
@@ -43,7 +45,12 @@ class System(BaseSystem):
             self.msg_length = utils.bytes_to_int(self.msg[-4:])
 
         if len(self.msg) == 12:
-            self.cmd_counter = utils.bytes_to_int(self.msg[-4:])
+            cmd_counter = utils.bytes_to_uint(self.msg[-4:])
+            if cmd_counter == self.cmd_counter:
+                self._set_default()
+                raise ValueError('Duplicated cmd_counter.')
+            else:
+                self.cmd_counter = cmd_counter
 
         if len(self.msg) == 16:
             self.cmds_number = utils.bytes_to_int(self.msg[-4:])
@@ -53,7 +60,7 @@ class System(BaseSystem):
             self._set_default()
             if msg[-4:] != end_flag:
                 raise ValueError(
-                    "Wrong end flag: got %s, expected %s."
+                    'Wrong end flag: got %s, expected %s.'
                     % (msg[-4:], end_flag)
                 )
             return self.acu.parse_commands(msg)
@@ -70,9 +77,9 @@ class System(BaseSystem):
 class ACU(object):
 
     functions = {
-        1: "mode_command",
-        2: "parameter_command",
-        4: "program_track_parameter_command",
+        1: '_mode_command',
+        2: '_parameter_command',
+        4: '_program_track_parameter_command',
     }
 
     def __init__(self, sampling_time=0.2):
@@ -80,12 +87,11 @@ class ACU(object):
         param sampling_time: seconds between the sending of consecutive
         status messages
         """
-        self.GS = general_status.GeneralStatus()
-        self.Azimuth = axis_status.AxisStatus(8, 0.85, 0.4, (-90, 450), [180])
-        self.Elevation = axis_status.AxisStatus(4, 0.5, 0.25, (5, 90), [90])
-        self.AzimuthCableWrap = axis_status.AxisStatus()
-        self.PS = pointing_status.PointingStatus()
-        self.FS = facility_status.FacilityStatus()
+        self.GS = GeneralStatus()
+        self.Azimuth = AzimuthAxisStatus()
+        self.Elevation = ElevationAxisStatus()
+        self.PS = PointingStatus(self.Azimuth, self.Elevation)
+        self.FS = FacilityStatus()
 
         self.status_counter = 0
         self.status_message = None
@@ -109,10 +115,10 @@ class ACU(object):
             self.GS.get_status()
             + self.Azimuth.get_axis_status()
             + self.Elevation.get_axis_status()
-            + self.AzimuthCableWrap.get_axis_status()
+            + self.Azimuth.get_cable_wrap_axis_status()
             + self.Azimuth.get_motor_status()
             + self.Elevation.get_motor_status()
-            + self.AzimuthCableWrap.get_motor_status()
+            + self.Azimuth.get_cable_wrap_motor_status()
             + self.PS.get_status()
             + self.FS.get_status()
         )
@@ -152,10 +158,10 @@ class ACU(object):
                 commands.append(commands_string[:command_ending])
                 commands_string = commands_string[command_ending + 4:]
             else:
-                raise ValueError("Unknown command.")
+                raise ValueError('Unknown command.')
 
         if len(commands) != cmds_number:
-            raise ValueError("Malformed message.")
+            raise ValueError('Malformed message.')
 
         for command in commands:
             command_id = utils.bytes_to_int(command[:2])
@@ -166,7 +172,7 @@ class ACU(object):
 
         return True
 
-    def mode_command(self, command):
+    def _mode_command(self, command):
         subsystem_id = utils.bytes_to_int(command[2:4])
 
         if subsystem_id == 1:
@@ -174,9 +180,9 @@ class ACU(object):
         elif subsystem_id == 2:
             self.Elevation.mode_command(command)
         else:
-            raise ValueError("Unknown subsystem.")
+            raise ValueError('Unknown subsystem.')
 
-    def parameter_command(self, command):
+    def _parameter_command(self, command):
         subsystem_id = utils.bytes_to_int(command[2:4])
 
         if subsystem_id == 1:
@@ -186,15 +192,19 @@ class ACU(object):
         elif subsystem_id == 5:
             self.PS.parameter_command(command)
         else:
-            raise ValueError("Unknown subsystem.")
+            raise ValueError('Unknown subsystem.')
 
-    def program_track_parameter_command(self, command):
-        pass
+    def _program_track_parameter_command(self, command):
+        subsystem_id = utils.bytes_to_int(command[2:4])
+
+        if subsystem_id == 5:
+            self.PS.program_track_parameter_command(command)
+        else:
+            raise ValueError('Unknown subsystem.')
 
     def stop(self):
         self.Azimuth.stop()
         self.Elevation.stop()
-        self.AzimuthCableWrap.stop()
         self.run = False
 
 servers = []

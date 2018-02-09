@@ -1,10 +1,13 @@
 import time
 import thread
-from simulators.acu_status import motor_status as ms
-from simulators.acu_status import parameter_command_status
-from simulators.acu_status import mode_command_status
-from simulators.acu_status.mode_command_status import mode_command_functions
+from datetime import datetime, timedelta
+from threading import Timer
 from simulators import utils
+from simulators.acu_status import motor_status as ms
+from simulators.acu_status import mode_command_status
+from simulators.acu_status.mode_command_status import (
+    mode_command_functions)
+from simulators.acu_status import parameter_command_status
 
 
 class AxisStatus(object):
@@ -15,6 +18,7 @@ class AxisStatus(object):
             op_range=(0, 0),
             stow_pos=None):
 
+        self.counter = 1
         self.max_velocity = max_vel
         self.max_acceleration = max_accel
         self.min_pos = op_range[0]
@@ -28,6 +32,11 @@ class AxisStatus(object):
 
         for _ in range(n_motors):
             self.motor_status.append(ms.MotorStatus())
+
+        self.program_track_max_rate = 0
+        self.program_track_table = []
+        self.program_track_timer = None
+        self.program_track_active = False
 
         self.simulation = 0  # BOOL, 0: axis simulation off, 1: on
         self.axis_ready = 0  # BOOL, 0: axis not ready for activating, 1: ready
@@ -309,6 +318,50 @@ class AxisStatus(object):
             response += motor_status.get_status()
         return response
 
+    def stop(self):
+        if self.program_track_timer:
+            self.program_track_timer.cancel()
+        self.run = False
+
+    def _move(self):
+        while self.run:
+            current_time = time.time()
+            if self.current_time != 0:
+                delta_time = current_time - self.current_time
+            else:
+                delta_time = 0
+            self.current_time = current_time
+            # delta_time unit is expressed in seconds
+
+            if self.axis_state == 3:
+                sign = utils.sign(self.p_Soll - self.p_Ist)
+                if sign != 0:
+                    current_pos = self.p_Ist
+                    # using instantaneous accel. for first implementation
+                    current_pos += sign * abs(self.v_Soll) * delta_time
+                    if self.p_Soll != current_pos:
+                        res_sign = utils.sign(self.p_Soll - current_pos)
+                        if res_sign != sign:
+                            # overshoot, movement completed
+                            self.p_Ist = self.p_Soll
+                            self.mcs.executed_command_answer = 1
+                            if (self.program_track_active and
+                                    not self.program_track_table):
+                                self.program_track_active = False
+                        else:
+                            # Updating current position
+                            self.p_Ist = current_pos
+                else:
+                    self.mcs.executed_command_answer = 1
+                    if self.program_track_active:
+                        if not self.program_track_table:
+                            self.program_track_active = False
+                            self.program_track_timer = None
+
+            time.sleep(0.005)
+
+    # -------------------- Mode Commands --------------------
+
     def mode_command(self, cmd):
         cmd_cnt = utils.bytes_to_int(cmd[4:8])
         mode_id = utils.bytes_to_int(cmd[8:10])
@@ -391,9 +444,6 @@ class AxisStatus(object):
 
         return received_command_answer
 
-    def parameter_command(self, cmd):
-        pass
-
     # mode_id == 1
     def _inactive(self, *_):
         self.axis_state = 0
@@ -438,12 +488,30 @@ class AxisStatus(object):
     def _stop(self, *_):
         self.p_Soll = self.p_Ist
         self.v_Soll = 0
+        if self.program_track_timer:
+            self.program_track_timer.cancel()
+            self.program_track_timer = None
+        if self.program_track_active:
+            self.program_track_active = False
         self.mcs.executed_command_answer = 1
         return True
 
     # mode_id == 8
     def _program_track(self, _, rate):
-        self.v_Soll = int(round(rate * 1000000))
+        if self.program_track_table:
+            self.v_Soll = min(
+                int(round(rate * 1000000)),
+                int(round(self.program_track_max_rate * 1000000))
+            )
+            delay = self.program_track_start_time - datetime.utcnow()
+            delay += timedelta(milliseconds=self.program_track_table[0][0])
+            self.program_track_timer = Timer(
+                delay.total_seconds(),
+                self._execute_program_track_entry
+            )
+            self.program_track_active = True
+            self.program_track_timer.daemon = True
+            self.program_track_timer.start()
         self.mcs.executed_command_answer = 1
         return True
 
@@ -504,32 +572,68 @@ class AxisStatus(object):
         self.v_Soll = int(round(rate * 1000000))
         return True
 
-    def _move(self):
-        while self.run:
-            current_time = time.time()
-            if self.current_time != 0:
-                delta_time = current_time - self.current_time
-            else:
-                delta_time = 0
-            self.current_time = current_time
-            # delta_time unit is expressed in seconds
+    def parameter_command(self, cmd):
+        pass
 
-            if self.axis_state == 3:
-                sign = utils.sign(self.p_Soll - self.p_Ist)
-                if sign != 0:
-                    current_pos = self.p_Ist
-                    # using instantaneous accel. for first implementation
-                    current_pos += self.v_Soll * delta_time
-                    if self.p_Soll != current_pos:
-                        res_sign = utils.sign(self.p_Soll - current_pos)
-                        if res_sign != sign:
-                            # overshoot, movement completed
-                            self.p_Ist = self.p_Soll
-                            self.mcs.executed_command_answer = 1
-                        else:
-                            self.p_Ist = current_pos
-                else:
-                    self.mcs.executed_command_answer = 1
+    # ------------------ Program Track Parameter Command ------------------
+
+    def load_program_track_table(self, start_time, max_rate, entries):
+        program_track_table = entries
+        program_track_table.sort(key=lambda i: i[0])
+        self.program_track_start_time = start_time
+        self.program_track_max_rate = max_rate
+        self.program_track_table = program_track_table
+
+    def add_program_track_entries(self, start_time, max_rate, entries):
+        if not self.program_track_table:
+            raise ValueError('Empty program_track_table.')
+        program_track_table = self.program_track_table + entries
+        program_track_table.sort(key=lambda i: i[0])
+        self.program_track_start_time = start_time
+        self.program_track_max_rate = max_rate
+        self.program_track_table = program_track_table
+
+    def _execute_program_track_entry(self):
+        self.program_track_timer = None
+        entry = self.program_track_table.pop(0)
+        self.p_Soll = int(round(entry[1] * 1000000))
+
+        if self.program_track_table:
+            delay = self.program_track_start_time - datetime.utcnow()
+            delay += timedelta(milliseconds=self.program_track_table[0][0])
+            self.program_track_timer = Timer(
+                delay.total_seconds(),
+                self._execute_program_track_entry
+            )
+            self.program_track_timer.daemon = True
+            self.program_track_timer.start()
+
+
+class AzimuthAxisStatus(AxisStatus):
+
+    def __init__(self):
+        AxisStatus.__init__(self, 8, 0.85, 0.4, (-90, 450), [180])
+
+        self.AzimuthCableWrap = CableWrapAxisStatus()
+
+    def get_cable_wrap_axis_status(self):
+        return self.AzimuthCableWrap.get_axis_status()
+
+    def get_cable_wrap_motor_status(self):
+        return self.AzimuthCableWrap.get_motor_status()
 
     def stop(self):
         self.run = False
+        self.AzimuthCableWrap.stop()
+
+
+class ElevationAxisStatus(AxisStatus):
+
+    def __init__(self):
+        AxisStatus.__init__(self, 4, 0.5, 0.25, (5, 90), [90])
+
+
+class CableWrapAxisStatus(AxisStatus):
+
+    def __init__(self):
+        AxisStatus.__init__(self)

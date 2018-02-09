@@ -4,7 +4,11 @@ from simulators import utils
 
 
 class PointingStatus(object):
-    def __init__(self):
+    def __init__(self, azimuth, elevation):
+        self.azimuth = azimuth
+        self.elevation = elevation
+        self.program_track_queue = []
+
         # confVersion, REAL64, version of the configuration file
         self.confVersion = 0
 
@@ -227,3 +231,87 @@ class PointingStatus(object):
 
     def parameter_command(self, command):
         pass
+
+    def program_track_parameter_command(self, command):
+        parameter_id = utils.bytes_to_uint(command[8:10])
+
+        if parameter_id != 61:
+            raise ValueError('Unknown parameter_id %d.' % parameter_id)
+
+        interpolation_mode = utils.bytes_to_uint(command[10:12])
+
+        if interpolation_mode != 4:
+            raise ValueError(
+                'Unknown interpolation_mode %d.'
+                % interpolation_mode
+            )
+
+        tracking_mode = utils.bytes_to_uint(command[12:14])
+
+        if tracking_mode != 1:
+            raise ValueError('Unknown tracking_mode %d.' % tracking_mode)
+
+        load_mode = utils.bytes_to_uint(command[14:16])
+
+        if load_mode not in [1, 2]:
+            raise ValueError('Unknown load_mode %d.' % load_mode)
+
+        sequence_length = utils.bytes_to_uint(command[16:18])
+
+        if sequence_length > 50:
+            raise ValueError('Sequence too long.')
+
+        if load_mode == 1 and sequence_length < 5:
+            raise ValueError('Sequence too short.')
+
+        start_time = utils.mjd_to_date(utils.bytes_to_real(command[18:26], 2))
+        azimuth_max_rate = utils.bytes_to_real(command[26:34], 2)
+        elevation_max_rate = utils.bytes_to_real(command[34:42], 2)
+
+        byte_entries = command[42:]
+        azimuth_entries = []
+        elevation_entries = []
+
+        if len(byte_entries) != sequence_length * 20:
+            raise ValueError('Malformed sequence.')
+
+        for i in range(sequence_length):
+            offset = i * 20
+
+            relative_time = utils.bytes_to_int(
+                byte_entries[offset:offset + 4]
+            )
+            azimuth_position = utils.bytes_to_real(
+                byte_entries[offset + 4:offset + 12],
+                2
+            )
+            elevation_position = utils.bytes_to_real(
+                byte_entries[offset + 12:offset + 20],
+                2
+            )
+
+            azimuth_entries.append((relative_time, azimuth_position))
+            elevation_entries.append((relative_time, elevation_position))
+
+        if load_mode == 1:
+            self.azimuth.load_program_track_table(
+                start_time,
+                azimuth_max_rate,
+                azimuth_entries
+            )
+            self.elevation.load_program_track_table(
+                start_time,
+                elevation_max_rate,
+                elevation_entries
+            )
+        else:
+            self.azimuth.add_program_track_entries(
+                start_time,
+                azimuth_max_rate,
+                azimuth_entries
+            )
+            self.elevation.add_program_track_entries(
+                start_time,
+                elevation_max_rate,
+                elevation_entries
+            )

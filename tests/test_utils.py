@@ -91,6 +91,19 @@ class TestServer(unittest.TestCase):
         expected_result = -1281
         self.assertNotEqual(result, expected_result)
 
+    def test_right_bytes_to_uint(self):
+        """Convert a string of bytes into an unsigned integer."""
+        byte_string = b'\xFF\xFF\xFF\xFF'
+        result = utils.bytes_to_uint(byte_string)
+        expected_result = 4294967295
+        self.assertEqual(result, expected_result)
+
+    def test_wrong_bytes_to_uint(self):
+        byte_string = b'\xFF\xFF\xFF\xFF'
+        result = utils.bytes_to_uint(byte_string)
+        expected_result = -1
+        self.assertNotEqual(result, expected_result)
+
     def test_real_to_binary_single_precision(self):
         """Convert a real number to its binary representation."""
         number = 3.14159265358979323846264338327950288419716939937510582097494
@@ -239,6 +252,10 @@ class TestServer(unittest.TestCase):
         """Return the datetime object of a given modified julian date."""
         expected_date = datetime(2018, 1, 20, 10, 30, 45, 100000)
         self.assertEqual(utils.mjd_to_date(58138.43802199074), expected_date)
+
+    def test_mjd_to_date_old_date(self):
+        expected_date = datetime(45, 6, 2, 8, 30, 39, 772000)
+        self.assertEqual(utils.mjd_to_date(-662354.354627354), expected_date)
 
     def test_day_milliseconds(self):
         """Make sure that the datatype of the response is the correct one.

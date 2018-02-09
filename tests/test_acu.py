@@ -1,5 +1,6 @@
 import unittest
 import time
+from datetime import datetime, timedelta
 from simulators import acu
 from simulators import utils
 from simulators.acu_status.acu_utils import Command
@@ -26,6 +27,18 @@ class TestACU(unittest.TestCase):
             status = self.system.get_status()
             msg_counter = utils.bytes_to_int(status[8:12])
             self.assertEqual(msg_counter, i)
+
+    def test_duplicated_command_counter(self):
+        commands = Command(ModeCommand(1, 1)).get()
+
+        for byte in commands:
+            self.assertTrue(self.system.parse(byte))
+
+        for byte in commands[:11]:
+            self.assertTrue(self.system.parse(byte))
+
+        with self.assertRaises(ValueError):
+            self.system.parse(commands[11])
 
     def test_status_message_sampling_time(self):
         self.system = acu.System()
@@ -503,9 +516,17 @@ class TestACU(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.system.parse(commands[-1])
 
-    def test_program_track_command_new_table(self):
-        command = ProgramTrackCommand(1, 0, (1, 1))
-        command.add_entry(1, 1, 1)
+    def test_program_track_command_load_new_table(self):
+        command = ProgramTrackCommand(
+            load_mode=1,
+            start_time=0,
+            axis_rates=(1, 1)
+        )
+        command.add_entry(
+            relative_time=1,
+            azimuth_position=1,
+            elevation_position=1
+        )
         command.add_entry(2, 2, 2)
         command.add_entry(3, 3, 3)
         command.add_entry(4, 4, 4)
@@ -517,15 +538,114 @@ class TestACU(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
 
     def test_program_track_command_add_entries(self):
-        command = ProgramTrackCommand(2, 0, (1, 1))
-        command.add_entry(1, 1, 1)
-        pte = ProgramTrackEntry(2, 2, 2)
-        command.append_entry(pte)
+        command = ProgramTrackCommand(
+            load_mode=1,
+            start_time=0,
+            axis_rates=(1, 1)
+        )
+        command.add_entry(
+            relative_time=1,
+            azimuth_position=1,
+            elevation_position=1
+        )
+        command.add_entry(2, 2, 2)
+        command.add_entry(3, 3, 3)
+        command.add_entry(4, 4, 4)
+        command.add_entry(5, 5, 5)
 
         commands = Command(command).get()
 
         for byte in commands:
             self.assertTrue(self.system.parse(byte))
+
+        command = ProgramTrackCommand(2, 0, (1, 1))
+        command.add_entry(6, 6, 6)
+
+        commands = Command(command).get()
+
+        for byte in commands:
+            self.assertTrue(self.system.parse(byte))
+
+    def test_program_track_command_add_entries_empty_table(self):
+        command = ProgramTrackCommand(2, 0, (1, 1))
+        command.add_entry(1, 1, 1)
+        pte = ProgramTrackEntry(
+            relative_time=2,
+            azimuth_position=2,
+            elevation_position=2
+        )
+        command.append_entry(pte)
+
+        commands = Command(command).get()
+
+        for byte in commands[:-1]:
+            self.assertTrue(self.system.parse(byte))
+
+        with self.assertRaises(ValueError):
+            self.system.parse(commands[-1])
+
+    def test_program_track_unknown_subsystem(self):
+        command = ProgramTrackCommand(
+            load_mode=1,
+            start_time=0,
+            axis_rates=(1, 1),
+            subsystem_id=0,
+        )
+        command.add_entry(
+            relative_time=1,
+            azimuth_position=1,
+            elevation_position=1
+        )
+        command.add_entry(2, 2, 2)
+        command.add_entry(3, 3, 3)
+        command.add_entry(4, 4, 4)
+        command.add_entry(5, 5, 5)
+
+        commands = Command(command).get()
+
+        for byte in commands[:-1]:
+            self.assertTrue(self.system.parse(byte))
+
+        with self.assertRaises(ValueError):
+            self.system.parse(commands[-1])
+
+    def test_program_track_execution(self):
+        start_time = datetime.utcnow() + timedelta(milliseconds=100)
+
+        command = ProgramTrackCommand(
+            load_mode=1,
+            start_time=utils.mjd(start_time),
+            axis_rates=(0.5, 0.5)
+        )
+        command.add_entry(
+            relative_time=10,
+            azimuth_position=181,
+            elevation_position=91
+        )
+        command.add_entry(2000, 182, 92)
+        command.add_entry(4000, 183, 93)
+        command.add_entry(6000, 182, 92)
+        command.add_entry(8000, 181, 91)
+
+        for byte in Command(command).get():
+            self.assertTrue(self.system.parse(byte))
+
+        activate_azimuth = ModeCommand(1, 2)
+        activate_elevation = ModeCommand(2, 2)
+
+        for byte in Command(activate_azimuth, activate_elevation).get():
+            self.assertTrue(self.system.parse(byte))
+
+        start_azimuth = ModeCommand(1, 8, 0, 0.5)
+        start_elevation = ModeCommand(2, 8, 0, 0.5)
+
+        for byte in Command(start_azimuth, start_elevation).get():
+            self.assertTrue(self.system.parse(byte))
+
+        time.sleep(10.2)
+
+        self.assertEqual(self.system.acu.Azimuth.p_Ist, 181000000)
+        self.assertEqual(self.system.acu.Elevation.p_Ist, 91000000)
 
     def test_multiple_commands(self):
         command_1 = ModeCommand(1, 1)
@@ -561,6 +681,31 @@ class TestACU(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             self.system.parse(commands[-1])
+
+    def test_utils_program_track_command_wrong_entry(self):
+        command = ProgramTrackCommand(1, 0, (0, 0))
+
+        with self.assertRaises(ValueError):
+            command.append_entry('dummy')
+
+    def test_utils_program_track_get_empty_table(self):
+        command = ProgramTrackCommand(1, 0, (0, 0))
+        fake_cmd_counter = 0
+
+        with self.assertRaises(ValueError):
+            command.get(fake_cmd_counter)
+
+    def test_utils_macro_command_wrong_type_init(self):
+        with self.assertRaises(ValueError):
+            Command('dummy')
+
+    def test_utils_macro_command_append(self):
+        command = Command()
+
+        command.append(ModeCommand(1, 1)) # This should not raise an exception
+
+        with self.assertRaises(ValueError):
+            command.append('dummy')
 
 
 if __name__ == '__main__':
