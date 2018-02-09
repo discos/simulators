@@ -1,3 +1,4 @@
+import time
 from simulators import utils
 
 start_flag = b'\x1D\xFC\xCF\x1A'
@@ -73,12 +74,14 @@ class ProgramTrackCommand(object):
             load_mode,
             start_time,
             axis_rates,
-            sequence=None):
+            sequence=None,
+            subsystem_id=5):
         self.load_mode = load_mode
         self.start_time = start_time
         self.azimuth_rate = axis_rates[0]
         self.elevation_rate = axis_rates[1]
         self.sequence = [] if not sequence else sequence
+        self.subsystem_id = subsystem_id
 
     def append_entry(self, entry):
         if not isinstance(entry, ProgramTrackEntry):
@@ -106,7 +109,9 @@ class ProgramTrackCommand(object):
 
         return(
             utils.uint_to_bytes(4, 2)  # 4: program track parameter command
-            + utils.uint_to_bytes(5, 2)  # 5: tracking subsystem
+            # The only subsystem supported is 5, tracking, but it is possible
+            # to be overridden to generate some specific errors
+            + utils.uint_to_bytes(self.subsystem_id, 2)
             + utils.uint_to_bytes(self.command_counter)
             + utils.uint_to_bytes(61, 2)  # 61: load program track table
             + utils.uint_to_bytes(4, 2)  # 4: spline interpolation mode
@@ -153,8 +158,10 @@ class Command(object):
         commands = b''
         command_counter = utils.day_milliseconds()
 
-        for command in self.command_list:
-            commands += command.get(command_counter)
+        for i in range(len(self.command_list)):
+            commands += self.command_list[i].get(command_counter + i)
+
+        time.sleep(0.001 * len(self.command_list))
 
         return(
             start_flag

@@ -28,6 +28,18 @@ class TestACU(unittest.TestCase):
             msg_counter = utils.bytes_to_int(status[8:12])
             self.assertEqual(msg_counter, i)
 
+    def test_duplicated_command_counter(self):
+        commands = Command(ModeCommand(1, 1)).get()
+
+        for byte in commands:
+            self.assertTrue(self.system.parse(byte))
+
+        for byte in commands[:11]:
+            self.assertTrue(self.system.parse(byte))
+
+        with self.assertRaises(ValueError):
+            self.system.parse(commands[11])
+
     def test_status_message_sampling_time(self):
         self.system = acu.System()
         time.sleep(2)
@@ -563,6 +575,31 @@ class TestACU(unittest.TestCase):
             elevation_position=2
         )
         command.append_entry(pte)
+
+        commands = Command(command).get()
+
+        for byte in commands[:-1]:
+            self.assertTrue(self.system.parse(byte))
+
+        with self.assertRaises(ValueError):
+            self.system.parse(commands[-1])
+
+    def test_program_track_unknown_subsystem(self):
+        command = ProgramTrackCommand(
+            load_mode=1,
+            start_time=0,
+            axis_rates=(1, 1),
+            subsystem_id=0,
+        )
+        command.add_entry(
+            relative_time=1,
+            azimuth_position=1,
+            elevation_position=1
+        )
+        command.add_entry(2, 2, 2)
+        command.add_entry(3, 3, 3)
+        command.add_entry(4, 4, 4)
+        command.add_entry(5, 5, 5)
 
         commands = Command(command).get()
 

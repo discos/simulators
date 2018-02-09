@@ -22,11 +22,11 @@ class System(BaseSystem):
         """
         self.acu = ACU(sampling_time)
         self._set_default()
+        self.cmd_counter = None
 
     def _set_default(self):
         self.msg = b''
         self.msg_length = 0
-        self.cmd_counter = None
         self.cmds_number = 0
 
     def parse(self, byte):
@@ -45,7 +45,7 @@ class System(BaseSystem):
             self.msg_length = utils.bytes_to_int(self.msg[-4:])
 
         if len(self.msg) == 12:
-            cmd_counter = utils.bytes_to_int(self.msg[-4:])
+            cmd_counter = utils.bytes_to_uint(self.msg[-4:])
             if cmd_counter == self.cmd_counter:
                 self._set_default()
                 raise ValueError('Duplicated cmd_counter.')
