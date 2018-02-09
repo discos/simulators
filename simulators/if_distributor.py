@@ -1,7 +1,16 @@
-from simulators.common import BaseSystem
+from simulators.common import ListeningSystem
 
 
-class System(BaseSystem):
+# Each system module (like active_surface.py, acu.py, etc.) has to
+# define a list called servers.s This list contains tuples
+# (l_address, s_address, args). l_address is the tuple (ip, port) that
+# defines the listening node that exposes the parse method, s_address
+# is the tuple that defines the optional sending node that exposes the
+# get_message method, while args is a tuple of optional extra arguments.
+servers = [(('127.0.0.1', 12000), (), ())]
+
+
+class System(ListeningSystem):
 
     header = b'#'
     tail = b'\n'
@@ -32,7 +41,7 @@ class System(BaseSystem):
             if byte == self.header:
                 return True  # Got the header
             else:
-                self.msg = 'b'
+                self.msg = b''
                 return False
         elif len(self.msg) < self.max_msg_length:
             if byte != self.tail:
@@ -127,10 +136,4 @@ class System(BaseSystem):
             self._set_default()
             return None
         else:  # Not expected command
-            return b'#COMMAND UNKNOW\n'
-
-# Each system module (like active_surface.py, acu.py, etc.) has to
-# define a list called servers.s This list contains tuples (address, args).
-# address is the tuple (ip, port) that defines the node, while args is a tuple
-# of optional extra arguments.
-servers = [(('127.0.0.1', 12000), ())]
+            return b'#COMMAND UNKNOWN\n'

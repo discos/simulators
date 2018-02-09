@@ -1,8 +1,19 @@
-#!/usr/bin/python
 import time
 import Queue
 from simulators import utils
-from simulators.common import BaseSystem
+from simulators.common import ListeningSystem
+
+
+# Each system module (like active_surface.py, acu.py, etc.) has to
+# define a list called servers.s This list contains tuples
+# (l_address, s_address, args). l_address is the tuple (ip, port) that
+# defines the listening node that exposes the parse method, s_address
+# is the tuple that defines the optional sending node that exposes the
+# get_message method, while args is a tuple of optional extra arguments.
+servers = []
+for line in range(96):  # 96 servers
+    l_address = ('127.0.0.1', 11000 + line)
+    servers.append((l_address, (), ()))  # No sending servers or extra args
 
 
 class Driver(object):
@@ -357,7 +368,7 @@ class Driver(object):
         self.standby_status = False if self.standby_mode > 0 else True
 
 
-class System(BaseSystem):
+class System(ListeningSystem):
     """The active surface is composed of 8 sectors, and each sector
     has 12 lines of actuators.  The antenna control software must open
     one TCP socket for each line.  This class represents a line."""
@@ -931,12 +942,3 @@ class System(BaseSystem):
             else:
                 self.drivers[params[0]].set_working_mode(params[2])
                 return self.byte_ack
-
-# Each system module (like active_surface.py, acu.py, etc.) has to
-# define a list called servers.s This list contains tuples (address, args).
-# address is the tuple (ip, port) that defines the node, while args is a tuple
-# of optional extra arguments.
-servers = []
-for line in range(96):  # 96 lines
-    address = ('127.0.0.1', 11000 + line)
-    servers.append((address, ()))  # No extra arguments

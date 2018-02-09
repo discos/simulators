@@ -1,5 +1,3 @@
-import thread
-import time
 from simulators import utils
 from simulators.acu_status.general_status import GeneralStatus
 from simulators.acu_status.axis_status import (
@@ -7,21 +5,32 @@ from simulators.acu_status.axis_status import (
 )
 from simulators.acu_status.pointing_status import PointingStatus
 from simulators.acu_status.facility_status import FacilityStatus
-from simulators.common import BaseSystem
+from simulators.common import ListeningSystem, SendingSystem
 
+
+# Each system module (like active_surface.py, acu.py, etc.) has to
+# define a list called servers.s This list contains tuples
+# (l_address, s_address, args). l_address is the tuple (ip, port) that
+# defines the listening node that exposes the parse method, s_address
+# is the tuple that defines the optional sending node that exposes the
+# get_message method, while args is a tuple of optional extra arguments.
+servers = []
+servers.append((('127.0.0.1', 13000), ('127.0.0.1', 13001), ()))
 
 start_flag = b'\x1D\xFC\xCF\x1A'
 end_flag = b'\xA1\xFC\xCF\xD1'
 
 
-class System(BaseSystem):
+class System(ListeningSystem, SendingSystem):
+
     def __init__(self, sampling_time=0.2):
         """
         param sampling_time: seconds between the sending of consecutive
         status messages
         """
-        self.acu = ACU(sampling_time)
+        self.acu = ACU()
         self._set_default()
+        self.sampling_time = sampling_time
         self.cmd_counter = None
 
     def _set_default(self):
@@ -67,11 +76,8 @@ class System(BaseSystem):
 
         return True
 
-    def get_status(self):
+    def get_message(self):
         return self.acu.get_status()
-
-    def __del__(self):
-        self.acu.stop()
 
 
 class ACU(object):
@@ -82,7 +88,7 @@ class ACU(object):
         4: '_program_track_parameter_command',
     }
 
-    def __init__(self, sampling_time=0.2):
+    def __init__(self):
         """
         param sampling_time: seconds between the sending of consecutive
         status messages
@@ -93,24 +99,9 @@ class ACU(object):
         self.PS = PointingStatus(self.Azimuth, self.Elevation)
         self.FS = FacilityStatus()
 
-        self.status_counter = 0
         self.status_message = None
 
-        if sampling_time > 0:
-            self.sampling_time = sampling_time
-            self.run = True
-            thread.start_new_thread(self._update_status, ())
-
     def get_status(self):
-        if self.status_message is None:
-            status_message = self._status_message()
-        else:
-            status_message = self.status_message
-            self.status_message = None
-
-        return status_message
-
-    def _status_message(self):
         status = (
             self.GS.get_status()
             + self.Azimuth.get_axis_status()
@@ -124,7 +115,7 @@ class ACU(object):
         )
 
         msg_length = utils.uint_to_bytes(len(status) + 16)
-        msg_counter = utils.uint_to_bytes(self.status_counter)
+        msg_counter = utils.uint_to_bytes(utils.day_milliseconds())
 
         status_message = start_flag
         status_message += msg_length
@@ -132,14 +123,7 @@ class ACU(object):
         status_message += status
         status_message += end_flag
 
-        self.status_counter += 1
-
         return status_message
-
-    def _update_status(self):
-        while self.run:
-            self.status_message = self._status_message()
-            time.sleep(self.sampling_time)
 
     def parse_commands(self, msg):
         cmds_number = utils.bytes_to_int(msg[12:16])
@@ -206,6 +190,3 @@ class ACU(object):
         self.Azimuth.stop()
         self.Elevation.stop()
         self.run = False
-
-servers = []
-servers.append((('127.0.0.1', 13000), ()))

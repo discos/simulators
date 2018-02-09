@@ -166,7 +166,7 @@ class TestIFDistributorParse(unittest.TestCase):
     def test_wrong_command(self):
         for byte in b'#abcdefg\n':
             response = self.system.parse(byte)
-        self.assertEqual(response, b'#COMMAND UNKNOW\n')
+        self.assertEqual(response, b'#COMMAND UNKNOWN\n')
 
     def test_set_switch(self):
         msg = b'#SWT 00 001\n'

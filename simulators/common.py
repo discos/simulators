@@ -7,6 +7,13 @@ class BaseSystem(object):
 
     __metaclass__ = abc.ABCMeta
 
+    @staticmethod
+    def system_stop():
+        os.kill(os.getpid(), signal.SIGHUP)  # Send myself SIGHUP
+
+
+class ListeningSystem(BaseSystem):
+
     @abc.abstractmethod
     def parse(self, byte):
         """This method takes a byte (single character string) and returns:
@@ -19,6 +26,12 @@ class BaseSystem(object):
         length, the sent message carries a wrong checksum, the client asks to
         execute an unknown command."""
 
-    @staticmethod
-    def system_stop():
-        os.kill(os.getpid(), signal.SIGHUP)  # Send myself SIGHUP
+
+class SendingSystem(BaseSystem):
+
+    @abc.abstractmethod
+    def get_message(self):
+        """This method returns the message the system wants to send to
+        its client(s). The message is sent periodically and the system
+        must have an attribute called 'sampling_rate'. Make sure that
+        the method is implemented thread safely."""
