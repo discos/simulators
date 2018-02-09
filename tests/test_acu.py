@@ -605,7 +605,7 @@ class TestACU(unittest.TestCase):
         for byte in Command(start_azimuth, start_elevation).get():
             self.assertTrue(self.system.parse(byte))
 
-        time.sleep(10.1)
+        time.sleep(10.2)
 
         self.assertEqual(self.system.acu.Azimuth.p_Ist, 181000000)
         self.assertEqual(self.system.acu.Elevation.p_Ist, 91000000)

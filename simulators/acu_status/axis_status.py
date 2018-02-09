@@ -607,3 +607,33 @@ class AxisStatus(object):
             )
             self.program_track_timer.daemon = True
             self.program_track_timer.start()
+
+
+class AzimuthAxisStatus(AxisStatus):
+
+    def __init__(self):
+        AxisStatus.__init__(self, 8, 0.85, 0.4, (-90, 450), [180])
+
+        self.AzimuthCableWrap = CableWrapAxisStatus()
+
+    def get_cable_wrap_axis_status(self):
+        return self.AzimuthCableWrap.get_axis_status()
+
+    def get_cable_wrap_motor_status(self):
+        return self.AzimuthCableWrap.get_motor_status()
+
+    def stop(self):
+        self.run = False
+        self.AzimuthCableWrap.stop()
+
+
+class ElevationAxisStatus(AxisStatus):
+
+    def __init__(self):
+        AxisStatus.__init__(self, 4, 0.5, 0.25, (5, 90), [90])
+
+
+class CableWrapAxisStatus(AxisStatus):
+
+    def __init__(self):
+        AxisStatus.__init__(self)

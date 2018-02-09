@@ -2,8 +2,9 @@ import thread
 import time
 from simulators import utils
 from simulators.acu_status.general_status import GeneralStatus
-from simulators.acu_status.azimuth_axis import AzimuthAxisStatus
-from simulators.acu_status.elevation_axis import ElevationAxisStatus
+from simulators.acu_status.axis_status import (
+    AzimuthAxisStatus, ElevationAxisStatus
+)
 from simulators.acu_status.pointing_status import PointingStatus
 from simulators.acu_status.facility_status import FacilityStatus
 from simulators.common import BaseSystem
