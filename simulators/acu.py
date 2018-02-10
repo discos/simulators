@@ -185,8 +185,3 @@ class ACU(object):
             self.PS.program_track_parameter_command(command)
         else:
             raise ValueError('Unknown subsystem.')
-
-    def stop(self):
-        self.Azimuth.stop()
-        self.Elevation.stop()
-        self.run = False

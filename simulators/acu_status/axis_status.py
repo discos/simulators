@@ -1,7 +1,6 @@
 import time
-import thread
 from datetime import datetime, timedelta
-from threading import Timer
+from threading import Thread, Timer
 from simulators import utils
 from simulators.acu_status import motor_status as ms
 from simulators.acu_status import mode_command_status
@@ -11,6 +10,7 @@ from simulators.acu_status import parameter_command_status
 
 
 class AxisStatus(object):
+
     def __init__(self,
             n_motors=1,
             max_vel=0,
@@ -203,8 +203,9 @@ class AxisStatus(object):
         # parameter_command_status, refer to ParameterCommandStatus class
         self.pcs = parameter_command_status.ParameterCommandStatus()
 
-        self.run = True
-        thread.start_new_thread(self._move, ())
+        self.move_thread = Thread(target=self._move)
+        self.move_thread.daemon = True
+        self.move_thread.start()
 
     def _warnings(self):
         binary_string = (
@@ -318,13 +319,8 @@ class AxisStatus(object):
             response += motor_status.get_status()
         return response
 
-    def stop(self):
-        if self.program_track_timer:
-            self.program_track_timer.cancel()
-        self.run = False
-
     def _move(self):
-        while self.run:
+        while True:
             current_time = time.time()
             if self.current_time != 0:
                 delta_time = current_time - self.current_time
@@ -621,10 +617,6 @@ class AzimuthAxisStatus(AxisStatus):
 
     def get_cable_wrap_motor_status(self):
         return self.AzimuthCableWrap.get_motor_status()
-
-    def stop(self):
-        self.run = False
-        self.AzimuthCableWrap.stop()
 
 
 class ElevationAxisStatus(AxisStatus):

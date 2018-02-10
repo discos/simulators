@@ -12,10 +12,7 @@ from simulators.acu_status.acu_utils import ProgramTrackEntry
 class TestACU(unittest.TestCase):
 
     def setUp(self):
-        self.system = acu.System(0)
-
-    def tearDown(self):
-        del self.system
+        self.system = acu.System()
 
     def test_status_message_length(self):
         status = self.system.get_message()

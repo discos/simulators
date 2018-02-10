@@ -4,6 +4,7 @@ from simulators import utils
 
 
 class PointingStatus(object):
+
     def __init__(self, azimuth, elevation):
         self.azimuth = azimuth
         self.elevation = elevation

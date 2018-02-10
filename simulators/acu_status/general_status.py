@@ -2,6 +2,7 @@ from simulators import utils
 
 
 class GeneralStatus(object):
+
     def __init__(self):
         # Version, UINT16, ACU software version (10 -> v1.0)
         self.major_version = 1
@@ -18,14 +19,14 @@ class GeneralStatus(object):
 
         # Status HMI, UINT16
         # In bit mode coded status of the human machine interfaces
-        self.LCP_connected = 0               # bit 0
-        self.remote_computer_connected = 0   # bit 1
-        self.HBG_connected = 0               # bit 2
-        #                               # bit 3 not used
-        self.LCP_initialization_OK = 0       # bit 4
-        self.remote_initialization_OK = 0    # bit 5
-        self.HBG_initialization_OK = 0       # bit 6
-        #                               # bits 7:15 not used
+        self.LCP_connected = 0
+        self.remote_computer_connected = 0
+        self.HBG_connected = 0
+        # bit 3 not used
+        self.LCP_initialization_OK = 0
+        self.remote_initialization_OK = 0
+        self.HBG_initialization_OK = 0
+        # bits 7:15 not used
 
         self.software_IO = 0  # BOOL, 0: LCP inactive, 1: active
         self.simulation = 0  # BOOL, 0: simulation inactive, 1: active
