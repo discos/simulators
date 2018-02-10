@@ -2,6 +2,7 @@ from simulators import utils
 
 
 class FacilityStatus(object):
+
     def __init__(self):
         self.voltagePhToPh = 0  # REAL64
         self.currentPhToPh = 0  # REAL64

@@ -12,21 +12,12 @@ from simulators.acu_status.acu_utils import ProgramTrackEntry
 class TestACU(unittest.TestCase):
 
     def setUp(self):
-        self.system = acu.System(0)
-
-    def tearDown(self):
-        del self.system
+        self.system = acu.System()
 
     def test_status_message_length(self):
-        status = self.system.get_status()
+        status = self.system.get_message()
         msg_length = utils.bytes_to_int(status[4:8])
         self.assertEqual(msg_length, 813)
-
-    def test_status_message_counter(self):
-        for i in range(10):
-            status = self.system.get_status()
-            msg_counter = utils.bytes_to_int(status[8:12])
-            self.assertEqual(msg_counter, i)
 
     def test_duplicated_command_counter(self):
         commands = Command(ModeCommand(1, 1)).get()
@@ -39,13 +30,6 @@ class TestACU(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             self.system.parse(commands[11])
-
-    def test_status_message_sampling_time(self):
-        self.system = acu.System()
-        time.sleep(2)
-        status = self.system.get_status()
-        msg_counter = utils.bytes_to_int(status[8:12])
-        self.assertGreater(msg_counter, 1)
 
     def test_parse_correct_end_flag(self):
         commands = Command(ModeCommand(1, 1)).get()

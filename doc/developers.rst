@@ -143,17 +143,24 @@ To implement a simulator, you need to create a module that
 defines both a ``System`` class and a ``servers`` list.  The next
 sections will exaplain the API of these two objects.
 If you want to see an example, have a look at
-:download:`active_surface.py <../simulators/active_surface.py>`.
+:download:`acu.py <../simulators/acu.py>`.
 
 The ``System`` class
 --------------------
-The ``System`` class must inherit from ``server.BaseSystem``, and
-has to define a ``parse()`` method::
+The ``System`` class must inherit from one of the classes defined in :download:
+`common.py <../simulators/common.py>`, it can be inherited from ``server.ListeningSystem``
+or ``server.SendingSystem``, or from both simultaneously.
 
-    from simulators.common import BaseSystem
+The ``ListeningSystem`` class and the ``System.parse()`` method
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If the ``System`` class inherits from ``server.ListeningSystem``, it has to define
+a ``parse()`` method::
+
+    from simulators.common import ListeningSystem
 
 
-    class System(BaseSystem):
+    class System(ListeningSystem):
 
         def parse(self, byte):
             ...
@@ -172,44 +179,96 @@ requests, ``System.parse()`` has to return ``True``.
 It eventually raises a ``ValueError`` in case there is an unexpected error (not
 considered by the protocol).
 
+The ``SendingSystem`` class and the ``System.get_message()`` method
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If the ``System`` class inherits from ``server.SendingSystem``, it has to define
+a ``get_message()`` method and a ``sampling_rate`` attribute::
+
+    from simulators.common import SendingSystem
+
+
+    class System(SendingSystem):
+
+        self.sampling_rate = ...
+
+        def get_message(self):
+            ...
+
+The ``System.get_message()`` method should return some arbitrary data that the system
+would like to send to its clients. The ``System.sampling_rate`` attribute should be a
+strictly positive integer or floating point number, it represents the time interval
+(in seconds) between each message sent by the system.
+
+Inheriting from both ``ListeningSystem`` and ``SystemSystem``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A ``System`` class can inherit from both ``ListeningSystem`` and ``SendingSystem`` at
+the same time. If it does, it has to implement both the ``System.parse()`` and the
+``System.get_message()`` methods, and it has to define the ``System.sampling_rate`` value.
+
 
 The ``servers`` list
 --------------------
 The elements of the ``servers`` list are tuples.  Each tuple is composed
-of two items:
+of three items:
 
-* the server ``address``
-* a tuple (let's call it ``args``) of possible arguments required
+* the server listening address, ``l_address``
+* the server sending address, ``r_address``
+* another tuple (let's call it ``args``) of possible arguments required
   by ``System.__init__()``.
 
-For instance, let's suppose the system to simulate has 2
-servers, the first one with address ``('192.168.100.10', 5000)`` and the
-second one with address ``('192.168.100.10', 5001)``.  In that case we have
-to define the ``servers`` list as follow::
+Each element of the ``servers`` list represents an instance of the ``system``,
+``l_address`` is the address in which the server will wait for its clients
+to send the commands to pass to the ``System.parse()`` method. ``s_address`` is
+the address to which the server will send its data retrieved via the
+``System.get_message()`` method, at a constant period of ``System.sampling_rate``
+seconds.
 
+For instance, let's suppose the system to simulate has 2 listening servers
+and no sending servers, the first one with address ``('192.168.100.10', 5000)``
+and the second one with address ``('192.168.100.10', 5001)``.  In that case
+we have to define the ``servers`` list as follows::
 
     servers = [
-        ('192.168.100.10', 5000), ()),
-        ('192.168.100.10', 5001), ()),
+        ('192.168.100.10', 5000), (), ()),
+        ('192.168.100.10', 5001), (), ()),
     ]
 
 If our ``System`` class takes some extra arguments, let's say two integers,
 we have to pass them throgh the ``args`` tuple.  For instance::
 
     servers = [
-        ('192.168.100.10', 5000), (10, 20)),
-        ('192.168.100.10', 5001), (4, 5)),
+        ('192.168.100.10', 5000), (), (10, 20)),
+        ('192.168.100.10', 5001), (), (4, 5)),
+    ]
+
+If the system we want to simulate has instead 3 sending servers and no listening
+servers, we have to define the ``servers`` list as follows::
+
+    servers = [
+        ((), ('192.168.100.10', 5002), ()),
+        ((), ('192.168.100.10', 5003), ()),
+        ((), ('192.168.100.11', 5000), ()),
+    ]
+
+Finally, a system instance can act as both listening and sending server. In this case,
+each server list entry must be defined as follows::
+
+    servers = [
+        (('192.168.100.10', 5003), ('192.168.100.10', 5004), ()),
+        (('192.168.100.10', 6000), ('192.168.100.10', 6001), ()),
     ]
 
 If you want to see another example, have a look at the
 :download:`active_surface.py <../simulators/active_surface.py>` module.
-The active surface system is composed of 96 servers, and in fact its
-``servers`` list in defined in the following way::
+The active surface system is composed of 96 listening servers, and in fact
+its ``servers`` list in defined in the following way::
 
     servers = []
-    for i in range(96):  # 96 servers
-        address = ('127.0.0.1', 11000 + s)
-        servers.append((address, ()))  # No extra arguments
+    for line in range(96):  # 96 servers
+        l_address = ('127.0.0.1', 11000 + line)
+        servers.append((l_address, (), ()))  # No sending servers or extra args
 
 
 Custom commands
@@ -248,10 +307,15 @@ Server module
 .. module:: simulators.server
 
 
-Handler class
-~~~~~~~~~~~~~
+Handler classes
+~~~~~~~~~~~~~~~
 
-.. autoclass:: Handler
+.. autoclass:: ListenHandler
+   :members:
+   :inherited-members:
+
+
+.. autoclass:: SendHandler
    :members:
    :inherited-members:
 

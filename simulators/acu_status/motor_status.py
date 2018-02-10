@@ -2,6 +2,7 @@ from simulators import utils
 
 
 class MotorStatus(object):
+
     def __init__(self):
         self.actual_position = 0  # REAL32, [rot]
         self.actual_velocity = 0  # REAL32, [rot/min]
