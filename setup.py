@@ -14,5 +14,6 @@ setup(
     classifiers=[
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 2.7',
-   ],
+    ],
+    install_requires=['numpy', 'scipy'],
 )

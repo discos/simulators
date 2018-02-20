@@ -16,6 +16,7 @@ class ModeCommand(object):
         self.mode_id = mode_id
         self.parameter_1 = parameter_1
         self.parameter_2 = parameter_2
+        self.command_counter = None
 
     def get(self, command_counter):
         self.command_counter = command_counter
@@ -40,6 +41,7 @@ class ParameterCommand(object):
         self.parameter_id = parameter_id
         self.parameter_1 = parameter_1
         self.parameter_2 = parameter_2
+        self.command_counter = None
 
     def get(self, command_counter):
         self.command_counter = command_counter
@@ -82,6 +84,7 @@ class ProgramTrackCommand(object):
         self.elevation_rate = axis_rates[1]
         self.sequence = [] if not sequence else sequence
         self.subsystem_id = subsystem_id
+        self.command_counter = None
 
     def append_entry(self, entry):
         if not isinstance(entry, ProgramTrackEntry):
@@ -102,6 +105,7 @@ class ProgramTrackCommand(object):
             raise ValueError('Sequence must contain at least one entry.')
 
         self.command_counter = command_counter
+
         sequence_bytes = ''
 
         for entry in self.sequence:
@@ -137,6 +141,7 @@ class Command(object):
                 )
             else:
                 self.command_list.append(command)
+        self.command_counter = None
 
     @staticmethod
     def _check_command(command):
@@ -156,18 +161,28 @@ class Command(object):
 
     def get(self):
         commands = b''
-        command_counter = utils.day_milliseconds()
+
+        if not self.command_counter:
+            self.command_counter = utils.day_milliseconds()
 
         for i in range(len(self.command_list)):
-            commands += self.command_list[i].get(command_counter + i)
+            commands += self.command_list[i].get(self.command_counter + 1 + i)
 
         time.sleep(0.001 * len(self.command_list))
 
         return(
             start_flag
             + utils.uint_to_bytes(20 + len(commands))
-            + utils.uint_to_bytes(command_counter)
+            + utils.uint_to_bytes(self.command_counter)
             + utils.uint_to_bytes(len(self.command_list))
             + commands
             + end_flag
         )
+
+    def get_counter(self, index=None):
+        if index is None:
+            return self.command_counter
+        elif index > len(self.command_list):
+            raise ValueError('Index %d out of range.' % index)
+        else:
+            return self.command_list[index].command_counter

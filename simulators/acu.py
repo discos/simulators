@@ -1,8 +1,8 @@
+import time
+from threading import Thread
 from simulators import utils
 from simulators.acu_status.general_status import GeneralStatus
-from simulators.acu_status.axis_status import (
-    AzimuthAxisStatus, ElevationAxisStatus
-)
+from simulators.acu_status.axis_status import AxisStatus
 from simulators.acu_status.pointing_status import PointingStatus
 from simulators.acu_status.facility_status import FacilityStatus
 from simulators.common import ListeningSystem, SendingSystem
@@ -23,15 +23,44 @@ end_flag = b'\xA1\xFC\xCF\xD1'
 
 class System(ListeningSystem, SendingSystem):
 
+    subsystems = {
+        1: 'AZ',
+        2: 'EL',
+        5: 'PS',
+    }
+
+    commands = {
+        1: 'mode_command',
+        2: 'parameter_command',
+        4: 'program_track_parameter_command',
+    }
+
     def __init__(self, sampling_time=0.2):
         """
         param sampling_time: seconds between the sending of consecutive
         status messages
         """
-        self.acu = ACU()
         self._set_default()
         self.sampling_time = sampling_time
-        self.cmd_counter = None
+        self.command_counter = None
+        self.macro_cmd_counter = None
+
+        self.GS = GeneralStatus()
+        self.AZ = AxisStatus(
+            n_motors=8,
+            max_rates=(0.85, 0.4),
+            op_range=(-90, 450),
+            stow_pos=[180],
+        )  # Azimuth status
+        self.EL = AxisStatus(
+            n_motors=4,
+            max_rates=(0.5, 0.25),
+            op_range=(5, 90),
+            stow_pos=[90],
+        )  # Elevation status
+        self.CW = AxisStatus()  # Azimuth Cable Wrap status
+        self.PS = PointingStatus(self.AZ, self.EL, self.CW)
+        self.FS = FacilityStatus()
 
     def _set_default(self):
         self.msg = b''
@@ -54,12 +83,12 @@ class System(ListeningSystem, SendingSystem):
             self.msg_length = utils.bytes_to_int(self.msg[-4:])
 
         if len(self.msg) == 12:
-            cmd_counter = utils.bytes_to_uint(self.msg[-4:])
-            if cmd_counter == self.cmd_counter:
+            macro_cmd_counter = utils.bytes_to_uint(self.msg[-4:])
+            if macro_cmd_counter == self.macro_cmd_counter:
                 self._set_default()
-                raise ValueError('Duplicated cmd_counter.')
+                raise ValueError('Duplicated macro command counter.')
             else:
-                self.cmd_counter = cmd_counter
+                self.macro_cmd_counter = macro_cmd_counter
 
         if len(self.msg) == 16:
             self.cmds_number = utils.bytes_to_int(self.msg[-4:])
@@ -72,44 +101,19 @@ class System(ListeningSystem, SendingSystem):
                     'Wrong end flag: got %s, expected %s.'
                     % (msg[-4:], end_flag)
                 )
-            return self.acu.parse_commands(msg)
+            self._parse_commands(msg)
 
         return True
 
     def get_message(self):
-        return self.acu.get_status()
-
-
-class ACU(object):
-
-    functions = {
-        1: '_mode_command',
-        2: '_parameter_command',
-        4: '_program_track_parameter_command',
-    }
-
-    def __init__(self):
-        """
-        param sampling_time: seconds between the sending of consecutive
-        status messages
-        """
-        self.GS = GeneralStatus()
-        self.Azimuth = AzimuthAxisStatus()
-        self.Elevation = ElevationAxisStatus()
-        self.PS = PointingStatus(self.Azimuth, self.Elevation)
-        self.FS = FacilityStatus()
-
-        self.status_message = None
-
-    def get_status(self):
         status = (
             self.GS.get_status()
-            + self.Azimuth.get_axis_status()
-            + self.Elevation.get_axis_status()
-            + self.Azimuth.get_cable_wrap_axis_status()
-            + self.Azimuth.get_motor_status()
-            + self.Elevation.get_motor_status()
-            + self.Azimuth.get_cable_wrap_motor_status()
+            + self.AZ.get_axis_status()
+            + self.EL.get_axis_status()
+            + self.CW.get_axis_status()
+            + self.AZ.get_motor_status()
+            + self.EL.get_motor_status()
+            + self.CW.get_motor_status()
             + self.PS.get_status()
             + self.FS.get_status()
         )
@@ -125,63 +129,58 @@ class ACU(object):
 
         return status_message
 
-    def parse_commands(self, msg):
+    def _parse_commands(self, msg):
         cmds_number = utils.bytes_to_int(msg[12:16])
         commands_string = msg[16:-4]  # Trimming end flag
 
         commands = []
 
         while commands_string:
-            current_id = utils.bytes_to_int(commands_string[:2])
+            current_id = utils.bytes_to_uint(commands_string[:2])
 
             if current_id == 1 or current_id == 2:
-                commands.append(commands_string[:26])
+                command = commands_string[:26]
                 commands_string = commands_string[26:]
             elif current_id == 4:
                 command_ending = commands_string.find(end_flag)
-                commands.append(commands_string[:command_ending])
+                command = commands_string[:command_ending]
                 commands_string = commands_string[command_ending + 4:]
             else:
                 raise ValueError('Unknown command.')
+
+            command_counter = utils.bytes_to_uint(command[4:8])
+            if command_counter == self.command_counter:
+                raise ValueError('Duplicated command counter.')
+            else:
+                self.command_counter = command_counter
+
+            commands.append(command)
 
         if len(commands) != cmds_number:
             raise ValueError('Malformed message.')
 
         for command in commands:
-            command_id = utils.bytes_to_int(command[:2])
-            name = self.functions.get(command_id)
-            if name is not None:
-                method = getattr(self, name)
-                method(command)
+            method = self._get_method(command)
+            if not method:
+                raise ValueError('Command has invalid parameters.')
+
+            t = Thread(target=method, args=(command,))
+            t.daemon = True
+            t.start()
+            time.sleep(0.01)
 
         return True
 
-    def _mode_command(self, command):
-        subsystem_id = utils.bytes_to_int(command[2:4])
+    def _get_method(self, command):
+        command_id = utils.bytes_to_uint(command[:2])
+        subsystem_id = utils.bytes_to_uint(command[2:4])
 
-        if subsystem_id == 1:
-            self.Azimuth.mode_command(command)
-        elif subsystem_id == 2:
-            self.Elevation.mode_command(command)
-        else:
-            raise ValueError('Unknown subsystem.')
+        command_name = self.commands.get(command_id)
+        subsystem_name = self.subsystems.get(subsystem_id)
 
-    def _parameter_command(self, command):
-        subsystem_id = utils.bytes_to_int(command[2:4])
+        command_method = None
+        if subsystem_name:
+            subsystem = getattr(self, subsystem_name)
+            command_method = getattr(subsystem, command_name)
 
-        if subsystem_id == 1:
-            self.Azimuth.parameter_command(command)
-        elif subsystem_id == 2:
-            self.Elevation.parameter_command(command)
-        elif subsystem_id == 5:
-            self.PS.parameter_command(command)
-        else:
-            raise ValueError('Unknown subsystem.')
-
-    def _program_track_parameter_command(self, command):
-        subsystem_id = utils.bytes_to_int(command[2:4])
-
-        if subsystem_id == 5:
-            self.PS.program_track_parameter_command(command)
-        else:
-            raise ValueError('Unknown subsystem.')
+        return command_method

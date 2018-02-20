@@ -1,14 +1,30 @@
-from datetime import datetime
-from simulators.acu_status import parameter_command_status as pcs
+import time
+from datetime import datetime, timedelta
+from threading import Thread
+import numpy as np
+from scipy import interpolate
+from simulators.acu_status.command_status import (
+    ParameterCommandStatus)
 from simulators import utils
 
 
 class PointingStatus(object):
 
-    def __init__(self, azimuth, elevation):
+    def __init__(self, azimuth, elevation, cable_wrap):
         self.azimuth = azimuth
         self.elevation = elevation
-        self.program_track_queue = []
+        self.cable_wrap = cable_wrap
+
+        self.azimuth.pointing = self
+        self.elevation.pointing = self
+        self.cable_wrap.pointing = self
+
+        self.relative_times = []
+        self.azimuth_positions = []
+        self.elevation_positions = []
+
+        self.start_time = None
+        self.end_time = None
 
         # confVersion, REAL64, version of the configuration file
         self.confVersion = 0
@@ -16,7 +32,7 @@ class PointingStatus(object):
         # confOk, BOOL
         # 0: pointing not initialized and configured
         # 1: pointing initialized and configured
-        self.confOk = 0
+        self.confOk = 1
 
         # posEncAz, INT32, actual position of azimuth encoder [microdeg]
         self.posEncAz = 0
@@ -90,10 +106,12 @@ class PointingStatus(object):
         # 1: internal ACU time (computer quartz clock)
         # 2: clock (time read-outs of GPS clock)
         # 3: external time (Time is set by command)
-        self.timeSource = 0
+        self.timeSource = 1
 
         # actTime, REAL64, actual time in format modified julian day
         self.actTime = 0
+
+        self.time_offset = timedelta(0)
 
         # actTimeOffset, REAL64, actual time offset in fraction of day
         self.actTimeOffset = 0
@@ -101,12 +119,12 @@ class PointingStatus(object):
         # clockOnLine, UINT8
         # 0: GPS receiver doesn't send data
         # 1: GPS receivers send data
-        self.clockOnline = 0
+        self.clockOnline = 1
 
         # clockOK, UINT8
         # 0: GPS receiver sends error message
         # 1: GPS receivers sends clock ok
-        self.clockOK = 0
+        self.clockOK = 1
 
         # Actual time
         self.year = 0  # UINT16
@@ -139,9 +157,9 @@ class PointingStatus(object):
         # bits 3:5 = 0, reserved
         # bits 6:15 = 0, not used
 
-        # actTimeOffset, INT32
+        # actPtTimeOffset, INT32
         # actual time offset [milliseconds] for program track
-        self.actTimeOffset = 0
+        self.actPtTimeOffset = 0
 
         # ptInterpolMode, UINT16, actual selected interpolation mode
         # 0: no interpolation mode selected
@@ -150,11 +168,11 @@ class PointingStatus(object):
 
         # ptTrackingType, UINT16, actual type of tracking
         # 1: program track
-        self.ptTrackingType = 0  # UINT16
+        self.ptTrackingType = 1  # UINT16
 
         # ptTrackingMode, UINT16, actual type of program track
         # 1: program track values are azimuth/elevation
-        self.ptTrackingMode = 0
+        self.ptTrackingMode = 1
 
         # ptActTableIndex, UINT32
         # actual table entry of the program track table
@@ -167,7 +185,18 @@ class PointingStatus(object):
         self.ptTableLength = 0
 
         # parameter_command_status, refer to ParameterCommandStatus class
-        self.parameter_command_status = pcs.ParameterCommandStatus()
+        self.pcs = ParameterCommandStatus()
+
+        self.update_thread = Thread(target=self._update_thread)
+        self.update_thread.daemon = True
+        self.update_thread.start()
+
+    def _set_default(self):
+        self.ptInterpolMode = 0
+        self.ptState = 0
+        self.ptTableLength = 0
+        self.ptEndTableIndex = 0
+        self.ptActTableIndex = 0
 
     def _pointing_error(self):
         binary_string = (
@@ -180,101 +209,145 @@ class PointingStatus(object):
         return utils.binary_to_bytes(binary_string)
 
     def get_status(self):
-        time = datetime.utcnow()
-        self.year = time.year
-        self.month = time.month
-        self.day = time.day
-        self.hour = time.hour
-        self.minute = time.minute
-        self.second = time.second
-        self.actTime = utils.mjd(time)
-        return (utils.real_to_bytes(self.confVersion, 2)
-                + chr(self.confOk)
-                + utils.int_to_bytes(self.posEncAz)
-                + utils.int_to_bytes(self.pointOffsetAz)
-                + utils.int_to_bytes(self.posCalibChartAz)
-                + utils.int_to_bytes(self.posCorrTableAz_F_plst_El)
-                + chr(self.posCorrTableAzOn)
-                + chr(self.encAzFault)
-                + chr(self.sectorSwitchAz)
-                + utils.int_to_bytes(self.posEncEl)
-                + utils.int_to_bytes(self.pointOffsetEl)
-                + utils.int_to_bytes(self.posCalibChartEl)
-                + utils.int_to_bytes(self.posCorrTableEl_F_plst_Az)
-                + chr(self.posCorrTableElOn)
-                + utils.uint_to_bytes(self.encElFault, 1)
-                + utils.int_to_bytes(self.posEncCw)
-                + utils.int_to_bytes(self.posCalibChartCw)
-                + utils.uint_to_bytes(self.encCwFault, 1)
-                + utils.uint_to_bytes(self.timeSource, 2)
-                + utils.real_to_bytes(self.actTime, 2)
-                + utils.real_to_bytes(self.actTimeOffset, 2)
-                + utils.uint_to_bytes(self.clockOnline, 1)
-                + utils.uint_to_bytes(self.clockOK, 1)
-                + utils.uint_to_bytes(self.year, 2)
-                + utils.uint_to_bytes(self.month, 2)
-                + utils.uint_to_bytes(self.day, 2)
-                + utils.uint_to_bytes(self.hour, 2)
-                + utils.uint_to_bytes(self.minute, 2)
-                + utils.uint_to_bytes(self.second, 2)
-                + utils.int_to_bytes(self.actPtPos_Azimuth)
-                + utils.int_to_bytes(self.actPtPos_Elevation)
-                + utils.uint_to_bytes(self.ptState, 2)
-                + self._pointing_error()
-                + utils.int_to_bytes(self.actTimeOffset)
-                + utils.uint_to_bytes(self.ptInterpolMode, 2)
-                + utils.uint_to_bytes(self.ptTrackingType, 2)
-                + utils.uint_to_bytes(self.ptTrackingMode, 2)
-                + utils.uint_to_bytes(self.ptActTableIndex)
-                + utils.uint_to_bytes(self.ptEndTableIndex)
-                + utils.uint_to_bytes(self.ptTableLength)
-                + self.parameter_command_status.get_status())
+        curr_time = self.actual_time()
+        self.year = curr_time.year
+        self.month = curr_time.month
+        self.day = curr_time.day
+        self.hour = curr_time.hour
+        self.minute = curr_time.minute
+        self.second = curr_time.second
+        self.actTime = utils.mjd(curr_time)
+
+        response = (
+            utils.real_to_bytes(self.confVersion, 2)
+            + chr(self.confOk)
+            + utils.int_to_bytes(self.posEncAz)
+            + utils.int_to_bytes(self.pointOffsetAz)
+            + utils.int_to_bytes(self.posCalibChartAz)
+            + utils.int_to_bytes(self.posCorrTableAz_F_plst_El)
+            + chr(self.posCorrTableAzOn)
+            + chr(self.encAzFault)
+            + chr(self.sectorSwitchAz)
+            + utils.int_to_bytes(self.posEncEl)
+            + utils.int_to_bytes(self.pointOffsetEl)
+            + utils.int_to_bytes(self.posCalibChartEl)
+            + utils.int_to_bytes(self.posCorrTableEl_F_plst_Az)
+            + chr(self.posCorrTableElOn)
+            + utils.uint_to_bytes(self.encElFault, 1)
+            + utils.int_to_bytes(self.posEncCw)
+            + utils.int_to_bytes(self.posCalibChartCw)
+            + utils.uint_to_bytes(self.encCwFault, 1)
+            + utils.uint_to_bytes(self.timeSource, 2)
+            + utils.real_to_bytes(self.actTime, 2)
+            + utils.real_to_bytes(self.actTimeOffset, 2)
+            + utils.uint_to_bytes(self.clockOnline, 1)
+            + utils.uint_to_bytes(self.clockOK, 1)
+            + utils.uint_to_bytes(self.year, 2)
+            + utils.uint_to_bytes(self.month, 2)
+            + utils.uint_to_bytes(self.day, 2)
+            + utils.uint_to_bytes(self.hour, 2)
+            + utils.uint_to_bytes(self.minute, 2)
+            + utils.uint_to_bytes(self.second, 2)
+            + utils.int_to_bytes(self.actPtPos_Azimuth)
+            + utils.int_to_bytes(self.actPtPos_Elevation)
+            + utils.uint_to_bytes(self.ptState, 2)
+            + self._pointing_error()
+            + utils.int_to_bytes(self.actPtTimeOffset)
+            + utils.uint_to_bytes(self.ptInterpolMode, 2)
+            + utils.uint_to_bytes(self.ptTrackingType, 2)
+            + utils.uint_to_bytes(self.ptTrackingMode, 2)
+            + utils.uint_to_bytes(self.ptActTableIndex)
+            + utils.uint_to_bytes(self.ptEndTableIndex)
+            + utils.uint_to_bytes(self.ptTableLength)
+            + self.pcs.get_status()
+        )
+
+        self.pcs = ParameterCommandStatus()
+        return response
+
+    def _update_thread(self):
+        while True:
+            if self.ptState == 2 and self.actual_time() >= self.start_time:
+                self.ptState = 3
+            elif (self.ptState == 3 and
+                    self.actual_time() >= (
+                        self.start_time
+                        + timedelta(milliseconds=self.relative_times[-1])
+                    )):
+                self.ptState = 4
+            time.sleep(0.001)
 
     def parameter_command(self, command):
         pass
 
     def program_track_parameter_command(self, command):
+        cmd_cnt = utils.bytes_to_uint(command[4:8])
         parameter_id = utils.bytes_to_uint(command[8:10])
 
+        self.pcs.counter = cmd_cnt
+        self.pcs.command = parameter_id
+
         if parameter_id != 61:
-            raise ValueError('Unknown parameter_id %d.' % parameter_id)
+            self.pcs.answer = 0
+            return
 
         interpolation_mode = utils.bytes_to_uint(command[10:12])
 
         if interpolation_mode != 4:
-            raise ValueError(
-                'Unknown interpolation_mode %d.'
-                % interpolation_mode
-            )
+            self.pcs.answer = 5
+            return
 
         tracking_mode = utils.bytes_to_uint(command[12:14])
 
         if tracking_mode != 1:
-            raise ValueError('Unknown tracking_mode %d.' % tracking_mode)
+            self.pcs.answer = 5
+            return
 
         load_mode = utils.bytes_to_uint(command[14:16])
 
         if load_mode not in [1, 2]:
-            raise ValueError('Unknown load_mode %d.' % load_mode)
+            self.pcs.answer = 5
+            return
 
         sequence_length = utils.bytes_to_uint(command[16:18])
 
         if sequence_length > 50:
-            raise ValueError('Sequence too long.')
+            self.pcs.answer = 5
+            return
 
         if load_mode == 1 and sequence_length < 5:
-            raise ValueError('Sequence too short.')
+            self.pcs.answer = 5
+            return
+
+        if load_mode == 2 and not self.relative_times:
+            self.pcs.answer = 5
+            return
 
         start_time = utils.mjd_to_date(utils.bytes_to_real(command[18:26], 2))
+        start_time += self.time_offset
+
+        if load_mode == 2 and start_time != self.start_time:
+            self.pcs.answer = 5
+            return
+
         azimuth_max_rate = utils.bytes_to_real(command[26:34], 2)
         elevation_max_rate = utils.bytes_to_real(command[34:42], 2)
 
         byte_entries = command[42:]
-        azimuth_entries = []
-        elevation_entries = []
+        relative_times = self.relative_times
+        azimuth_positions = self.azimuth_positions
+        elevation_positions = self.elevation_positions
+
+        if relative_times:
+            expected_delta = relative_times[1] - relative_times[0]
+            last_relative_time = relative_times[-1]
+        else:
+            expected_delta = None
+            last_relative_time = 0
 
         if len(byte_entries) != sequence_length * 20:
-            raise ValueError('Malformed sequence.')
+            self.pcs.answer = 5
+            return
 
         for i in range(sequence_length):
             offset = i * 20
@@ -282,37 +355,94 @@ class PointingStatus(object):
             relative_time = utils.bytes_to_int(
                 byte_entries[offset:offset + 4]
             )
+
+            if i == 0 and last_relative_time == 0 and relative_time != 0:
+                self.pcs.answer = 5
+                return
+
+            if relative_time < last_relative_time:
+                self.pcs.answer = 5
+                return
+
+            if not expected_delta and relative_times:
+                expected_delta = relative_time - last_relative_time
+
+            if expected_delta:
+                if relative_time - last_relative_time != expected_delta:
+                    self.pcs.answer = 5
+                    return
+
+            relative_times.append(relative_time)
+            last_relative_time = relative_time
+
             azimuth_position = utils.bytes_to_real(
                 byte_entries[offset + 4:offset + 12],
                 2
             )
+            azimuth_positions.append(azimuth_position)
+
             elevation_position = utils.bytes_to_real(
                 byte_entries[offset + 12:offset + 20],
                 2
             )
+            elevation_positions.append(elevation_position)
 
-            azimuth_entries.append((relative_time, azimuth_position))
-            elevation_entries.append((relative_time, elevation_position))
+        relative_times = np.array(relative_times)
 
-        if load_mode == 1:
-            self.azimuth.load_program_track_table(
-                start_time,
-                azimuth_max_rate,
-                azimuth_entries
-            )
-            self.elevation.load_program_track_table(
-                start_time,
-                elevation_max_rate,
-                elevation_entries
-            )
+        self.start_time = start_time
+        self.end_time = (
+            start_time
+            + timedelta(milliseconds=relative_times[-1])
+        )
+        self.azimuth_max_rate = azimuth_max_rate
+        self.elevation_max_rate = elevation_max_rate
+        self.azimuth_positions = azimuth_positions
+        self.elevation_positions = elevation_positions
+
+        self.az_tck = interpolate.splrep(
+            relative_times,
+            np.array(azimuth_positions)
+        )
+        self.el_tck = interpolate.splrep(
+            relative_times,
+            np.array(elevation_positions)
+        )
+        if self.ptState != 3:
+            self.ptState = 2
+        self.ptInterpolMode = interpolation_mode
+        self.ptActTableIndex = 0
+        self.ptTableLength = len(relative_times)
+        self.ptEndTableIndex = self.ptTableLength - 1
+        self.pcs.answer = 1
+
+    def actual_time(self):
+        return datetime.utcnow() + self.time_offset
+
+    def get_starting_pos(self, subsystem):
+        if subsystem is self.azimuth:
+            return self.azimuth_positions[0]
+        elif subsystem is self.elevation:
+            return self.elevation_positions[0]
         else:
-            self.azimuth.add_program_track_entries(
-                start_time,
-                azimuth_max_rate,
-                azimuth_entries
-            )
-            self.elevation.add_program_track_entries(
-                start_time,
-                elevation_max_rate,
-                elevation_entries
-            )
+            return None
+
+    def get_traj_values(self, subsystem):
+        if subsystem is self.azimuth:
+            trajectory = self.az_tck
+        elif subsystem is self.elevation:
+            trajectory = self.el_tck
+        else:
+            return None
+
+        if not self.start_time:
+            return None
+
+        elapsed = (
+            (self.actual_time() - self.start_time).total_seconds()
+            / 1000
+        )
+
+        pos = interpolate.splev(elapsed, trajectory).item(0) * 1000000
+        vel = interpolate.splev(elapsed, trajectory, der=1).item(0) * 1000000
+        acc = interpolate.splev(elapsed, trajectory, der=2).item(0) * 1000000
+        return int(round(pos)), int(round(vel)), int(round(acc))
