@@ -9,6 +9,8 @@ matrix:
 
 install:
   - pip install tox
+  - pip install numpy
+  - pip install scipy
 
 script:
   - tox
