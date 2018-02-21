@@ -10,12 +10,20 @@ class ModeCommand(object):
     def __init__(self,
             subsystem_id,
             mode_id,
-            parameter_1=0.0,
-            parameter_2=0.0):
+            parameter_1=None,
+            parameter_2=None):
         self.subsystem_id = subsystem_id
         self.mode_id = mode_id
+
+        if not parameter_1:
+            parameter_1 = 0.0
         self.parameter_1 = parameter_1
+
+        if not parameter_2:
+            parameter_2 = 0.0
         self.parameter_2 = parameter_2
+
+        self.command_counter = None
 
     def get(self, command_counter):
         self.command_counter = command_counter
@@ -40,6 +48,7 @@ class ParameterCommand(object):
         self.parameter_id = parameter_id
         self.parameter_1 = parameter_1
         self.parameter_2 = parameter_2
+        self.command_counter = None
 
     def get(self, command_counter):
         self.command_counter = command_counter
@@ -74,14 +83,21 @@ class ProgramTrackCommand(object):
             load_mode,
             start_time,
             axis_rates,
-            sequence=None,
+            parameter_id=61,
+            interpolation_mode=4,
+            tracking_mode=1,
             subsystem_id=5):
         self.load_mode = load_mode
         self.start_time = start_time
         self.azimuth_rate = axis_rates[0]
         self.elevation_rate = axis_rates[1]
-        self.sequence = [] if not sequence else sequence
+        self.parameter_id = parameter_id
+        self.interpolation_mode = interpolation_mode
+        self.tracking_mode = tracking_mode
         self.subsystem_id = subsystem_id
+
+        self.sequence = []
+        self.command_counter = None
 
     def append_entry(self, entry):
         if not isinstance(entry, ProgramTrackEntry):
@@ -102,6 +118,7 @@ class ProgramTrackCommand(object):
             raise ValueError('Sequence must contain at least one entry.')
 
         self.command_counter = command_counter
+
         sequence_bytes = ''
 
         for entry in self.sequence:
@@ -113,9 +130,9 @@ class ProgramTrackCommand(object):
             # to be overridden to generate some specific errors
             + utils.uint_to_bytes(self.subsystem_id, 2)
             + utils.uint_to_bytes(self.command_counter)
-            + utils.uint_to_bytes(61, 2)  # 61: load program track table
-            + utils.uint_to_bytes(4, 2)  # 4: spline interpolation mode
-            + utils.uint_to_bytes(1, 2)  # 1: coordinates in azimuth/elevation
+            + utils.uint_to_bytes(self.parameter_id, 2)
+            + utils.uint_to_bytes(self.interpolation_mode, 2)
+            + utils.uint_to_bytes(self.tracking_mode, 2)
             + utils.uint_to_bytes(self.load_mode, 2)
             + utils.uint_to_bytes(len(self.sequence), 2)
             + utils.real_to_bytes(self.start_time, 2)
@@ -137,6 +154,7 @@ class Command(object):
                 )
             else:
                 self.command_list.append(command)
+        self.command_counter = None
 
     @staticmethod
     def _check_command(command):
@@ -156,18 +174,30 @@ class Command(object):
 
     def get(self):
         commands = b''
-        command_counter = utils.day_milliseconds()
+
+        if not self.command_counter:
+            self.command_counter = utils.day_milliseconds()
 
         for i in range(len(self.command_list)):
-            commands += self.command_list[i].get(command_counter + i)
+            commands += self.command_list[i].get(self.command_counter + 1 + i)
 
         time.sleep(0.001 * len(self.command_list))
 
         return(
             start_flag
             + utils.uint_to_bytes(20 + len(commands))
-            + utils.uint_to_bytes(command_counter)
+            + utils.uint_to_bytes(self.command_counter)
             + utils.uint_to_bytes(len(self.command_list))
             + commands
             + end_flag
         )
+
+    def get_counter(self, index=None):
+        if index is None:
+            return self.command_counter
+        elif index > 0 and index >= len(self.command_list):
+            raise ValueError('Index %d out of range.' % index)
+        elif index < 0 and abs(index) > len(self.command_list):
+            raise ValueError('Index %d out of range.' % index)
+        else:
+            return self.command_list[index].command_counter

@@ -24,6 +24,7 @@ pylint:
     - too-many-nested-blocks
     - too-many-statements
     - too-many-arguments
+    - too-many-lines
 
 pep8:
   disable:
