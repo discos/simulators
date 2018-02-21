@@ -438,7 +438,7 @@ class AxisStatus(object):
                 received_command_answer = 4
 
         if mode_id == 3:
-            desired_pos = int(round(parameter_1))
+            desired_pos = parameter_1
             delta_pos = desired_pos - int(round((self.p_Ist / 1000000)))
 
             if utils.sign(delta_pos) != utils.sign(parameter_2):
@@ -449,7 +449,7 @@ class AxisStatus(object):
             if abs(parameter_2) > self.max_velocity:
                 received_command_answer = 5
         elif mode_id == 4:
-            desired_pos = int(round((self.p_Ist / 1000000) + parameter_1))
+            desired_pos = (self.p_Ist / 1000000) + parameter_1
 
             if utils.sign(parameter_1) != utils.sign(parameter_2):
                 # Discordant direction of new position and rate
@@ -552,6 +552,8 @@ class AxisStatus(object):
         while self.pointing.ptState in [2, 3]:
             time.sleep(0.01)
 
+        self.v_Ist = 0
+
         if self.pointing.ptState == 4:
             if self.axis_trajectory_state == 7:
                 self.axis_trajectory_state = 0
@@ -611,10 +613,12 @@ class AxisStatus(object):
 
     # mode_id == 52
     def _drive_to_stow(self, stow_position, rate):
+        self.axis_trajectory_state = 6  # 6: position
         self.p_Soll = int(round(self.stow_pos[int(stow_position)] * 1000000))
         self.v_Soll = int(round(rate * 1000000))
         while self.p_Soll != self.p_Ist:
             time.sleep(0.005)
+        self.axis_trajectory_state = 0
         return True
 
     # -------------------- Parameter Command --------------------

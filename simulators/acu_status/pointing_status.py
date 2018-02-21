@@ -191,13 +191,6 @@ class PointingStatus(object):
         self.update_thread.daemon = True
         self.update_thread.start()
 
-    def _set_default(self):
-        self.ptInterpolMode = 0
-        self.ptState = 0
-        self.ptTableLength = 0
-        self.ptEndTableIndex = 0
-        self.ptActTableIndex = 0
-
     def _pointing_error(self):
         binary_string = (
             str(self.Data_Overflow)
@@ -269,12 +262,23 @@ class PointingStatus(object):
         while True:
             if self.ptState == 2 and self.actual_time() >= self.start_time:
                 self.ptState = 3
-            elif (self.ptState == 3 and
-                    self.actual_time() >= (
-                        self.start_time
-                        + timedelta(milliseconds=self.relative_times[-1])
-                    )):
-                self.ptState = 4
+            elif self.ptState == 3:
+                current_pt_time = self.actual_time() - self.start_time
+                current_pt_time = current_pt_time.total_seconds() * 1000
+
+                pt_index = None
+
+                for index in range(len(self.relative_times)):
+                    if current_pt_time < self.relative_times[index]:
+                        pt_index = index
+                        break
+
+                if pt_index:
+                    self.ptActTableIndex = pt_index
+                else:
+                    self.ptActTableIndex = len(self.relative_times)
+                    self.ptState = 4
+
             time.sleep(0.001)
 
     def parameter_command(self, command):
@@ -387,7 +391,7 @@ class PointingStatus(object):
             )
             elevation_positions.append(elevation_position)
 
-        relative_times = np.array(relative_times)
+        self.relative_times = relative_times
 
         self.start_time = start_time
         self.end_time = (
@@ -399,20 +403,21 @@ class PointingStatus(object):
         self.azimuth_positions = azimuth_positions
         self.elevation_positions = elevation_positions
 
-        self.az_tck = interpolate.splrep(
-            relative_times,
-            np.array(azimuth_positions)
-        )
-        self.el_tck = interpolate.splrep(
-            relative_times,
-            np.array(elevation_positions)
-        )
         if self.ptState != 3:
             self.ptState = 2
         self.ptInterpolMode = interpolation_mode
-        self.ptActTableIndex = 0
         self.ptTableLength = len(relative_times)
         self.ptEndTableIndex = self.ptTableLength - 1
+
+        self.az_tck = interpolate.splrep(
+            np.array(relative_times),
+            np.array(azimuth_positions)
+        )
+        self.el_tck = interpolate.splrep(
+            np.array(relative_times),
+            np.array(elevation_positions)
+        )
+
         self.pcs.answer = 1
 
     def actual_time(self):
