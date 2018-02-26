@@ -17,8 +17,8 @@ from simulators.common import ListeningSystem, SendingSystem
 servers = []
 servers.append((('127.0.0.1', 13000), ('127.0.0.1', 13001), ()))
 
-start_flag = b'\x1D\xFC\xCF\x1A'
-end_flag = b'\xA1\xFC\xCF\xD1'
+start_flag = b'\x1A\xCF\xFC\x1D'
+end_flag = b'\xD1\xCF\xFC\xA1'
 
 
 class System(ListeningSystem, SendingSystem):
@@ -80,7 +80,7 @@ class System(ListeningSystem, SendingSystem):
             return False
 
         if len(self.msg) == 8:
-            self.msg_length = utils.bytes_to_int(self.msg[-4:])
+            self.msg_length = utils.bytes_to_uint(self.msg[-4:])
 
         if len(self.msg) == 12:
             macro_cmd_counter = utils.bytes_to_uint(self.msg[-4:])

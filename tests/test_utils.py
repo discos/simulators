@@ -68,7 +68,7 @@ class TestServer(unittest.TestCase):
     def test_right_binary_to_bytes(self):
         """Convert a binary string into a string of bytes."""
         binary_string = '00000101000110100010100011010010'
-        byte_string = utils.binary_to_bytes(binary_string)
+        byte_string = utils.binary_to_bytes(binary_string, little_endian=False)
         expected_byte_string = b'\x05\x1A\x28\xD2'
         self.assertEqual(byte_string, expected_byte_string)
 
@@ -81,7 +81,7 @@ class TestServer(unittest.TestCase):
     def test_right_bytes_to_int(self):
         """Convert a string of bytes into an integer (like C atoi function)."""
         byte_string = b'\x00\x00\xFA\xFF'
-        result = utils.bytes_to_int(byte_string)
+        result = utils.bytes_to_int(byte_string, little_endian=False)
         expected_result = 64255
         self.assertEqual(result, expected_result)
 
@@ -137,13 +137,13 @@ class TestServer(unittest.TestCase):
     def test_real_to_bytes_single_precision(self):
         """Convert a real number to a string of bytes."""
         number = 45.12371938725634
-        result = utils.real_to_bytes(number)
+        result = utils.real_to_bytes(number, little_endian=False)
         expected_result = b'\x42\x34\x7E\xB0'
         self.assertEqual(result, expected_result)
 
     def test_real_to_bytes_double_precision(self):
         number = 3.14159265358979323846264338327950288419716939937510582097494
-        result = utils.real_to_bytes(number, 2)
+        result = utils.real_to_bytes(number, precision=2, little_endian=False)
         expected_result = b'\x40\x09\x21\xFB\x54\x44\x2D\x18'
         self.assertEqual(result, expected_result)
 
@@ -155,13 +155,17 @@ class TestServer(unittest.TestCase):
     def test_bytes_to_real_single_precision(self):
         """Convert a string of bytes to a floating point  number."""
         byte_string = b'\x42\x34\x7E\xB0'
-        result = utils.bytes_to_real(byte_string)
+        result = utils.bytes_to_real(byte_string, little_endian=False)
         expected_result = 45.12371826171875
         self.assertEqual(result, expected_result)
 
     def test_bytes_to_real_double_precision(self):
         byte_string = b'\x40\x09\x21\xFB\x54\x44\x2D\x18'
-        result = utils.bytes_to_real(byte_string, 2)
+        result = utils.bytes_to_real(
+            byte_string,
+            precision=2,
+            little_endian=False
+        )
         expected_result = (
             3.14159265358979323846264338327950288419716939937510582097494
         )
@@ -175,13 +179,13 @@ class TestServer(unittest.TestCase):
     def test_int_to_bytes_positive(self):
         """Convert a signed integer to a string of bytes."""
         number = 232144
-        result = utils.int_to_bytes(number)
+        result = utils.int_to_bytes(number, little_endian=False)
         expected_result = b'\x00\x03\x8A\xD0'
         self.assertEqual(result, expected_result)
 
     def test_int_to_bytes_negative(self):
         number = -4522764
-        result = utils.int_to_bytes(number)
+        result = utils.int_to_bytes(number, little_endian=False)
         expected_result = b'\xFF\xBA\xFC\xF4'
         self.assertEqual(result, expected_result)
 
@@ -199,7 +203,7 @@ class TestServer(unittest.TestCase):
     def test_uint_to_bytes(self):
         """Convert an unsigned integer to a string of bytes."""
         number = 1284639736
-        result = utils.uint_to_bytes(number)
+        result = utils.uint_to_bytes(number, little_endian=False)
         expected_result = b'\x4C\x92\x0B\xF8'
         self.assertEqual(result, expected_result)
 

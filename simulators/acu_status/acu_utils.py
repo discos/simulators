@@ -1,8 +1,8 @@
 import time
 from simulators import utils
 
-start_flag = b'\x1D\xFC\xCF\x1A'
-end_flag = b'\xA1\xFC\xCF\xD1'
+start_flag = b'\x1A\xCF\xFC\x1D'
+end_flag = b'\xD1\xCF\xFC\xA1'
 
 
 class ModeCommand(object):

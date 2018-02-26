@@ -20,7 +20,7 @@ class TestACU(unittest.TestCase):
 
     def test_status_message_length(self):
         status = self.system.get_message()
-        msg_length = utils.bytes_to_int(status[4:8])
+        msg_length = utils.bytes_to_uint(status[4:8])
         self.assertEqual(msg_length, 813)
 
     def test_duplicated_macro_command_counter(self):
