@@ -121,10 +121,10 @@ def int_to_twos(val, n_bytes=4):
     return ("{0:0>%s}" % n_bits).format(binary_string)
 
 
-def binary_to_bytes(binary_string):
+def binary_to_bytes(binary_string, little_endian=True):
     """Convert a binary string in a string of bytes.
 
-    >>> binary_to_bytes('0110100001100101011011000110110001101111')
+    >>> binary_to_bytes('0110100001100101011011000110110001101111', False)
     '\x68\x65\x6C\x6C\x6F'
     """
 
@@ -133,16 +133,19 @@ def binary_to_bytes(binary_string):
     for i in range(0, len(binary_string), 8):
         byte_string += chr(int(binary_string[i:i + 8], 2))
 
-    return byte_string
+    return byte_string[::-1] if little_endian else byte_string
 
 
-def bytes_to_int(byte_string):
+def bytes_to_int(byte_string, little_endian=True):
     """Convert a string of bytes to an integer (like C atoi function).
 
-    >>> bytes_to_int(b'hello')
+    >>> bytes_to_int(b'hello', False)
     448378203247
     """
     binary_string = ''
+
+    if little_endian:
+        byte_string = byte_string[::-1]
 
     for char in byte_string:
         binary_string += bin(ord(char))[2:].zfill(8)
@@ -150,13 +153,16 @@ def bytes_to_int(byte_string):
     return twos_to_int(binary_string)
 
 
-def bytes_to_uint(byte_string):
+def bytes_to_uint(byte_string, little_endian=True):
     """Convert a string of bytes to an unsigned integer.
 
-    >>> bytes_to_uint(b'hi')
+    >>> bytes_to_uint(b'hi', little_endian=False)
     26729
     """
     binary_string = ''
+
+    if little_endian:
+        byte_string = byte_string[::-1]
 
     for char in byte_string:
         binary_string += bin(ord(char))[2:].zfill(8)
@@ -198,31 +204,34 @@ def real_to_binary(num, precision=1):
         )
 
 
-def real_to_bytes(num, precision=1):
+def real_to_bytes(num, precision=1, little_endian=True):
     """Return the bytestring representation of a floating-point number
     (IEEE 754 standard).
 
-    >>> [hex(ord(x)) for x in real_to_bytes(436.56, 1)]
+    >>> [hex(ord(x)) for x in real_to_bytes(436.56, 1, False)]
     ['0x43', '0xda', '0x47', '0xae']
 
-    >>> [hex(ord(x)) for x in real_to_bytes(436.56, 2)]
+    >>> [hex(ord(x)) for x in real_to_bytes(436.56, 2, False)]
     ['0x40', '0x7b', '0x48', '0xf5', '0xc2', '0x8f', '0x5c', '0x29']
     """
 
     binary_number = real_to_binary(num, precision)
-    return binary_to_bytes(binary_number)
+    return binary_to_bytes(binary_number, little_endian=little_endian)
 
 
-def bytes_to_real(bytes_real, precision=1):
+def bytes_to_real(bytes_real, precision=1, little_endian=True):
     """Return the floating-point representation (IEEE 754 standard)
     of bytestring number.
 
-    >>> round(bytes_to_real('\x43\xDA\x47\xAE', 1), 2)
+    >>> round(bytes_to_real('\x43\xDA\x47\xAE', 1, False), 2)
     436.56
 
-    >>> round(bytes_to_real('\x40\x7B\x48\xF5\xC2\x8F\x5C\x29', 2), 2)
+    >>> round(bytes_to_real('\x40\x7B\x48\xF5\xC2\x8F\x5C\x29', 2, False), 2)
     436.56
     """
+
+    if little_endian:
+        bytes_real = bytes_real[::-1]
 
     if precision == 1:
         return struct.unpack('!f', bytes_real)[0]
@@ -235,20 +244,20 @@ def bytes_to_real(bytes_real, precision=1):
         )
 
 
-def int_to_bytes(val, n_bytes=4):
+def int_to_bytes(val, n_bytes=4, little_endian=True):
     """Return the bytestring representation of a given signed integer.
 
-    >>> [hex(ord(x)) for x in int_to_bytes(354)]
+    >>> [hex(ord(x)) for x in int_to_bytes(354, little_endian=False)]
     ['0x0', '0x0', '0x1', '0x62']
     """
 
-    return binary_to_bytes(int_to_twos(val, n_bytes))
+    return binary_to_bytes(int_to_twos(val, n_bytes), little_endian)
 
 
-def uint_to_bytes(val, n_bytes=4):
+def uint_to_bytes(val, n_bytes=4, little_endian=True):
     """Return the bytestring representation of a given unsigned integer.
 
-    >>> [hex(ord(x)) for x in uint_to_bytes(657)]
+    >>> [hex(ord(x)) for x in uint_to_bytes(657, little_endian=False)]
     ['0x0', '0x0', '0x2', '0x91']
     """
 
@@ -262,7 +271,10 @@ def uint_to_bytes(val, n_bytes=4):
             % (val, min_range, max_range)
         )
 
-    return binary_to_bytes(bin(val)[2:].zfill(n_bytes * 8))
+    return binary_to_bytes(
+        bin(val)[2:].zfill(n_bytes * 8),
+        little_endian=little_endian
+    )
 
 
 def sign(number):

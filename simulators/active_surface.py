@@ -579,7 +579,7 @@ class System(ListeningSystem):
                 self.drivers[params[0]].current_position
             )
 
-            val = utils.binary_to_bytes(binary_position)
+            val = utils.binary_to_bytes(binary_position, little_endian=False)
 
             if params[1] == 0xFA:
                 retval += val
@@ -642,7 +642,10 @@ class System(ListeningSystem):
             else:
                 return self.byte_nak
         else:
-            frequency = utils.bytes_to_int([chr(x) for x in params[2]])
+            frequency = utils.bytes_to_int(
+                [chr(x) for x in params[2]],
+                little_endian=False
+            )
 
             if frequency >= 20 and frequency <= 10000:
                 if params[0] == -1:
@@ -669,7 +672,10 @@ class System(ListeningSystem):
             else:
                 return self.byte_nak
         else:
-            frequency = utils.bytes_to_int([chr(x) for x in params[2]])
+            frequency = utils.bytes_to_int(
+                [chr(x) for x in params[2]],
+                little_endian=False
+            )
 
             if frequency >= 20 and frequency <= 10000:
                 if params[0] == -1:
@@ -714,7 +720,8 @@ class System(ListeningSystem):
                 return self.byte_nak
         else:
             reference_position = utils.bytes_to_int(
-                [chr(x) for x in params[2]]
+                [chr(x) for x in params[2]],
+                little_endian=False
             )
 
             if params[0] == -1:
@@ -811,7 +818,10 @@ class System(ListeningSystem):
             else:
                 return self.byte_nak
         else:
-            absolute_position = utils.bytes_to_int([chr(x) for x in params[2]])
+            absolute_position = utils.bytes_to_int(
+                [chr(x) for x in params[2]],
+                little_endian=False
+            )
 
             if params[0] == -1:
                 for driver in self.drivers:
@@ -829,7 +839,10 @@ class System(ListeningSystem):
             else:
                 return self.byte_nak
         else:
-            relative_position = utils.bytes_to_int([chr(x) for x in params[2]])
+            relative_position = utils.bytes_to_int(
+                [chr(x) for x in params[2]],
+                little_endian=False
+            )
 
             if params[0] == -1:
                 for driver in self.drivers:
@@ -867,7 +880,10 @@ class System(ListeningSystem):
             else:
                 return self.byte_nak
         else:
-            velocity = utils.bytes_to_int([chr(x) for x in params[2]])
+            velocity = utils.bytes_to_int(
+                [chr(x) for x in params[2]],
+                little_endian=False
+            )
 
             if velocity > 100000 or velocity < -100000:
                 if params[0] == -1:
