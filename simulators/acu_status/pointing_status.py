@@ -1,6 +1,4 @@
-import time
 from datetime import datetime, timedelta
-from threading import Thread
 import numpy as np
 from scipy import interpolate
 from simulators.acu_status.command_status import (
@@ -187,10 +185,6 @@ class PointingStatus(object):
         # parameter_command_status, refer to ParameterCommandStatus class
         self.pcs = ParameterCommandStatus()
 
-        self.update_thread = Thread(target=self._update_thread)
-        self.update_thread.daemon = True
-        self.update_thread.start()
-
     def _pointing_error(self):
         binary_string = (
             str(self.Data_Overflow)
@@ -202,7 +196,8 @@ class PointingStatus(object):
         return utils.binary_to_bytes(binary_string)
 
     def get_status(self):
-        curr_time = self.actual_time()
+        self._update_status()
+        curr_time = self._actual_time()
         self.year = curr_time.year
         self.month = curr_time.month
         self.day = curr_time.day
@@ -258,28 +253,25 @@ class PointingStatus(object):
         self.pcs = ParameterCommandStatus()
         return response
 
-    def _update_thread(self):
-        while True:
-            if self.ptState == 2 and self.actual_time() >= self.start_time:
-                self.ptState = 3
-            elif self.ptState == 3:
-                current_pt_time = self.actual_time() - self.start_time
-                current_pt_time = current_pt_time.total_seconds() * 1000
+    def _update_status(self):
+        if self.ptState == 2 and self._actual_time() >= self.start_time:
+            self.ptState = 3
+        elif self.ptState == 3:
+            current_pt_time = self._actual_time() - self.start_time
+            current_pt_time = current_pt_time.total_seconds() * 1000
 
-                pt_index = None
+            pt_index = None
 
-                for index in range(len(self.relative_times)):
-                    if current_pt_time < self.relative_times[index]:
-                        pt_index = index
-                        break
+            for index in range(len(self.relative_times)):
+                if current_pt_time < self.relative_times[index]:
+                    pt_index = index
+                    break
 
-                if pt_index:
-                    self.ptActTableIndex = pt_index
-                else:
-                    self.ptActTableIndex = len(self.relative_times)
-                    self.ptState = 4
-
-            time.sleep(0.001)
+            if pt_index:
+                self.ptActTableIndex = pt_index
+            else:
+                self.ptActTableIndex = len(self.relative_times)
+                self.ptState = 4
 
     def parameter_command(self, command):
         pass
@@ -403,6 +395,8 @@ class PointingStatus(object):
         self.azimuth_positions = azimuth_positions
         self.elevation_positions = elevation_positions
 
+        self._update_status()
+
         if self.ptState != 3:
             self.ptState = 2
         self.ptInterpolMode = interpolation_mode
@@ -420,7 +414,7 @@ class PointingStatus(object):
 
         self.pcs.answer = 1
 
-    def actual_time(self):
+    def _actual_time(self):
         return datetime.utcnow() + self.time_offset
 
     def get_starting_pos(self, subsystem):
@@ -431,19 +425,19 @@ class PointingStatus(object):
         else:
             return None
 
-    def get_traj_values(self, subsystem):
-        if subsystem is self.azimuth:
+    def get_trajectory_values(self, subsystem):
+        self._update_status()
+
+        if (not self.start_time
+                or subsystem not in [self.azimuth, self.elevation]):
+            return 0, 0, 0
+        elif subsystem is self.azimuth:
             trajectory = self.az_tck
         elif subsystem is self.elevation:
             trajectory = self.el_tck
-        else:
-            return None
-
-        if not self.start_time:
-            return None
 
         elapsed = (
-            (self.actual_time() - self.start_time).total_seconds()
+            (self._actual_time() - self.start_time).total_seconds()
             / 1000
         )
 

@@ -1,4 +1,3 @@
-import time
 from threading import Thread
 from simulators import utils
 from simulators.acu_status.general_status import GeneralStatus
@@ -42,23 +41,24 @@ class System(ListeningSystem, SendingSystem):
         """
         self._set_default()
         self.sampling_time = sampling_time
-        self.command_counter = None
-        self.macro_cmd_counter = None
+        self.cmd_counter = None
 
         self.GS = GeneralStatus()
         self.AZ = AxisStatus(
+            axis_name='azimuth',
             n_motors=8,
             max_rates=(0.85, 0.4),
             op_range=(-90, 450),
             stow_pos=[180],
-        )  # Azimuth status
+        )
         self.EL = AxisStatus(
+            axis_name='elevation',
             n_motors=4,
             max_rates=(0.5, 0.25),
             op_range=(5, 90),
             stow_pos=[90],
-        )  # Elevation status
-        self.CW = AxisStatus()  # Azimuth Cable Wrap status
+        )
+        self.CW = AxisStatus(axis_name='cable wrap')
         self.PS = PointingStatus(self.AZ, self.EL, self.CW)
         self.FS = FacilityStatus()
 
@@ -83,12 +83,12 @@ class System(ListeningSystem, SendingSystem):
             self.msg_length = utils.bytes_to_uint(self.msg[-4:])
 
         if len(self.msg) == 12:
-            macro_cmd_counter = utils.bytes_to_uint(self.msg[-4:])
-            if macro_cmd_counter == self.macro_cmd_counter:
+            cmd_counter = utils.bytes_to_uint(self.msg[-4:])
+            if cmd_counter == self.cmd_counter:
                 self._set_default()
-                raise ValueError('Duplicated macro command counter.')
+                raise ValueError('Duplicated command counter.')
             else:
-                self.macro_cmd_counter = macro_cmd_counter
+                self.cmd_counter = cmd_counter
 
         if len(self.msg) == 16:
             self.cmds_number = utils.bytes_to_int(self.msg[-4:])
@@ -134,6 +134,7 @@ class System(ListeningSystem, SendingSystem):
         commands_string = msg[16:-4]  # Trimming end flag
 
         commands = []
+        subsystems = []
 
         while commands_string:
             current_id = utils.bytes_to_uint(commands_string[:2])
@@ -148,13 +149,15 @@ class System(ListeningSystem, SendingSystem):
             else:
                 raise ValueError('Unknown command.')
 
-            command_counter = utils.bytes_to_uint(command[4:8])
-            if command_counter == self.command_counter:
-                raise ValueError('Duplicated command counter.')
+            subsystem = utils.bytes_to_uint(command[2:4])
+            if subsystem not in subsystems:
+                subsystems.append(subsystem)
+                commands.append(command)
             else:
-                self.command_counter = command_counter
-
-            commands.append(command)
+                raise ValueError(
+                    'More than one command for subsystem %d.'
+                    % subsystem
+                )
 
         if len(commands) != cmds_number:
             raise ValueError('Malformed message.')
@@ -167,9 +170,6 @@ class System(ListeningSystem, SendingSystem):
             t = Thread(target=method, args=(command,))
             t.daemon = True
             t.start()
-            time.sleep(0.01)
-
-        return True
 
     def _get_method(self, command):
         command_id = utils.bytes_to_uint(command[:2])

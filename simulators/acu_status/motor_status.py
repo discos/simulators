@@ -8,7 +8,7 @@ class MotorStatus(object):
         self.actual_velocity = 0  # REAL32, [rot/min]
         self.actual_torque = 0  # REAL32, [Nm]
         self.rate_of_utilization = 0  # REAL32, [+- 200 %]
-        self.active = 0  # UINT8, 0: motor inactive, 1: motor active
+        self.active = 1  # UINT8, 0: motor inactive, 1: motor active
 
         # speed_of_rotation, UINT8
         # 0: speed of rotation unequal 0
@@ -18,7 +18,7 @@ class MotorStatus(object):
         # speed_of_rotation_ok, UINT8
         # 0: speed of rotation failure
         # 1: speed of rotation ok
-        self.speed_of_rotation_ok = 0
+        self.speed_of_rotation_ok = 1
 
         # position, UINT8
         # 0: desired position not reached
