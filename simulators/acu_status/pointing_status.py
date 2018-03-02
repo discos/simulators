@@ -417,31 +417,46 @@ class PointingStatus(object):
     def _actual_time(self):
         return datetime.utcnow() + self.time_offset
 
-    def get_starting_pos(self, subsystem):
+    def get_start_end_pos(self, subsystem):
         if subsystem is self.azimuth:
-            return self.azimuth_positions[0]
+            return self.azimuth_positions[0], self.azimuth_positions[-1]
         elif subsystem is self.elevation:
-            return self.elevation_positions[0]
+            return self.elevation_positions[0], self.elevation_positions[-1]
         else:
-            return None
+            return None, None
 
     def get_trajectory_values(self, subsystem):
         self._update_status()
 
-        if (not self.start_time
-                or subsystem not in [self.azimuth, self.elevation]):
-            return 0, 0, 0
+        if not self.start_time or subsystem not in [self.azimuth, self.elevation]:
+            return self.ptState, 0, 0, 0
         elif subsystem is self.azimuth:
             trajectory = self.az_tck
         elif subsystem is self.elevation:
             trajectory = self.el_tck
 
         elapsed = (
-            (self._actual_time() - self.start_time).total_seconds()
-            / 1000
+            (self._actual_time() - self.start_time).total_seconds() * 1000
         )
+
+        if elapsed <= self.relative_times[0]:
+            if subsystem is self.azimuth:
+                start_pos = int(round(self.azimuth_positions[0] * 1000000))
+            elif subsystem is self.elevation:
+                start_pos = int(round(self.elevation_positions[0] * 1000000))
+            else:
+                start_pos = 0
+            return self.ptState, start_pos, 0, 0
+        elif elapsed >= self.relative_times[-1]:
+            if subsystem is self.azimuth:
+                end_pos = int(round(self.azimuth_positions[-1] * 1000000))
+            elif subsystem is self.elevation:
+                end_pos = int(round(self.elevation_positions[-1] * 1000000))
+            else:
+                end_pos = 0
+            return self.ptState, end_pos, 0, 0
 
         pos = interpolate.splev(elapsed, trajectory).item(0) * 1000000
         vel = interpolate.splev(elapsed, trajectory, der=1).item(0) * 1000000
         acc = interpolate.splev(elapsed, trajectory, der=2).item(0) * 1000000
-        return int(round(pos)), int(round(vel)), int(round(acc))
+        return self.ptState, int(round(pos)), int(round(vel)), int(round(acc))

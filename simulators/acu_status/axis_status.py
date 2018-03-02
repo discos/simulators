@@ -309,7 +309,8 @@ class AxisStatus(object):
 
     def _update_trajectory_values(self):
         data = self.pointing.get_trajectory_values(self)
-        self.p_Bahn, self.v_Bahn, self.a_Bahn = data
+        pt_status, self.p_Bahn, self.v_Bahn, self.a_Bahn = data
+        return pt_status
 
     def get_axis_status(self):
         self._update_status()
@@ -436,14 +437,16 @@ class AxisStatus(object):
         executed.answer = answer
         self.mcs.executed = executed
 
-    @staticmethod
-    def _calc_position(delta_time, desired_pos, desired_rate, current_pos):
+    def _calc_position(self, delta_time, desired_pos, desired_rate):
+        current_pos = self.p_Ist
         sign = utils.sign(desired_pos - current_pos)
         if sign != 0:
             current_pos += sign * int(round(abs(desired_rate) * delta_time))
             res_sign = utils.sign(desired_pos - current_pos)
             if res_sign != sign:
                 current_pos = desired_pos
+        current_pos = min(current_pos, int(round(self.max_pos * 1000000)))
+        current_pos = max(current_pos, int(round(self.min_pos * 1000000)))
         return current_pos
 
     def _move(self, counter, desired_pos, desired_rate):
@@ -464,8 +467,7 @@ class AxisStatus(object):
             current_pos = self._calc_position(
                 delta_time,
                 desired_pos,
-                desired_rate,
-                self.p_Ist
+                desired_rate
             )
             if counter == self.curr_mode_counter:
                 if self.axis_state == 3:
@@ -542,7 +544,7 @@ class AxisStatus(object):
             self._executed_mode_command(counter, 8, 3)
             return
 
-        start_pos = self.pointing.get_starting_pos(self)
+        start_pos, end_pos = self.pointing.get_start_end_pos(self)
 
         if not start_pos:
             self._executed_mode_command(counter, 8, 3)
@@ -562,26 +564,26 @@ class AxisStatus(object):
             delta_time = t1 - t0
             t0 = t1
 
-            if self.pointing.ptState == 3:
-                self._update_trajectory_values()
+            program_track_state = self._update_trajectory_values()
 
-                desired_pos = min(self.p_Bahn, self.max_pos)
-                desired_pos = max(self.p_Bahn, self.min_pos)
-                desired_rate = min(abs(self.v_Bahn), self.max_velocity)
-                desired_rate = desired_rate * utils.sign(self.v_Bahn)
+            if program_track_state == 4:
+                if self.p_Ist == end_pos:
+                    self._executed_mode_command(counter, 8, 1)
+                    break
+                else:
+                    program_track_state = 3
+
+            if program_track_state == 3:
+                desired_pos = self.p_Bahn
 
                 if counter == self.curr_mode_counter:
                     self.p_Ist = self._calc_position(
                         delta_time,
                         desired_pos,
-                        desired_rate,
-                        self.p_Ist
+                        int(round(self.max_velocity * 1000000)),
                     )
                 else:
                     break
-            elif self.pointing.ptState == 4:
-                self._executed_mode_command(counter, 8, 1)
-                break
             time.sleep(0.01)
 
     # mode_id == 14

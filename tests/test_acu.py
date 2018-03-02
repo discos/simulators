@@ -805,13 +805,13 @@ class TestACU(unittest.TestCase):
         )
         pt_command.add_entry(
             relative_time=0,
-            azimuth_position=181,
-            elevation_position=91
+            azimuth_position=180,
+            elevation_position=90
         )
-        pt_command.add_entry(2000, 182, 92)
-        pt_command.add_entry(4000, 183, 93)
-        pt_command.add_entry(6000, 182, 92)
-        pt_command.add_entry(8000, 181, 91)
+        pt_command.add_entry(2000, 181, 89)
+        pt_command.add_entry(4000, 180, 90)
+        pt_command.add_entry(6000, 181, 89)
+        pt_command.add_entry(8000, 182, 88)
 
         command = Command(pt_command)
         self._send(command.get())
@@ -836,8 +836,8 @@ class TestACU(unittest.TestCase):
         )
         entry = ProgramTrackEntry(
             relative_time=10000,
-            azimuth_position=180,
-            elevation_position=90
+            azimuth_position=181,
+            elevation_position=89
         )
         pt_command.append_entry(entry)
 
@@ -1207,8 +1207,8 @@ class TestACU(unittest.TestCase):
 
         time.sleep(10)
 
-        self.assertEqual(self.system.AZ.p_Ist, 181000000)
-        self.assertEqual(self.system.EL.p_Ist, 91000000)
+        self.assertEqual(self.system.AZ.p_Ist, 182000000)
+        self.assertEqual(self.system.EL.p_Ist, 88000000)
 
     def test_program_track_out_of_range_rate(self):
         self.test_program_track_command_load_new_table()
