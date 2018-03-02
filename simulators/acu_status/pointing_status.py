@@ -428,7 +428,8 @@ class PointingStatus(object):
     def get_trajectory_values(self, subsystem):
         self._update_status()
 
-        if not self.start_time or subsystem not in [self.azimuth, self.elevation]:
+        if (not self.start_time
+                or subsystem not in [self.azimuth, self.elevation]):
             return self.ptState, 0, 0, 0
         elif subsystem is self.azimuth:
             trajectory = self.az_tck
