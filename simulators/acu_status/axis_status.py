@@ -544,15 +544,11 @@ class AxisStatus(object):
             self._executed_mode_command(counter, 8, 3)
             return
 
-        start_pos, end_pos = self.pointing.get_start_end_pos(self)
-
-        if not start_pos:
-            self._executed_mode_command(counter, 8, 3)
-            return
-
         self.axis_trajectory_state = 7  # 7: tracking
 
-        desired_pos = int(round(start_pos * 1000000))
+        start_pos, end_pos = self.pointing.get_start_end_pos(self)
+
+        desired_pos = start_pos
         desired_rate = int(round(rate * 1000000))
 
         if not self._move(counter, desired_pos, desired_rate):

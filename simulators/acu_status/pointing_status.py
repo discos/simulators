@@ -418,12 +418,18 @@ class PointingStatus(object):
         return datetime.utcnow() + self.time_offset
 
     def get_start_end_pos(self, subsystem):
+        retval = (None, None)
         if subsystem is self.azimuth:
-            return self.azimuth_positions[0], self.azimuth_positions[-1]
+            retval = (
+                int(round(self.azimuth_positions[0] * 1000000)),
+                int(round(self.azimuth_positions[-1] * 1000000))
+            )
         elif subsystem is self.elevation:
-            return self.elevation_positions[0], self.elevation_positions[-1]
-        else:
-            return None, None
+            retval = (
+                int(round(self.elevation_positions[0] * 1000000)),
+                int(round(self.elevation_positions[-1] * 1000000))
+            )
+        return retval
 
     def get_trajectory_values(self, subsystem):
         self._update_status()
@@ -441,20 +447,18 @@ class PointingStatus(object):
         )
 
         if elapsed <= self.relative_times[0]:
+            start_pos = 0
             if subsystem is self.azimuth:
                 start_pos = int(round(self.azimuth_positions[0] * 1000000))
             elif subsystem is self.elevation:
                 start_pos = int(round(self.elevation_positions[0] * 1000000))
-            else:
-                start_pos = 0
             return self.ptState, start_pos, 0, 0
         elif elapsed >= self.relative_times[-1]:
+            end_pos = 0
             if subsystem is self.azimuth:
                 end_pos = int(round(self.azimuth_positions[-1] * 1000000))
             elif subsystem is self.elevation:
                 end_pos = int(round(self.elevation_positions[-1] * 1000000))
-            else:
-                end_pos = 0
             return self.ptState, end_pos, 0, 0
 
         pos = interpolate.splev(elapsed, trajectory).item(0) * 1000000
