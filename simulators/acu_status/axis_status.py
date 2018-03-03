@@ -1,13 +1,10 @@
 import time
-from copy import deepcopy
-from threading import Thread
 from simulators import utils
 from simulators.acu_status.motor_status import MotorStatus
 from simulators.acu_status.command_status import (
     CommandStatus,
     ModeCommandStatus,
-    ParameterCommandStatus,
-    mode_command_functions
+    ParameterCommandStatus
 )
 
 
@@ -36,11 +33,13 @@ class AxisStatus(object):
     }
 
     def __init__(self,
+                 axis_name='',
                  n_motors=1,
                  max_rates=(0, 0),
                  op_range=(0, 0),
                  stow_pos=None):
 
+        self.axis_name = axis_name
         self.max_velocity, self.max_acceleration = max_rates
         self.min_pos, self.max_pos = op_range
         if stow_pos:
@@ -49,7 +48,6 @@ class AxisStatus(object):
             self.stow_pos = [0]
 
         self.motor_status = []
-        self.current_time = None
 
         for _ in range(n_motors):
             self.motor_status.append(MotorStatus())
@@ -57,9 +55,9 @@ class AxisStatus(object):
         self.pointing = None
 
         self.simulation = 0  # BOOL, 0: axis simulation off, 1: on
-        self.axis_ready = 0  # BOOL, 0: axis not ready for activating, 1: ready
-        self.conf_ok = 0  # BOOL, 0: conf. file read error, 1: read successful
-        self.init_ok = 0  # BOOL, 0: faulty conf. data, 1: init. completed
+        self.axis_ready = 1  # BOOL, 0: axis not ready for activating, 1: ready
+        self.conf_ok = 1  # BOOL, 0: conf. file read error, 1: read successful
+        self.init_ok = 1  # BOOL, 0: faulty conf. data, 1: init. completed
         self.override = 0  # BOOL, 0: override mode not active, 1: active
         self.low_power = 0  # BOOL, 0: low power mode not active, 1: active
 
@@ -151,10 +149,10 @@ class AxisStatus(object):
         self.p_Soll = int(round(self.stow_pos[0] * 1000000))
 
         # p_Bahn, INT32, output pos. of the trajectory generator [microdeg]
-        self.p_Bahn = 0
+        self.p_Bahn = self.p_Soll
 
         # p_Ist, INT32, actual pos. [microdeg]
-        self.p_Ist = int(round(self.stow_pos[0] * 1000000))
+        self.p_Ist = self.p_Soll
 
         # p_AbwFil, INT32, filtered pos. deviation [microdeg]
         self.p_AbwFil = 0
@@ -179,7 +177,7 @@ class AxisStatus(object):
         # in bit mode coded indicator for the selected motors
         # 0: motor not selected, 1: motor selected
         # SRT range: 0:8 for Azimuth, 0:4 for Elevation, 0:1 for Cable Wrap
-        self.motor_selection = '1' * n_motors + '0' * (16 - n_motors)
+        self.motor_selection = '0' * (16 - n_motors) + '1' * n_motors
 
         # brakes_open, WORD
         # in bit mode coded indicator for the brakes that are open
@@ -190,7 +188,7 @@ class AxisStatus(object):
         # power_module_ok, WORD
         # in bit mode coded indicator for the
         # power module concerning each motor
-        self.power_module_ok = '0' * 16
+        self.power_module_ok = self.motor_selection
 
         self.stowed = 1  # BOOL, 0: axis not stowed, 1: axis stowed
 
@@ -221,9 +219,7 @@ class AxisStatus(object):
         # parameter_command_status, refer to ParameterCommandStatus class
         self.pcs = ParameterCommandStatus()
 
-        self.move_thread = Thread(target=self._move)
-        self.move_thread.daemon = True
-        self.move_thread.start()
+        self.curr_mode_counter = None
 
     def _warnings(self):
         binary_string = (
@@ -297,7 +293,28 @@ class AxisStatus(object):
         )
         return utils.binary_to_bytes(binary_string)
 
+    def _update_status(self):
+        # This method is called to update some of the values before comparison
+        # or sending.
+        if float(self.p_Ist) / 1000000 in self.stow_pos:
+            self.stow_pos_ok = 1
+        else:
+            self.stow_pos_ok = 0
+
+        if (self.mcs.executed.counter == self.curr_mode_counter
+                and self.mcs.executed.answer == 1):
+            self.curr_mode_counter = None
+
+        self._update_trajectory_values()
+
+    def _update_trajectory_values(self):
+        data = self.pointing.get_trajectory_values(self)
+        pt_status, self.p_Bahn, self.v_Bahn, self.a_Bahn = data
+        return pt_status
+
     def get_axis_status(self):
+        self._update_status()
+
         response = (
             chr(self.simulation)
             + chr(self.axis_ready)
@@ -330,11 +347,6 @@ class AxisStatus(object):
             + self.pcs.get_status()
         )
 
-        self.mcs.received = CommandStatus()
-        if self.mcs.executed.answer != 2:
-            self.mcs.executed = CommandStatus()
-        self.pcs = ParameterCommandStatus()
-
         return response
 
     def get_motor_status(self):
@@ -343,52 +355,18 @@ class AxisStatus(object):
             response += motor_status.get_status()
         return response
 
-    def _move(self):
-        while True:
-            current_time = time.time()
-            if self.current_time:
-                delta_time = current_time - self.current_time
-            else:
-                delta_time = 0
-            self.current_time = current_time
-            # delta_time unit is expressed in seconds
-
-            if self.axis_state == 3:
-                if self.axis_trajectory_state in [4, 6]:
-                    sign = utils.sign(self.p_Soll - self.p_Ist)
-                    if sign != 0:
-                        current_pos = self.p_Ist
-                        current_pos += sign * abs(self.v_Soll) * delta_time
-                        if self.p_Soll != current_pos:
-                            res_sign = utils.sign(self.p_Soll - current_pos)
-                            if res_sign != sign:
-                                # overshoot, movement completed
-                                self.p_Ist = self.p_Soll
-                            else:
-                                # Updating current position
-                                self.p_Ist = current_pos
-                elif self.axis_trajectory_state == 7:
-                    if self.pointing.ptState == 3:
-                        data = self.pointing.get_traj_values(self)
-                        if data:
-                            self.p_Bahn, self.v_Bahn, self.a_Bahn = data
-                            self.p_Ist = self.p_Soll = self.p_Bahn
-                            self.v_Ist = self.v_Soll = self.v_Bahn
-
-            time.sleep(0.01)
-
     # -------------------- Mode Command --------------------
 
     def mode_command(self, cmd):
         cmd_cnt = utils.bytes_to_int(cmd[4:8])
         mode_id = utils.bytes_to_int(cmd[8:10])
-        parameter_1 = utils.bytes_to_real(cmd[10:18], 2)
-        parameter_2 = utils.bytes_to_real(cmd[18:26], 2)
+        par_1 = utils.bytes_to_real(cmd[10:18], 2)
+        par_2 = utils.bytes_to_real(cmd[18:26], 2)
 
         received_command_status = CommandStatus()
         received_command_status.counter = cmd_cnt
 
-        command = mode_command_functions.get(mode_id)
+        command = self.mode_commands.get(mode_id)
 
         if command is None or command == '_ignore':
             self.mcs.received = received_command_status
@@ -398,62 +376,42 @@ class AxisStatus(object):
 
         received_command_status.answer = self._validate_mode_command(
             mode_id,
-            parameter_1,
-            parameter_2
+            par_1,
+            par_2
         )
 
         self.mcs.received = received_command_status
 
         if received_command_status.answer == 9:
-            executed_command_status = deepcopy(received_command_status)
-            executed_command_status.answer = 2
-
-            self.mcs.executed = deepcopy(executed_command_status)
-
-            # Call the desired command
             method = getattr(self, command)
 
-            response = method(parameter_1, parameter_2)
-
-            if response is not None:
-                if response:
-                    executed_command_status.answer = 1
-                else:
-                    executed_command_status.answer = 3
-
-                self.mcs.executed = executed_command_status
+            self._executed_mode_command(cmd_cnt, mode_id, 2)
+            method(cmd_cnt, par_1, par_2)
 
     def _validate_mode_command(self, mode_id, parameter_1, parameter_2):
         received_command_answer = 9  # Command accepted
 
-        if mode_id == 2 and self.axis_state != 0:
+        self._update_status()
+        axis_state = self.axis_state
+
+        if mode_id == 2 and axis_state != 0:
             received_command_answer = 4
-        elif mode_id in [3, 4, 5, 7, 8, 52] and self.axis_state != 3:
+        elif mode_id in [3, 4, 5, 7, 8, 52] and axis_state != 3:
             received_command_answer = 4
-        elif mode_id == 15 and self.axis_state not in [0, 1]:
+        elif mode_id == 15 and axis_state not in [0, 1]:
             received_command_answer = 4
         elif mode_id == 50:
-            current_pos = int(round(self.p_Ist / 1000000))
-            if current_pos not in self.stow_pos or self.v_Ist:
+            if not self.stow_pos_ok:
                 received_command_answer = 4
 
         if mode_id == 3:
-            desired_pos = parameter_1
-            delta_pos = desired_pos - int(round((self.p_Ist / 1000000)))
-
-            if utils.sign(delta_pos) != utils.sign(parameter_2):
-                # Discordant direction of new position and rate
-                received_command_answer = 5
-            if desired_pos < self.min_pos or desired_pos > self.max_pos:
+            if parameter_1 < self.min_pos or parameter_1 > self.max_pos:
                 received_command_answer = 5
             if abs(parameter_2) > self.max_velocity:
                 received_command_answer = 5
         elif mode_id == 4:
             desired_pos = (self.p_Ist / 1000000) + parameter_1
 
-            if utils.sign(parameter_1) != utils.sign(parameter_2):
-                # Discordant direction of new position and rate
-                received_command_answer = 5
             if desired_pos < self.min_pos or desired_pos > self.max_pos:
                 received_command_answer = 5
             if abs(int(parameter_2)) > self.max_velocity:
@@ -472,104 +430,164 @@ class AxisStatus(object):
 
         return received_command_answer
 
+    def _executed_mode_command(self, counter, command, answer):
+        executed = CommandStatus()
+        executed.counter = counter
+        executed.command = command
+        executed.answer = answer
+        self.mcs.executed = executed
+
+    def _calc_position(self, delta_time, desired_pos, desired_rate):
+        current_pos = self.p_Ist
+        sign = utils.sign(desired_pos - current_pos)
+        if sign != 0:
+            current_pos += sign * int(round(abs(desired_rate) * delta_time))
+            res_sign = utils.sign(desired_pos - current_pos)
+            if res_sign != sign:
+                current_pos = desired_pos
+        current_pos = min(current_pos, int(round(self.max_pos * 1000000)))
+        current_pos = max(current_pos, int(round(self.min_pos * 1000000)))
+        return current_pos
+
+    def _move(self, counter, desired_pos, desired_rate):
+
+        self.p_Soll = desired_pos
+        self.v_Soll = desired_rate
+
+        t0 = time.time()
+
+        # Additional check to time module, when the father thread exits, the
+        # time module becomes 'None' and an exception is raised (it happens on
+        # exit so this should not be an issue).
+        while time is not None:
+            t1 = time.time()
+            delta_time = t1 - t0
+            t0 = t1
+
+            current_pos = self._calc_position(
+                delta_time,
+                desired_pos,
+                desired_rate
+            )
+            if counter == self.curr_mode_counter:
+                if self.axis_state == 3:
+                    self.v_Ist = desired_rate
+                    self.p_Ist = current_pos
+                else:
+                    self.v_Ist = 0
+
+                if self.p_Ist == desired_pos:
+                    self.v_Ist = 0
+                    return True
+            else:
+                self.v_Ist = 0
+                return False
+            time.sleep(0.01)
+
     # mode_id == 1
-    def _inactive(self, *_):
+    def _inactive(self, counter, *_):
         self.axis_state = 0
         self.brakes_open = '0' * 16
-        return True
+        self._executed_mode_command(counter, 1, 1)
 
     # mode_id == 2
-    def _active(self, *_):
+    def _active(self, counter, *_):
         self.axis_state = 3
         self.brakes_open = (
-            '1' * len(self.motor_status)
-            + '0' * (16 - len(self.motor_status))
+            '0' * (16 - len(self.motor_status))
+            + '1' * len(self.motor_status)
         )
-        return True
+        self._executed_mode_command(counter, 2, 1)
 
     # mode_id == 3
-    def _preset_absolute(self, angle, rate):
+    def _preset_absolute(self, counter, angle, rate):
+        self.curr_mode_counter = counter
         self.axis_trajectory_state = 6
-        self.p_Soll = int(round(angle * 1000000))
-        self.v_Soll = int(round(rate * 1000000))
-        while self.p_Soll != self.p_Ist:
-            time.sleep(0.005)
-        self.axis_trajectory_state = 0
-        return True
+        desired_pos = int(round(angle * 1000000))
+        desired_rate = int(round(rate * 1000000))
+        if self._move(counter, desired_pos, desired_rate):
+            self._executed_mode_command(counter, 3, 1)
 
     # mode_id == 4
-    def _preset_relative(self, angle, rate):
+    def _preset_relative(self, counter, angle, rate):
+        self.curr_mode_counter = counter
         self.axis_trajectory_state = 6
-        self.p_Soll += int(round(angle * 1000000))
-        self.v_Soll = int(round(rate * 1000000))
-        while self.p_Soll != self.p_Ist:
-            time.sleep(0.005)
-        self.axis_trajectory_state = 0
-        return True
+        desired_pos = self.p_Soll + int(round(angle * 1000000))
+        desired_rate = int(round(rate * 1000000))
+        if self._move(counter, desired_pos, desired_rate):
+            self._executed_mode_command(counter, 4, 1)
 
     # mode_id == 5
-    def _slew(self, percentage, rate):
+    def _slew(self, counter, percentage, rate):
+        self.curr_mode_counter = counter
         self.axis_trajectory_state = 4
-        self.v_Soll = int(round(rate * 1000000 * percentage))
-        if utils.sign(self.v_Soll) > 0:
-            self.p_Soll = int(round(self.max_pos * 1000000))
-        elif utils.sign(self.v_Soll) < 0:
-            self.p_Soll = int(round(self.min_pos * 1000000))
+        desired_rate = int(round(rate * 1000000 * percentage))
+        if utils.sign(desired_rate) > 0:
+            desired_pos = int(round(self.max_pos * 1000000))
+        elif utils.sign(desired_rate) < 0:
+            desired_pos = int(round(self.min_pos * 1000000))
         else:
-            self.p_Soll = self.p_Ist
-        while self.p_Soll != self.p_Ist:
-            time.sleep(0.005)
-        self.axis_trajectory_state = 0
-        return True
+            desired_pos = self.p_Ist
+        if self._move(counter, desired_pos, desired_rate):
+            self._executed_mode_command(counter, 5, 1)
 
     # mode_id == 7
-    def _stop(self, *_):
-        self.p_Soll = self.p_Ist
-        self.v_Soll = 0
+    def _stop(self, counter, *_):
+        self.curr_mode_counter = counter
         self.axis_trajectory_state = 3
-        return True
+        self._executed_mode_command(counter, 7, 1)
 
     # mode_id == 8
-    def _program_track(self, _, rate):
+    def _program_track(self, counter, _, rate):
+        self.curr_mode_counter = counter
         if self.pointing.ptState in [0, 1, 4]:
-            return False
-
-        start_pos = self.pointing.get_starting_pos(self)
-
-        if not start_pos:
-            return False
-
-        self.axis_trajectory_state = 6  # 6: position
-
-        self.p_Soll = int(round(start_pos * 1000000))
-        self.v_Soll = int(round(rate * 1000000))
-
-        while self.p_Ist != self.p_Soll:
-            time.sleep(0.01)
+            self._executed_mode_command(counter, 8, 3)
+            return
 
         self.axis_trajectory_state = 7  # 7: tracking
 
-        while self.pointing.ptState in [2, 3]:
+        start_pos, end_pos = self.pointing.get_start_end_pos(self)
+
+        desired_pos = start_pos
+        desired_rate = int(round(rate * 1000000))
+
+        if not self._move(counter, desired_pos, desired_rate):
+            return
+
+        t0 = time.time()
+        while True:
+            t1 = time.time()
+            delta_time = t1 - t0
+            t0 = t1
+
+            program_track_state = self._update_trajectory_values()
+
+            if program_track_state == 4:
+                if self.p_Ist == end_pos:
+                    self._executed_mode_command(counter, 8, 1)
+                    break
+                else:
+                    program_track_state = 3
+
+            if program_track_state == 3:
+                desired_pos = self.p_Bahn
+
+                if counter == self.curr_mode_counter:
+                    self.p_Ist = self._calc_position(
+                        delta_time,
+                        desired_pos,
+                        int(round(self.max_velocity * 1000000)),
+                    )
+                else:
+                    break
             time.sleep(0.01)
 
-        self.v_Ist = 0
-
-        if self.pointing.ptState == 4:
-            if self.axis_trajectory_state == 7:
-                self.axis_trajectory_state = 0
-                return True
-            else:
-                return False
-        else:
-            return False
-
     # mode_id == 14
-    @staticmethod
-    def _interlock(*_):
-        return True
+    def _interlock(self, counter, *_):
+        self._executed_mode_command(counter, 14, 1)
 
     # mode_id == 15
-    def _reset(self, *_):
+    def _reset(self, counter, *_):
         self.Error_Active = 0
         self.System_fault = 0
         self.Em_Stop = 0
@@ -597,29 +615,29 @@ class AxisStatus(object):
         self.Com_Error = 0
         self.Pre_Limit_Err = 0
         self.Fin_Limit_Err = 0
-        return True
+        self._executed_mode_command(counter, 15, 1)
 
     # mode_id == 50
-    def _stow(self, *_):
+    def _stow(self, counter, *_):
         self.stow_pin_out = '0' * 16
         self.stow_pin_in = self.stow_pin_selection
-        return True
+        self.stowed = 1
+        self._executed_mode_command(counter, 50, 1)
 
     # mode_id == 51
-    def _unstow(self, *_):
+    def _unstow(self, counter, *_):
         self.stow_pin_in = '0' * 16
         self.stow_pin_out = self.stow_pin_selection
-        return True
+        self.stowed = 0
+        self._executed_mode_command(counter, 51, 1)
 
     # mode_id == 52
-    def _drive_to_stow(self, stow_position, rate):
-        self.axis_trajectory_state = 6  # 6: position
-        self.p_Soll = int(round(self.stow_pos[int(stow_position)] * 1000000))
-        self.v_Soll = int(round(rate * 1000000))
-        while self.p_Soll != self.p_Ist:
-            time.sleep(0.005)
-        self.axis_trajectory_state = 0
-        return True
+    def _drive_to_stow(self, counter, stow_position, rate):
+        desired_pos = int(round(self.stow_pos[int(stow_position)] * 1000000))
+        desired_rate = int(round(rate * 1000000))
+        self.curr_mode_counter = counter
+        if self._move(counter, desired_pos, desired_rate):
+            self._executed_mode_command(counter, 52, 1)
 
     # -------------------- Parameter Command --------------------
 

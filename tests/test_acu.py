@@ -17,21 +17,21 @@ class TestACU(unittest.TestCase):
     def _send(self, message):
         for byte in message:
             self.assertTrue(self.system.parse(byte))
+        # Wait for command to start its execution
+        time.sleep(0.01)
 
     def test_status_message_length(self):
         status = self.system.get_message()
         msg_length = utils.bytes_to_uint(status[4:8])
         self.assertEqual(msg_length, 813)
+        self.assertEqual(len(status), 813)
 
-    def test_duplicated_macro_command_counter(self):
+    def test_duplicated_command_counter(self):
         command_string = Command(ModeCommand(1, 1)).get()
         self._send(command_string)
 
         with self.assertRaises(ValueError):
             self._send(command_string)
-
-    def test_duplicated_command_counter(self):
-        pass
 
     def test_parse_correct_end_flag(self):
         command_string = Command(ModeCommand(1, 1)).get()
@@ -46,6 +46,16 @@ class TestACU(unittest.TestCase):
 
     def test_parse_wrong_start_flag(self):
         self.assertFalse(self.system.parse('\x00'))
+
+    def test_multiple_command_same_subsystem(self):
+        for subsystem in [1, 2]:
+            command = Command(
+                ModeCommand(subsystem_id=subsystem, mode_id=2),
+                ModeCommand(subsystem_id=subsystem, mode_id=1)
+            )
+
+            with self.assertRaises(ValueError):
+                self._send(command.get())
 
     def test_mode_command_azimuth(self):
         command_string = Command(ModeCommand(1, 1)).get()
@@ -95,17 +105,17 @@ class TestACU(unittest.TestCase):
         self.assertEqual(az_mcs.received.command, mode_id)
         self.assertEqual(az_mcs.received.answer, 9)
 
-        # Make sure the azimuth command has been executed
-        self.assertEqual(az_mcs.executed.counter, az_command_counter)
-        self.assertEqual(az_mcs.executed.command, mode_id)
-        self.assertEqual(az_mcs.executed.answer, 1)
-
         # Check if the elevation command has been received
         self.assertEqual(el_mcs.received.counter, el_command_counter)
         self.assertEqual(el_mcs.received.command, mode_id)
         self.assertEqual(el_mcs.received.answer, 9)
 
         # Make sure the azimuth command has been executed
+        self.assertEqual(az_mcs.executed.counter, az_command_counter)
+        self.assertEqual(az_mcs.executed.command, mode_id)
+        self.assertEqual(az_mcs.executed.answer, 1)
+
+        # Make sure the elevation command has been executed
         self.assertEqual(el_mcs.executed.counter, el_command_counter)
         self.assertEqual(el_mcs.executed.command, mode_id)
         self.assertEqual(el_mcs.executed.answer, 1)
@@ -127,17 +137,17 @@ class TestACU(unittest.TestCase):
         self.assertEqual(az_mcs.received.command, mode_id)
         self.assertEqual(az_mcs.received.answer, 9)
 
-        # Make sure the azimuth command has been executed
-        self.assertEqual(az_mcs.executed.counter, az_command_counter)
-        self.assertEqual(az_mcs.executed.command, mode_id)
-        self.assertEqual(az_mcs.executed.answer, 1)
-
         # Check if the elevation command has been received
         self.assertEqual(el_mcs.received.counter, el_command_counter)
         self.assertEqual(el_mcs.received.command, mode_id)
         self.assertEqual(el_mcs.received.answer, 9)
 
         # Make sure the azimuth command has been executed
+        self.assertEqual(az_mcs.executed.counter, az_command_counter)
+        self.assertEqual(az_mcs.executed.command, mode_id)
+        self.assertEqual(az_mcs.executed.answer, 1)
+
+        # Make sure the elevation command has been executed
         self.assertEqual(el_mcs.executed.counter, el_command_counter)
         self.assertEqual(el_mcs.executed.command, mode_id)
         self.assertEqual(el_mcs.executed.answer, 1)
@@ -223,6 +233,75 @@ class TestACU(unittest.TestCase):
 
         # Should be both in position in ~1 seconds but we give it 2 to be sure
         time.sleep(2)
+
+        az_res_pos = round(float(self.system.AZ.p_Ist) / 1000000, 2)
+        self.assertEqual(az_res_pos, az_des_pos)
+        el_res_pos = round(float(self.system.EL.p_Ist) / 1000000, 2)
+        self.assertEqual(el_res_pos, el_des_pos)
+
+        # Make sure the azimuth command has been executed
+        self.assertEqual(az_mcs.executed.counter, az_command_counter)
+        self.assertEqual(az_mcs.executed.command, preset_abs_id)
+        self.assertEqual(az_mcs.executed.answer, 1)
+
+        # Make sure the elevation command has been executed
+        self.assertEqual(el_mcs.executed.counter, el_command_counter)
+        self.assertEqual(el_mcs.executed.command, preset_abs_id)
+        self.assertEqual(el_mcs.executed.answer, 1)
+
+    def test_mode_command_preset_absolute_pause(self):
+        # We save the starting position for further comparison
+        az_start_pos = round(float(self.system.AZ.p_Ist) / 1000000, 2)
+        el_start_pos = round(float(self.system.EL.p_Ist) / 1000000, 2)
+
+        # Axis needs to be activated before sending this command
+        self.test_mode_command_active()
+
+        preset_abs_id = 3
+
+        az_des_pos = 179.25
+        az_des_rate = -0.75
+        az_preset_abs = ModeCommand(1, preset_abs_id, az_des_pos, az_des_rate)
+
+        el_des_pos = 89.5
+        el_des_rate = -0.5
+        el_preset_abs = ModeCommand(2, preset_abs_id, el_des_pos, el_des_rate)
+
+        command = Command(az_preset_abs, el_preset_abs)
+        self._send(command.get())
+
+        az_command_counter = command.get_counter(-2)
+        az_mcs = self.system.AZ.mcs
+        el_command_counter = command.get_counter(-1)
+        el_mcs = self.system.EL.mcs
+
+        # Check if the azimuth command has been received
+        self.assertEqual(az_mcs.received.counter, az_command_counter)
+        self.assertEqual(az_mcs.received.command, preset_abs_id)
+        self.assertEqual(az_mcs.received.answer, 9)
+
+        # Check if the elevation command has been received
+        self.assertEqual(el_mcs.received.counter, el_command_counter)
+        self.assertEqual(el_mcs.received.command, preset_abs_id)
+        self.assertEqual(el_mcs.received.answer, 9)
+
+        # Should be both moving but we deactivate the axis after 0.3 seconds
+        time.sleep(0.6)
+        self.test_mode_command_inactive()
+
+        # We check that the current position is
+        # between the starting and the ending one
+        az_cur_pos = round(float(self.system.AZ.p_Ist) / 1000000, 2)
+        self.assertTrue(az_des_pos < az_cur_pos < az_start_pos)
+        el_cur_pos = round(float(self.system.EL.p_Ist) / 1000000, 2)
+        self.assertTrue(el_des_pos < el_cur_pos < el_start_pos)
+
+        # We activate the axis again after 1 second
+        time.sleep(1)
+        self.test_mode_command_active()
+
+        # We finally wait for the command to be completed
+        time.sleep(0.6)
 
         az_res_pos = round(float(self.system.AZ.p_Ist) / 1000000, 2)
         self.assertEqual(az_res_pos, az_des_pos)
@@ -488,9 +567,10 @@ class TestACU(unittest.TestCase):
         self.assertEqual(el_mcs.received.command, slew_id)
         self.assertEqual(el_mcs.received.answer, 5)
 
-    def test_mode_command_stop(self):
+    def test_mode_command_stop(self, activate=True):
         # Axis needs to be activated before sending this command
-        self.test_mode_command_active()
+        if activate:
+            self.test_mode_command_active()
 
         stop_id = 7
         az_stop = ModeCommand(1, stop_id)
@@ -796,12 +876,12 @@ class TestACU(unittest.TestCase):
         pt_command.add_entry(
             relative_time=0,
             azimuth_position=181,
-            elevation_position=91
+            elevation_position=89
         )
-        pt_command.add_entry(2000, 182, 92)
-        pt_command.add_entry(4000, 183, 93)
-        pt_command.add_entry(6000, 182, 92)
-        pt_command.add_entry(8000, 181, 91)
+        pt_command.add_entry(2000, 182, 88)
+        pt_command.add_entry(4000, 181, 89)
+        pt_command.add_entry(6000, 182, 88)
+        pt_command.add_entry(8000, 183, 87)
 
         command = Command(pt_command)
         self._send(command.get())
@@ -826,8 +906,8 @@ class TestACU(unittest.TestCase):
         )
         entry = ProgramTrackEntry(
             relative_time=10000,
-            azimuth_position=180,
-            elevation_position=90
+            azimuth_position=182,
+            elevation_position=88
         )
         pt_command.append_entry(entry)
 
@@ -1183,44 +1263,83 @@ class TestACU(unittest.TestCase):
 
     def test_program_track_execution(self):
         self.test_program_track_command_load_new_table()
-
-        activate_azimuth = ModeCommand(1, 2)
-        activate_elevation = ModeCommand(2, 2)
+        self.test_mode_command_active()
 
         start_azimuth = ModeCommand(1, 8, None, 0.5)
         start_elevation = ModeCommand(2, 8, None, 0.5)
 
         command = Command(
-            activate_azimuth,
-            activate_elevation,
             start_azimuth,
-            start_elevation
+            start_elevation,
         )
 
         self._send(command.get())
 
         time.sleep(10)
 
-        self.assertEqual(self.system.AZ.p_Ist, 181000000)
-        self.assertEqual(self.system.EL.p_Ist, 91000000)
+        self.assertEqual(self.system.AZ.p_Ist, 183000000)
+        self.assertEqual(self.system.EL.p_Ist, 87000000)
+
+    def test_program_track_stop_positioning(self):
+        self.test_program_track_command_load_new_table()
+        self.test_mode_command_active()
+
+        start_azimuth = ModeCommand(1, 8, None, 0.5)
+        start_elevation = ModeCommand(2, 8, None, 0.5)
+
+        command = Command(
+            start_azimuth,
+            start_elevation,
+        )
+
+        self._send(command.get())
+
+        time.sleep(0.5)
+
+        self.test_mode_command_stop(activate=False)
+
+        time.sleep(9.5)
+
+        self.assertNotEqual(self.system.AZ.p_Ist, 183000000)
+        self.assertNotEqual(self.system.EL.p_Ist, 87000000)
+
+    def test_program_track_stop_tracking(self):
+        self.test_program_track_command_load_new_table()
+        self.test_mode_command_active()
+
+        start_azimuth = ModeCommand(1, 8, None, 0.5)
+        start_elevation = ModeCommand(2, 8, None, 0.5)
+
+        command = Command(
+            start_azimuth,
+            start_elevation,
+        )
+
+        self._send(command.get())
+
+        time.sleep(5)
+
+        self.test_mode_command_stop(activate=False)
+
+        time.sleep(5)
+
+        self.assertNotEqual(self.system.AZ.p_Ist, 183000000)
+        self.assertNotEqual(self.system.EL.p_Ist, 87000000)
 
     def test_program_track_out_of_range_rate(self):
         self.test_program_track_command_load_new_table()
-
-        activate_azimuth = ModeCommand(1, 2)
-        activate_elevation = ModeCommand(2, 2)
+        self.test_mode_command_active()
 
         start_azimuth = ModeCommand(1, 8, None, 1.5)
         start_elevation = ModeCommand(2, 8, None, 1.5)
 
         command = Command(
-            activate_azimuth,
-            activate_elevation,
             start_azimuth,
             start_elevation
         )
 
         self._send(command.get())
+
         az_command_counter = command.get_counter(-2)
         el_command_counter = command.get_counter(-1)
 

@@ -15,12 +15,12 @@ class GeneralStatus(object):
         # 3: Local control panel active
         # 4: Primary control panel active
         # 5: Secondary control panel active
-        self.master = 0
+        self.master = 2
 
         # Status HMI, UINT16
         # In bit mode coded status of the human machine interfaces
         self.LCP_connected = 0
-        self.remote_computer_connected = 0
+        self.remote_computer_connected = 1
         self.HBG_connected = 0
         # bit 3 not used
         self.LCP_initialization_OK = 0
