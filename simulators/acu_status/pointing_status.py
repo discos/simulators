@@ -273,8 +273,81 @@ class PointingStatus(object):
                 self.ptActTableIndex = len(self.relative_times)
                 self.ptState = 4
 
+    def actual_time(self):
+        return datetime.utcnow() + self.time_offset
+
+    # -------------------- Parameter Command --------------------
+
     def parameter_command(self, command):
-        pass
+        cmd_cnt = utils.bytes_to_uint(command[4:8])
+        parameter_id = utils.bytes_to_uint(command[8:10])
+        parameter_1 = utils.bytes_to_real(command[10:18], 2)
+        parameter_2 = utils.bytes_to_real(command[18:26], 2)
+
+        self.pcs.counter = cmd_cnt
+        self.pcs.command = parameter_id
+
+        if parameter_id == 50:
+            self._time_source(parameter_1, parameter_2)
+        elif parameter_id == 51:
+            self._time_offset(parameter_1, parameter_2)
+        elif parameter_id == 60:
+            self._program_track_time_correction(parameter_1)
+        else:
+            self.pcs.answer = 5
+
+    def _time_source(self, parameter_1, parameter_2):
+        parameter_1 = int(parameter_1)
+
+        if parameter_1 not in [1, 2, 3]:
+            self.pcs.answer = 5
+            return
+        elif parameter_1 == 3:
+            self.time_offset = (
+                utils.mjd_to_date(parameter_2)
+                - datetime.utcnow()
+            )
+
+        self.timeSource = parameter_1
+        self.pcs.answer = 1
+
+    def _time_offset(self, parameter_1, parameter_2):
+        parameter_1 = int(parameter_1)
+
+        if parameter_1 == 1:
+            # Servo System Time + 1 second
+            pass
+        elif parameter_1 == 2:
+            # Servo System Time - 1 second
+            pass
+        elif parameter_1 == 3:
+            # Set absolute offset
+            pass
+        elif parameter_1 == 4:
+            # Set relative offset
+            pass
+        else:
+            self.pcs.answer = 5
+
+        self.pcs.answer = 1
+
+    def _program_track_time_correction(self, time_offset):
+        # time_offset = offset time [s]
+
+        if not self.start_time:
+            self.pcs.answer = 4
+            return
+
+        if abs(time_offset) > 86400000:
+            self.pcs.answer = 5
+            return
+
+        time_offset = timedelta(seconds=time_offset)
+        self.start_time += time_offset
+        self.end_time += time_offset
+        self.pcs.answer = 1
+
+    # --------------- Program Track Parameter Command ---------------
 
     def program_track_parameter_command(self, command):
         cmd_cnt = utils.bytes_to_uint(command[4:8])

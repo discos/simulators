@@ -864,6 +864,19 @@ class TestACU(unittest.TestCase):
         self.assertEqual(el_mcs.received.command, mode_id)
         self.assertEqual(el_mcs.received.answer, 5)
 
+    def test_parameter_command_azimuth(self):
+        self._send(Command(ParameterCommand(1, 1)).get())
+
+    def test_parameter_command_elevation(self):
+        self._send(Command(ParameterCommand(2, 1)).get())
+
+    def test_parameter_command_pointing(self):
+        self._send(Command(ParameterCommand(5, 1)).get())
+
+    def test_parameter_command_unknown_subsystem(self):
+        with self.assertRaises(ValueError):
+            self._send(Command(ParameterCommand(3, 1)).get())
+
     def test_program_track_command_load_new_table(self, start_time=None):
         if not start_time:
             start_time = datetime.utcnow() + timedelta(seconds=1)
