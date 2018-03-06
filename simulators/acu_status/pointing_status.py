@@ -339,8 +339,20 @@ class PointingStatus(object):
 
         self.pcs.answer = 1
 
-    def _program_track_time_correction(self, parameter_1):
-        # parameter_1 = offset time mode
+    def _program_track_time_correction(self, time_offset):
+        # time_offset = offset time [s]
+
+        if not self.start_time:
+            self.pcs.answer = 4
+            return
+
+        if abs(time_offset) > 86400000:
+            self.pcs.answer = 5
+            return
+
+        time_offset = timedelta(seconds=time_offset)
+        self.start_time += time_offset
+        self.end_time += time_offset
         self.pcs.answer = 1
 
     # --------------- Program Track Parameter Command ---------------
