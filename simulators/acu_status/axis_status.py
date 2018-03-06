@@ -632,6 +632,10 @@ class AxisStatus(object):
         self.pcs.parameter_command_counter = cmd_cnt
         self.pcs.parameter_command = parameter_id
 
+        if self.axis_state != 3:
+            self.pcs_parameter_command_answer = 4
+            return
+
         if parameter_id == 11:
             self._absolute_position_offset(parameter_1, parameter_2)
         elif parameter_id == 12:
