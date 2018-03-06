@@ -647,11 +647,11 @@ class AxisStatus(object):
         parameter_1 = utils.bytes_to_real(cmd[10:18], 2)
         parameter_2 = utils.bytes_to_real(cmd[18:26], 2)
 
-        self.pcs.parameter_command_counter = cmd_cnt
-        self.pcs.parameter_command = parameter_id
+        self.pcs.counter = cmd_cnt
+        self.pcs.command = parameter_id
 
         if self.axis_state != 3:
-            self.pcs_parameter_command_answer = 4
+            self.pcs.answer = 4
             return
 
         if parameter_id == 11:
@@ -659,10 +659,10 @@ class AxisStatus(object):
         elif parameter_id == 12:
             self._relative_position_offset(parameter_1, parameter_2)
         else:
-            self.pcs.parameter_command_answer = 5
+            self.pcs.answer = 5
 
     def _absolute_position_offset(self, offset, ramp_time):
-        self.pcs.parameter_command_answer = 1
+        self.pcs.answer = 1
 
     def _relative_position_offset(self, offset, ramp_time):
-        self.pcs.parameter_command_answer = 1
+        self.pcs.answer = 1
