@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import math
 import struct
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 def checksum(msg):
@@ -315,10 +315,6 @@ def mjd(time=None):
     year = time.year
     month = time.month
     day = time.day
-    hour = time.hour
-    minute = time.minute
-    second = time.second
-    microsecond = time.microsecond
 
     if month == 1 or month == 2:
         yearp = year - 1
@@ -345,19 +341,7 @@ def mjd(time=None):
 
     modified_julian_day = jd - 2400000.5
 
-    # Total UTC hours of the day
-    day_hours = hour
-    # Total minutes of the day
-    day_minutes = (day_hours * 60) + minute
-    # Total seconds of the day
-    day_seconds = (day_minutes * 60) + second
-    # Total microseconds of the day
-    day_microseconds = (day_seconds * 1000000) + microsecond
-
-    # Day percentage, 00:00 = 0.0, 24:00=1.0
-    day_percentage = float(day_microseconds) / 86400000000
-
-    return float(modified_julian_day + day_percentage)
+    return float(modified_julian_day + day_percentage(time))
 
 
 def mjd_to_date(original_mjd_date):
@@ -421,19 +405,41 @@ def mjd_to_date(original_mjd_date):
     return result_date
 
 
-def day_milliseconds():
-    """Return the milliseconds elapsed since last midnight UTC."""
-    utcnow = datetime.utcnow()
+def day_microseconds(date=None):
+    """Return the microseconds elapsed since last midnight UTC."""
+    if not date:
+        date = datetime.utcnow()
+    elif not isinstance(date, datetime):
+        raise ValueError('Date parameter must be a datetime object.')
 
     # Total UTC hours of the day
-    day_hours = utcnow.hour
+    day_hours = date.hour
     # Total minutes of the day
-    day_minutes = (day_hours * 60) + utcnow.minute
+    day_minutes = (day_hours * 60) + date.minute
     # Total seconds of the day
-    day_seconds = (day_minutes * 60) + utcnow.second
+    day_seconds = (day_minutes * 60) + date.second
     # Total microseconds of the day
-    day_microseconds = (day_seconds * 1000000) + utcnow.microsecond
-    return day_microseconds / 1000  # Total milliseconds of the day
+    return (day_seconds * 1000000) + date.microsecond
+
+
+def day_milliseconds(date=None):
+    microseconds = day_microseconds(date)
+    return int(round(float(microseconds) / 1000))
+
+
+def day_percentage(date=None):
+    """Return the day percentage. 00:00 = 0.0, 23:59:999999 = 1.0"""
+    if not date:
+        date = datetime.utcnow()
+
+    if isinstance(date, datetime):
+        microseconds = day_microseconds(date)
+    elif isinstance(date, timedelta):
+        microseconds = date.total_seconds() * 1000000
+    else:
+        raise ValueError('Date parameter must be a datetime object.')
+
+    return float(microseconds) / 86400000000
 
 
 if __name__ == '__main__':

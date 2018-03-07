@@ -106,13 +106,15 @@ class PointingStatus(object):
         # 3: external time (Time is set by command)
         self.timeSource = 1
 
+        self.time_source_offset = timedelta(0)
+
         # actTime, REAL64, actual time in format modified julian day
         self.actTime = 0
 
-        self.time_offset = timedelta(0)
-
         # actTimeOffset, REAL64, actual time offset in fraction of day
         self.actTimeOffset = 0
+
+        self.time_offset = timedelta(0)
 
         # clockOnLine, UINT8
         # 0: GPS receiver doesn't send data
@@ -197,14 +199,6 @@ class PointingStatus(object):
 
     def get_status(self):
         self._update_status()
-        curr_time = self._actual_time()
-        self.year = curr_time.year
-        self.month = curr_time.month
-        self.day = curr_time.day
-        self.hour = curr_time.hour
-        self.minute = curr_time.minute
-        self.second = curr_time.second
-        self.actTime = utils.mjd(curr_time)
 
         response = (
             utils.real_to_bytes(self.confVersion, 2)
@@ -254,10 +248,29 @@ class PointingStatus(object):
         return response
 
     def _update_status(self):
-        if self.ptState == 2 and self._actual_time() >= self.start_time:
+        curr_time = self.actual_time()
+        self.year = curr_time.year
+        self.month = curr_time.month
+        self.day = curr_time.day
+        self.hour = curr_time.hour
+        self.minute = curr_time.minute
+        self.second = curr_time.second
+        self.actTime = utils.mjd(curr_time)
+
+        self.posEncAz = self.azimuth.p_Ist
+        self.pointOffsetAz = self.azimuth.p_Offset
+        self.posEncEl = self.elevation.p_Ist
+        self.pointOffsetEl = self.elevation.p_Offset
+
+        if self.ptState == 0:
+            return
+
+        start_time = self.start_time + timedelta(seconds=self.actPtTimeOffset)
+
+        if self.ptState == 2 and self.actual_time() >= start_time:
             self.ptState = 3
         elif self.ptState == 3:
-            current_pt_time = self._actual_time() - self.start_time
+            current_pt_time = self.actual_time() - start_time
             current_pt_time = current_pt_time.total_seconds() * 1000
 
             pt_index = None
@@ -273,8 +286,91 @@ class PointingStatus(object):
                 self.ptActTableIndex = len(self.relative_times)
                 self.ptState = 4
 
+    def actual_time(self):
+        return (
+            datetime.utcnow()
+            + self.time_source_offset
+            + self.time_offset
+        )
+
+    # -------------------- Parameter Command --------------------
+
     def parameter_command(self, command):
-        pass
+        cmd_cnt = utils.bytes_to_uint(command[4:8])
+        parameter_id = utils.bytes_to_uint(command[8:10])
+        parameter_1 = utils.bytes_to_real(command[10:18], 2)
+        parameter_2 = utils.bytes_to_real(command[18:26], 2)
+
+        self.pcs.counter = cmd_cnt
+        self.pcs.command = parameter_id
+
+        if parameter_id == 50:
+            self._time_source(parameter_1, parameter_2)
+        elif parameter_id == 51:
+            self._time_offset(parameter_1, parameter_2)
+        elif parameter_id == 60:
+            self._program_track_time_correction(parameter_1)
+        else:
+            self.pcs.answer = 5
+
+    def _time_source(self, parameter_1, parameter_2):
+        parameter_1 = int(parameter_1)
+
+        if parameter_1 not in [1, 2, 3]:
+            self.pcs.answer = 5
+            return
+        elif parameter_1 == 1:
+            self.time_source_offset = timedelta(0)
+        elif parameter_1 == 2:
+            pass
+        elif parameter_1 == 3:
+            self.time_source_offset = (
+                utils.mjd_to_date(parameter_2)
+                - datetime.utcnow()
+            )
+
+        self.timeSource = parameter_1
+        self.pcs.answer = 1
+
+    def _time_offset(self, parameter_1, parameter_2):
+        parameter_1 = int(parameter_1)
+
+        if not (1 <= parameter_1 <= 4) or abs(parameter_2) > 86400000:
+            self.pcs.answer = 5
+            return
+        if parameter_1 == 1:
+            # Servo System Time + 1 second
+            offset = timedelta(seconds=1)
+            self.time_offset += offset
+            self.actTimeOffset += utils.day_percentage(timedelta(seconds=1))
+        elif parameter_1 == 2:
+            # Servo System Time - 1 second
+            offset = timedelta(seconds=1)
+            self.time_offset -= offset
+            self.actTimeOffset -= utils.day_percentage(timedelta(seconds=1))
+        elif parameter_1 == 3:
+            # Set absolute offset
+            self.time_offset = timedelta(seconds=parameter_2)
+            self.actTimeOffset = utils.day_percentage(self.time_offset)
+        elif parameter_1 == 4:
+            # Set relative offset
+            offset = timedelta(seconds=parameter_2)
+            self.time_offset += offset
+            self.actTimeOffset += utils.day_percentage(offset)
+
+        self.pcs.answer = 1
+
+    def _program_track_time_correction(self, time_offset):
+        # time_offset = offset time [s]
+
+        if abs(time_offset) > 86400000:
+            self.pcs.answer = 5
+            return
+
+        self.actPtTimeOffset = time_offset
+        self.pcs.answer = 1
+
+    # --------------- Program Track Parameter Command ---------------
 
     def program_track_parameter_command(self, command):
         cmd_cnt = utils.bytes_to_uint(command[4:8])
@@ -320,11 +416,17 @@ class PointingStatus(object):
             return
 
         start_time = utils.mjd_to_date(utils.bytes_to_real(command[18:26], 2))
-        start_time += self.time_offset
+        start_time += self.time_source_offset
 
         if load_mode == 2 and start_time != self.start_time:
             self.pcs.answer = 5
             return
+
+        if load_mode == 1:
+            self.pt_command_id = cmd_cnt
+            self.relative_times = []
+            self.azimuth_positions = []
+            self.elevation_positions = []
 
         azimuth_max_rate = utils.bytes_to_real(command[26:34], 2)
         elevation_max_rate = utils.bytes_to_real(command[34:42], 2)
@@ -397,8 +499,11 @@ class PointingStatus(object):
 
         self._update_status()
 
-        if self.ptState != 3:
+        if load_mode == 1:
             self.ptState = 2
+        elif self.ptState != 3:
+            self.ptState = 2
+
         self.ptInterpolMode = interpolation_mode
         self.ptTableLength = len(relative_times)
         self.ptEndTableIndex = self.ptTableLength - 1
@@ -413,9 +518,6 @@ class PointingStatus(object):
         )
 
         self.pcs.answer = 1
-
-    def _actual_time(self):
-        return datetime.utcnow() + self.time_offset
 
     def get_start_end_pos(self, subsystem):
         retval = (None, None)
@@ -442,8 +544,10 @@ class PointingStatus(object):
         elif subsystem is self.elevation:
             trajectory = self.el_tck
 
+        start_time = self.start_time + timedelta(seconds=self.actPtTimeOffset)
+
         elapsed = (
-            (self._actual_time() - self.start_time).total_seconds() * 1000
+            (self.actual_time() - start_time).total_seconds() * 1000
         )
 
         if elapsed <= self.relative_times[0]:

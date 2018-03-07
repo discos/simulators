@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime
+from datetime import datetime, timedelta
 from simulators import utils
 
 
@@ -261,7 +261,26 @@ class TestServer(unittest.TestCase):
         expected_date = datetime(45, 6, 2, 8, 30, 39, 772000)
         self.assertEqual(utils.mjd_to_date(-662354.354627354), expected_date)
 
-    def test_day_milliseconds(self):
+    def test_day_microseconds_now(self):
+        """Make sure that the datatype of the response is the correct one.
+        Also make sure that the returned value is inside the expected range."""
+        day_microseconds = utils.day_microseconds()
+        self.assertIsInstance(day_microseconds, int)
+        self.assertGreaterEqual(day_microseconds, 0)
+        self.assertLess(day_microseconds, 86400000000)
+
+    def test_day_microseconds_date(self):
+        """Test the function with an actual date."""
+        date = datetime(2018, 3, 7, 10, 30, 20, 123456)
+        day_microseconds = utils.day_microseconds(date)
+        self.assertEqual(day_microseconds, 37820123456)
+
+    def test_day_microseconds_wrong_type(self):
+        """Test the function sending a different type object."""
+        with self.assertRaises(ValueError):
+            utils.day_microseconds('dummy')
+
+    def test_day_milliseconds_now(self):
         """Make sure that the datatype of the response is the correct one.
         Also make sure that the returned value is inside the expected range."""
         day_milliseconds = utils.day_milliseconds()
@@ -269,6 +288,35 @@ class TestServer(unittest.TestCase):
         self.assertGreaterEqual(day_milliseconds, 0)
         self.assertLess(day_milliseconds, 86400000)
 
+    def test_day_milliseconds_date(self):
+        """Test the function with an actual date."""
+        date = datetime(2018, 3, 7, 10, 30, 20, 123456)
+        day_milliseconds = utils.day_milliseconds(date)
+        self.assertEqual(day_milliseconds, 37820123)
+
+    def test_day_percentage(self):
+        """Make sure that the datatype of the response is the correct one.
+        Also make sure that the returned value is inside the expected range."""
+        day_percentage = utils.day_percentage()
+        self.assertIsInstance(day_percentage, float)
+        self.assertGreaterEqual(day_percentage, 0)
+        self.assertLess(day_percentage, 1)
+
+    def test_day_percentage_date(self):
+        """Test the function with an actual date."""
+        date = datetime(2018, 3, 7, 10, 30, 20, 123456)
+        day_percentage = utils.day_percentage(date)
+        self.assertEqual(day_percentage, 0.4377329103703704)
+
+    def test_day_percentage_timedelta(self):
+        """Test the function with a time delta."""
+        delta = timedelta(seconds=987654, microseconds=321)
+        day_percentage = utils.day_percentage(delta)
+        self.assertEqual(day_percentage, 11.431180559270834)
+
+    def test_day_percentage_wrong_type(self):
+        with self.assertRaises(ValueError):
+            utils.day_percentage('dummy')
 
 if __name__ == '__main__':
     unittest.main()
