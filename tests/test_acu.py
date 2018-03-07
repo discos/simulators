@@ -1111,7 +1111,7 @@ class TestACU(unittest.TestCase):
         self.assertEqual(pcs.command, 60)
         self.assertEqual(pcs.answer, 1)
 
-        self.assertEqual(self.system.PS.actPtTimeOffset, seconds)
+        self.assertEqual(self.system.PS.actPtTimeOffset, seconds * 1000)
 
     def test_parameter_command_pt_time_correction_out_of_range_offset(self):
         # Load a new program track table

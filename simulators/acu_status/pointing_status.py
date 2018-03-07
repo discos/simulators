@@ -265,7 +265,10 @@ class PointingStatus(object):
         if self.ptState == 0:
             return
 
-        start_time = self.start_time + timedelta(seconds=self.actPtTimeOffset)
+        start_time = (
+            self.start_time
+            + timedelta(milliseconds=self.actPtTimeOffset)
+        )
 
         if self.ptState == 2 and self.actual_time() >= start_time:
             self.ptState = 3
@@ -544,7 +547,10 @@ class PointingStatus(object):
         elif subsystem is self.elevation:
             trajectory = self.el_tck
 
-        start_time = self.start_time + timedelta(seconds=self.actPtTimeOffset)
+        start_time = (
+            self.start_time
+            + timedelta(milliseconds=self.actPtTimeOffset)
+        )
 
         elapsed = (
             (self.actual_time() - start_time).total_seconds() * 1000
