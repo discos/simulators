@@ -449,10 +449,13 @@ class AxisStatus(object):
         current_pos = max(current_pos, int(round(self.min_pos * 1000000)))
         return current_pos
 
-    def _move(self, counter, desired_pos, desired_rate):
+    def _move(self, counter, desired_pos, desired_rate, pt_counter=None):
 
         self.p_Soll = desired_pos
         self.v_Soll = desired_rate
+
+        if pt_counter:
+            self.p_Soll += self.p_Offset
 
         t0 = time.time()
 
@@ -469,6 +472,13 @@ class AxisStatus(object):
                 desired_pos,
                 desired_rate
             )
+            if pt_counter:
+                if pt_counter != self.pointing.pt_command_id:
+                    # Program track related, if a new table is received we
+                    # need to stop the movement of the axis, we set the
+                    # `counter` variable to -1 since no counter can be
+                    # negative
+                    counter = -1
             if counter == self.curr_mode_counter:
                 if self.axis_state == 3:
                     self.v_Ist = desired_rate
@@ -548,14 +558,18 @@ class AxisStatus(object):
 
         start_pos, end_pos = self.pointing.get_start_end_pos(self)
 
+        # We do not add the tracking offset to the desired position
+        # because it is already been handled in the `_move` method
         desired_pos = start_pos
         desired_rate = int(round(rate * 1000000))
 
-        if not self._move(counter, desired_pos, desired_rate):
+        pt_counter = self.pointing.pt_command_id
+
+        if not self._move(counter, desired_pos, desired_rate, pt_counter):
             return
 
         t0 = time.time()
-        while True:
+        while pt_counter == self.pointing.pt_command_id:
             t1 = time.time()
             delta_time = t1 - t0
             t0 = t1
@@ -563,14 +577,14 @@ class AxisStatus(object):
             program_track_state = self._update_trajectory_values()
 
             if program_track_state == 4:
-                if self.p_Ist == end_pos:
+                if self.p_Ist == end_pos + self.p_Offset:
                     self._executed_mode_command(counter, 8, 1)
                     break
                 else:
                     program_track_state = 3
 
             if program_track_state == 3:
-                desired_pos = self.p_Bahn
+                desired_pos = self.p_Bahn + self.p_Offset
 
                 if counter == self.curr_mode_counter:
                     self.p_Ist = self._calc_position(
@@ -647,22 +661,38 @@ class AxisStatus(object):
         parameter_1 = utils.bytes_to_real(cmd[10:18], 2)
         parameter_2 = utils.bytes_to_real(cmd[18:26], 2)
 
-        self.pcs.counter = cmd_cnt
-        self.pcs.command = parameter_id
+        pcs = CommandStatus()
+        pcs.counter = cmd_cnt
+        pcs.command = parameter_id
 
         if self.axis_state != 3:
-            self.pcs.answer = 4
+            pcs.answer = 4
+            self.pcs = pcs
             return
 
         if parameter_id == 11:
-            self._absolute_position_offset(parameter_1, parameter_2)
+            pcs.answer = self._absolute_position_offset(
+                parameter_1,
+                parameter_2
+            )
         elif parameter_id == 12:
-            self._relative_position_offset(parameter_1, parameter_2)
+            pcs.answer = self._relative_position_offset(
+                parameter_1,
+                parameter_2
+            )
         else:
-            self.pcs.answer = 5
+            pcs.answer = 5
 
-    def _absolute_position_offset(self, offset, ramp_time):
-        self.pcs.answer = 1
+        self.pcs = pcs
 
-    def _relative_position_offset(self, offset, ramp_time):
-        self.pcs.answer = 1
+    def _absolute_position_offset(self, offset, _):
+        # 2nd parameter should be ramp time but in the
+        # current implementation it will be ignored
+        self.p_Offset = int(round(offset * 1000000))
+        return 1
+
+    def _relative_position_offset(self, offset, _):
+        # 2nd parameter should be ramp time but in the
+        # current implementation it will be ignored
+        self.p_Offset += int(round(offset * 1000000))
+        return 1

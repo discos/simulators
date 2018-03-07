@@ -864,14 +864,278 @@ class TestACU(unittest.TestCase):
         self.assertEqual(el_mcs.received.command, mode_id)
         self.assertEqual(el_mcs.received.answer, 5)
 
-    def test_parameter_command_azimuth(self):
-        self._send(Command(ParameterCommand(1, 1)).get())
+    def test_parameter_command_absolute_position_offset(self):
+        # Axis must be active in order to send this command
+        self.test_mode_command_active()
+        command = Command(
+            ParameterCommand(1, 11, 5, 0),
+            ParameterCommand(2, 11, -5, 0)
+        )
+        self._send(command.get())
 
-    def test_parameter_command_elevation(self):
-        self._send(Command(ParameterCommand(2, 1)).get())
+        az_pcs = self.system.AZ.pcs
+        el_pcs = self.system.EL.pcs
 
-    def test_parameter_command_pointing(self):
-        self._send(Command(ParameterCommand(5, 1)).get())
+        self.assertEqual(az_pcs.counter, command.get_counter(0))
+        self.assertEqual(az_pcs.command, 11)
+        self.assertEqual(az_pcs.answer, 1)
+
+        self.assertEqual(el_pcs.counter, command.get_counter(1))
+        self.assertEqual(el_pcs.command, 11)
+        self.assertEqual(el_pcs.answer, 1)
+
+        self.assertEqual(self.system.AZ.p_Offset, 5000000)
+        self.assertEqual(self.system.EL.p_Offset, -5000000)
+
+    def test_parameter_command_relative_position_offset(self):
+        self.test_parameter_command_absolute_position_offset()
+
+        command = Command(
+            ParameterCommand(1, 12, 5, 0),
+            ParameterCommand(2, 12, -5, 0)
+        )
+        self._send(command.get())
+
+        az_pcs = self.system.AZ.pcs
+        el_pcs = self.system.EL.pcs
+
+        self.assertEqual(az_pcs.counter, command.get_counter(0))
+        self.assertEqual(az_pcs.command, 12)
+        self.assertEqual(az_pcs.answer, 1)
+
+        self.assertEqual(el_pcs.counter, command.get_counter(1))
+        self.assertEqual(el_pcs.command, 12)
+        self.assertEqual(el_pcs.answer, 1)
+
+        self.assertEqual(self.system.AZ.p_Offset, 10000000)
+        self.assertEqual(self.system.EL.p_Offset, -10000000)
+
+    def test_parameter_command_axis_unknown_parameter_id(self):
+        # Axis must be active in order to send this command
+        self.test_mode_command_active()
+        command = Command(
+            ParameterCommand(1, 100),  # 100: unknown parameter id
+            ParameterCommand(2, 100)
+        )
+        self._send(command.get())
+
+        az_pcs = self.system.AZ.pcs
+        el_pcs = self.system.EL.pcs
+
+        self.assertEqual(az_pcs.counter, command.get_counter(0))
+        self.assertEqual(az_pcs.command, 100)
+        self.assertEqual(az_pcs.answer, 5)
+
+        self.assertEqual(el_pcs.counter, command.get_counter(1))
+        self.assertEqual(el_pcs.command, 100)
+        self.assertEqual(el_pcs.answer, 5)
+
+    def test_parameter_command_axis_not_active(self):
+        command = Command(
+            ParameterCommand(1, 11),
+            ParameterCommand(2, 11)
+        )
+        self._send(command.get())
+
+        az_pcs = self.system.AZ.pcs
+        el_pcs = self.system.EL.pcs
+
+        self.assertEqual(az_pcs.counter, command.get_counter(0))
+        self.assertEqual(az_pcs.command, 11)
+        self.assertEqual(az_pcs.answer, 4)
+
+        self.assertEqual(el_pcs.counter, command.get_counter(1))
+        self.assertEqual(el_pcs.command, 11)
+        self.assertEqual(el_pcs.answer, 4)
+
+    def test_parameter_command_time_source_acu_time(self):
+        acu_time_mode = 1
+        acu_time = Command(ParameterCommand(5, 50, acu_time_mode))
+
+        self._send(acu_time.get())
+
+        pcs = self.system.PS.pcs
+        self.assertEqual(pcs.counter, acu_time.get_counter(0))
+        self.assertEqual(pcs.command, 50)
+        self.assertEqual(pcs.answer, 1)
+
+        self.assertEqual(self.system.PS.timeSource, acu_time_mode)
+
+        now_min = datetime.utcnow() - timedelta(milliseconds=25)
+        now_max = datetime.utcnow() + timedelta(milliseconds=25)
+
+        ps_time = self.system.PS.actual_time()
+
+        self.assertTrue(
+            now_min <= ps_time <= now_max
+        )
+
+    def test_parameter_command_time_source_clock_time(self):
+        clock_time_mode = 2
+        clock_time = Command(ParameterCommand(5, 50, clock_time_mode))
+
+        self._send(clock_time.get())
+
+        pcs = self.system.PS.pcs
+        self.assertEqual(pcs.counter, clock_time.get_counter(0))
+        self.assertEqual(pcs.command, 50)
+        self.assertEqual(pcs.answer, 1)
+
+        self.assertEqual(self.system.PS.timeSource, clock_time_mode)
+
+    def test_parameter_command_time_source_external(self):
+        offset = timedelta(days=1)
+        new_time = datetime.utcnow() + offset
+        external_time_mode = 3
+
+        external_time = Command(
+            ParameterCommand(5, 50, external_time_mode, utils.mjd(new_time))
+        )
+
+        self._send(external_time.get())
+
+        pcs = self.system.PS.pcs
+        self.assertEqual(pcs.counter, external_time.get_counter(0))
+        self.assertEqual(pcs.command, 50)
+        self.assertEqual(pcs.answer, 1)
+
+        self.assertEqual(self.system.PS.timeSource, external_time_mode)
+
+        now_min = datetime.utcnow() + offset - timedelta(milliseconds=25)
+        now_max = datetime.utcnow() + offset + timedelta(milliseconds=25)
+
+        ps_time = self.system.PS.actual_time()
+
+        self.assertTrue(
+            now_min <= ps_time <= now_max
+        )
+
+    def test_parameter_command_time_source_unknown(self):
+        unknown_time_source = Command(
+            ParameterCommand(5, 50, 100)  # 100: unknown time source
+        )
+
+        self._send(unknown_time_source.get())
+
+        pcs = self.system.PS.pcs
+        self.assertEqual(pcs.counter, unknown_time_source.get_counter(0))
+        self.assertEqual(pcs.command, 50)
+        self.assertEqual(pcs.answer, 5)  # 5: command has invalid parameters
+
+    def test_parameter_command_time_offset_add_second(self):
+        add_second = Command(ParameterCommand(5, 51, 1))
+
+        self._send(add_second.get())
+
+        pcs = self.system.PS.pcs
+        self.assertEqual(pcs.counter, add_second.get_counter(0))
+        self.assertEqual(pcs.command, 51)
+        self.assertEqual(pcs.answer, 1)
+
+        self.assertEqual(self.system.PS.actTimeOffset, 1.1574074074074073e-05)
+
+    def test_parameter_command_time_offset_subtract_second(self):
+        subtract_second = Command(ParameterCommand(5, 51, 2))
+
+        self._send(subtract_second.get())
+
+        pcs = self.system.PS.pcs
+        self.assertEqual(pcs.counter, subtract_second.get_counter(0))
+        self.assertEqual(pcs.command, 51)
+        self.assertEqual(pcs.answer, 1)
+
+        self.assertEqual(self.system.PS.actTimeOffset, -1.1574074074074073e-05)
+
+    def test_parameter_command_time_offset_absolute(self):
+        absolute_offset = Command(
+            ParameterCommand(5, 51, 3, 100)
+        )
+
+        self._send(absolute_offset.get())
+
+        pcs = self.system.PS.pcs
+        self.assertEqual(pcs.counter, absolute_offset.get_counter(0))
+        self.assertEqual(pcs.command, 51)
+        self.assertEqual(pcs.answer, 1)
+
+    def test_parameter_command_time_offset_relative(self):
+        self.test_parameter_command_time_offset_absolute()
+
+        relative_offset = Command(
+            ParameterCommand(5, 51, 4, 100)
+        )
+
+        self._send(relative_offset.get())
+
+        pcs = self.system.PS.pcs
+        self.assertEqual(pcs.counter, relative_offset.get_counter(0))
+        self.assertEqual(pcs.command, 51)
+        self.assertEqual(pcs.answer, 1)
+
+    def test_parameter_command_time_offset_out_of_range(self):
+        out_of_range_offset = Command(
+            ParameterCommand(5, 51, 3, 100000000)  # Max offset: 86400000
+        )
+
+        self._send(out_of_range_offset.get())
+
+        pcs = self.system.PS.pcs
+        self.assertEqual(pcs.counter, out_of_range_offset.get_counter(0))
+        self.assertEqual(pcs.command, 51)
+        self.assertEqual(pcs.answer, 5)  # 5: command has invalid parameters
+
+    def test_parameter_command_time_offset_unknown(self):
+        unknown_time_offset = Command(
+            ParameterCommand(5, 50, 100)  # 100: unknown time offset
+        )
+
+        self._send(unknown_time_offset.get())
+
+        pcs = self.system.PS.pcs
+        self.assertEqual(pcs.counter, unknown_time_offset.get_counter(0))
+        self.assertEqual(pcs.command, 50)
+        self.assertEqual(pcs.answer, 5)  # 5: command has invalid parameters
+
+    def test_parameter_command_pt_time_correction(self):
+        # Load a new program track table
+        self.test_program_track_command_load_new_table()
+
+        # Correct program track start time by adding 5 seconds
+        seconds = 5
+        time_correction = Command(ParameterCommand(5, 60, seconds))
+
+        self._send(time_correction.get())
+
+        pcs = self.system.PS.pcs
+        self.assertEqual(pcs.counter, time_correction.get_counter(0))
+        self.assertEqual(pcs.command, 60)
+        self.assertEqual(pcs.answer, 1)
+
+        self.assertEqual(self.system.PS.actPtTimeOffset, seconds)
+
+    def test_parameter_command_pt_time_correction_out_of_range_offset(self):
+        # Load a new program track table
+        self.test_program_track_command_load_new_table()
+
+        # Maximum correction absolute value: 86400000
+        time_correction = Command(ParameterCommand(5, 60, 100000000))
+
+        self._send(time_correction.get())
+
+        pcs = self.system.PS.pcs
+        self.assertEqual(pcs.counter, time_correction.get_counter(0))
+        self.assertEqual(pcs.command, 60)
+        self.assertEqual(pcs.answer, 5)  # 5: command has invalid parameters
+
+    def test_parameter_command_pointing_unknown_parameter_id(self):
+        unknown_par_id = Command(ParameterCommand(5, 100))  # 100: unknown id
+
+        self._send(unknown_par_id.get())
+
+        pcs = self.system.PS.pcs
+        self.assertEqual(pcs.counter, unknown_par_id.get_counter(0))
+        self.assertEqual(pcs.command, 100)
+        self.assertEqual(pcs.answer, 5)  # 5: command has invalid parameters
 
     def test_parameter_command_unknown_subsystem(self):
         with self.assertRaises(ValueError):
@@ -1292,6 +1556,80 @@ class TestACU(unittest.TestCase):
 
         self.assertEqual(self.system.AZ.p_Ist, 183000000)
         self.assertEqual(self.system.EL.p_Ist, 87000000)
+
+    def test_program_track_execution_with_offset(self):
+        self.test_program_track_command_load_new_table()
+        self.test_parameter_command_pt_time_correction()
+        self.test_mode_command_active()
+
+        start_azimuth = ModeCommand(1, 8, None, 0.5)
+        start_elevation = ModeCommand(2, 8, None, 0.5)
+
+        command = Command(
+            start_azimuth,
+            start_elevation,
+        )
+
+        self._send(command.get())
+
+        time.sleep(4.8)
+
+        # Make sure that program track is not started yet
+        self.assertEqual(self.system.PS.ptState, 2)
+        self.assertEqual(self.system.AZ.p_Ist, 181000000)
+        self.assertEqual(self.system.EL.p_Ist, 89000000)
+
+        # Wait for program track execution
+        time.sleep(10.2)
+
+        self.assertEqual(self.system.AZ.p_Ist, 183000000)
+        self.assertEqual(self.system.EL.p_Ist, 87000000)
+
+    def test_program_track_load_new_table_while_positioning(self):
+        self.test_program_track_command_load_new_table()
+        self.test_mode_command_active()
+
+        start_azimuth = ModeCommand(1, 8, None, 0.5)
+        start_elevation = ModeCommand(2, 8, None, 0.5)
+
+        command = Command(
+            start_azimuth,
+            start_elevation,
+        )
+
+        self._send(command.get())
+
+        time.sleep(0.5)
+
+        self.test_program_track_command_load_new_table()
+
+        # Make sure both axis stopped, they will not restart moving
+        # if they do not receive a new program track mode command
+        self.assertEqual(self.system.AZ.v_Ist, 0)
+        self.assertEqual(self.system.EL.v_Ist, 0)
+
+    def test_program_track_load_new_table_while_running(self):
+        self.test_program_track_command_load_new_table()
+        self.test_mode_command_active()
+
+        start_azimuth = ModeCommand(1, 8, None, 0.5)
+        start_elevation = ModeCommand(2, 8, None, 0.5)
+
+        command = Command(
+            start_azimuth,
+            start_elevation,
+        )
+
+        self._send(command.get())
+
+        time.sleep(2)
+
+        self.test_program_track_command_load_new_table()
+
+        # Make sure both axis stopped, they will not restart moving
+        # if they do not receive a new program track mode command
+        self.assertEqual(self.system.AZ.v_Ist, 0)
+        self.assertEqual(self.system.EL.v_Ist, 0)
 
     def test_program_track_stop_positioning(self):
         self.test_program_track_command_load_new_table()
