@@ -661,7 +661,7 @@ class AxisStatus(object):
         parameter_1 = utils.bytes_to_real(cmd[10:18], 2)
         parameter_2 = utils.bytes_to_real(cmd[18:26], 2)
 
-        pcs = CommandStatus()
+        pcs = ParameterCommandStatus()
         pcs.counter = cmd_cnt
         pcs.command = parameter_id
 

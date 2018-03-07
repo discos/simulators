@@ -329,7 +329,7 @@ class PointingStatus(object):
                 - datetime.utcnow()
             )
 
-        self.timeSource = parameter_1
+        self.timeSource = int(parameter_1)
         self.pcs.answer = 1
 
     def _time_offset(self, parameter_1, parameter_2):
@@ -367,7 +367,7 @@ class PointingStatus(object):
             self.pcs.answer = 5
             return
 
-        self.actPtTimeOffset = time_offset
+        self.actPtTimeOffset = int(round(time_offset * 1000))
         self.pcs.answer = 1
 
     # --------------- Program Track Parameter Command ---------------
