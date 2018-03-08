@@ -104,6 +104,7 @@ class SendHandler(BaseHandler):
         self.request.setblocking(False)
         sampling_time = self.system.sampling_time
         while True:
+            t0 = time.time()
             try:
                 custom_msg = self.request.recv(1024)
                 # Check if the client is sending a custom command
@@ -123,7 +124,8 @@ class SendHandler(BaseHandler):
                 # Something went wrong while sending the message, probably
                 # the client was stopped without closing the connection
                 break
-            time.sleep(sampling_time)
+            elapsed_time = time.time() - t0
+            time.sleep(sampling_time - elapsed_time)
 
 
 class Server(ThreadingMixIn, ThreadingTCPServer):
