@@ -1,10 +1,10 @@
 from threading import Thread
 from simulators import utils
-from simulators.acu_status.general_status import GeneralStatus
-from simulators.acu_status.axis_status import AxisStatus
-from simulators.acu_status.pointing_status import PointingStatus
-from simulators.acu_status.facility_status import FacilityStatus
 from simulators.common import ListeningSystem, SendingSystem
+from simulators.acu.general_status import GeneralStatus
+from simulators.acu.axis_status import AxisStatus
+from simulators.acu.pointing_status import PointingStatus
+from simulators.acu.facility_status import FacilityStatus
 
 
 # Each system module (like active_surface.py, acu.py, etc.) has to

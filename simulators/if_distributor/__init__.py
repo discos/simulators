@@ -25,7 +25,7 @@ class System(ListeningSystem):
     max_att_multiplier = max_att / att_step
     channels = [max_att_multiplier] * max_channels
     switched = False
-    version = b'SRT IF Distributor 4.6.5 5.4.3'
+    version = b'SRT IF Distributor Simulator 1.0'
 
     def __init__(self):
         self.msg = b''

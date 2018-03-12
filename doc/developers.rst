@@ -143,12 +143,13 @@ To implement a simulator, you need to create a module that
 defines both a ``System`` class and a ``servers`` list.  The next
 sections will exaplain the API of these two objects.
 If you want to see an example, have a look at
-:download:`acu.py <../simulators/acu.py>`.
+:download:`acu <../simulators/acu/__init__.py>` module.
 
 The ``System`` class
 --------------------
-The ``System`` class must inherit from one of the classes defined in :download:
-`common.py <../simulators/common.py>`, it can be inherited from ``server.ListeningSystem``
+The ``System`` class must inherit from one of the classes defined in
+:download:`common.py <../simulators/common.py>`,
+it can be inherited from ``server.ListeningSystem``
 or ``server.SendingSystem``, or from both simultaneously.
 
 The ``ListeningSystem`` class and the ``System.parse()`` method
@@ -171,13 +172,13 @@ The ``System.parse()`` interface is described in `issue #1
 
 * ``False`` when the byte is not the message header and it is still waiting for the header
 * ``True`` when it has already got the header and it is composing the message
-* the reponse, a non empty string, when there is a response to send back to the
-  client.
+* the reponse, a non empty string, when the system is half duplex and there is a response
+  to be sent back to the client.
 
 If the system has nothing to send to the client, as in the case of broadcast
 requests, ``System.parse()`` has to return ``True``.
 It eventually raises a ``ValueError`` in case there is an unexpected error (not
-considered by the protocol).
+considered by the system protocol).
 
 The ``SendingSystem`` class and the ``System.get_message()`` method
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -196,7 +197,7 @@ a ``get_message()`` method and a ``sampling_rate`` attribute::
             ...
 
 The ``System.get_message()`` method should return some arbitrary data that the system
-would like to send to its clients. The ``System.sampling_rate`` attribute should be a
+would like to send to its client(s). The ``System.sampling_rate`` attribute should be a
 strictly positive integer or floating point number, it represents the time interval
 (in seconds) between each message sent by the system.
 
@@ -205,23 +206,24 @@ Inheriting from both ``ListeningSystem`` and ``SystemSystem``
 
 A ``System`` class can inherit from both ``ListeningSystem`` and ``SendingSystem`` at
 the same time. If it does, it has to implement both the ``System.parse()`` and the
-``System.get_message()`` methods, and it has to define the ``System.sampling_rate`` value.
+``System.get_message()`` methods, along with the ``System.sampling_rate`` value.
 
 
 The ``servers`` list
 --------------------
+
 The elements of the ``servers`` list are tuples.  Each tuple is composed
 of three items:
 
 * the server listening address, ``l_address``
-* the server sending address, ``r_address``
+* the server sending address, ``s_address``
 * another tuple (let's call it ``args``) of possible arguments required
   by ``System.__init__()``.
 
 Each element of the ``servers`` list represents an instance of the ``system``,
 ``l_address`` is the address in which the server will wait for its clients
 to send the commands to pass to the ``System.parse()`` method. ``s_address`` is
-the address to which the server will send its data retrieved via the
+the address from which the server will send its data retrieved via the
 ``System.get_message()`` method, at a constant period of ``System.sampling_rate``
 seconds.
 
@@ -261,7 +263,7 @@ each server list entry must be defined as follows::
     ]
 
 If you want to see another example, have a look at the
-:download:`active_surface.py <../simulators/active_surface.py>` module.
+:download:`active surface <../simulators/active_surface/__init__.py>` module.
 The active surface system is composed of 96 listening servers, and in fact
 its ``servers`` list in defined in the following way::
 
@@ -273,6 +275,7 @@ its ``servers`` list in defined in the following way::
 
 Custom commands
 ---------------
+
 Custom commands are useful for several use cases.  For instance,
 let's suppose we want the simulator to reproduce some error conditions
 by changing the ``System`` state.  We just need to define a method that
@@ -328,18 +331,18 @@ Server class
    :inherited-members:
 
 
+Simulator class
+~~~~~~~~~~~~~~~
+
+.. autoclass:: Simulator
+    :members:
+    :inherited-members:
+
+
 Active Surface module
 ---------------------
 
 .. module:: simulators.active_surface
-
-
-Driver class
-~~~~~~~~~~~~
-
-.. autoclass:: Driver
-   :members:
-   :inherited-members:
 
 
 System class
@@ -350,12 +353,50 @@ System class
    :inherited-members:
 
 
+USD class
+~~~~~~~~~~~~
+
+.. autoclass:: USD
+   :members:
+   :inherited-members:
+
+
+ACU module
+---------------------------
+
+.. module:: simulators.acu
+
+
+System class
+~~~~~~~~~~~~
+
+.. autoclass:: System
+    :members:
+    :inherited-members:
+
+
+IF Distributor module
+---------------------
+
+.. module:: simulators.if_distributor
+
+
+System class
+~~~~~~~~~~~~
+
+.. autoclass:: System
+    :members:
+    :inherited-members:
+
+
 Useful Functions and Classes
 ----------------------------
 
 .. module:: simulators.utils
 
 .. autofunction:: checksum
+
+.. autofunction:: binary_complement
 
 .. autofunction:: twos_to_int
 
@@ -365,6 +406,26 @@ Useful Functions and Classes
 
 .. autofunction:: bytes_to_int
 
+.. autofunction:: int_to_bytes
+
+.. autofunction:: bytes_to_uint
+
+.. autofunction:: uint_to_bytes
+
+.. autofunction:: real_to_binary
+
+.. autofunction:: real_to_bytes
+
+.. autofunction:: bytes_to_real
+
+.. autofunction:: sign
+
 .. autofunction:: mjd
 
+.. autofunction:: mjd_to_date
+
+.. autofunction:: day_microseconds
+
 .. autofunction:: day_milliseconds
+
+.. autofunction:: day_percentage

@@ -1,7 +1,7 @@
 import time
 from simulators import utils
-from simulators.acu_status.motor_status import MotorStatus
-from simulators.acu_status.command_status import (
+from simulators.acu.motor_status import MotorStatus
+from simulators.acu.command_status import (
     CommandStatus,
     ModeCommandStatus,
     ParameterCommandStatus

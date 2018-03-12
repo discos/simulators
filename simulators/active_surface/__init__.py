@@ -1,8 +1,7 @@
 import time
-import Queue
 from simulators import utils
 from simulators.common import ListeningSystem
-
+from simulators.active_surface.usd import USD
 
 # Each system module (like active_surface.py, acu.py, etc.) has to
 # define a list called servers.s This list contains tuples
@@ -16,388 +15,36 @@ for line in range(96):  # 96 servers
     servers.append((l_address, (), ()))  # No sending servers or extra args
 
 
-class Driver(object):
-    """This class represents a single USD actuator. It is completely handled by
-    the active surface System class."""
-
-    standby_delay_step = 0.004096  # 4096 microseconds
-
-    #: Resolution denominator, i.e.:
-    #: 0 -> 1/1, full step
-    #: 1 -> 1/2, half step
-    #: ...
-    #: 7 -> 1/128th of step
-    resolutions = {
-        0: 1,
-        1: 2,
-        2: 4,
-        3: 8,
-        4: 16,
-        5: 32,
-        6: 64,
-        7: 128,
-    }
-
-    #: Current reduction percentage
-    standby_modes = {
-        0: 0,
-        1: 0,
-        2: 0.25,
-        3: 0.50,
-    }
-
-    baud_rates = {
-        0: 9600,
-        1: 19200
-    }
-
-    def __init__(self, driver_reset_delay=0):
-        self.driver_reset_delay = driver_reset_delay  # Real delay: 100ms
-        self._set_default()
-
-    def _set_default(self):
-        self.reference_position = 0
-        self.current_position = 0
-        self.position_queue = Queue.Queue()
-        self.delay_multiplier = 5  # x * delay_step. 255: no response
-        self.standby_delay_multiplier = 0
-        self.standby_mode = self.standby_modes.get(0)
-        self.current_percentage = 1.0
-        self.version = [1, 3]  # Major, minor
-        self.driver_type = 0x20  # 0x20: USD50xxx, 0x21: USD60xxx
-        self.slope_multiplier = 1
-        self.min_frequency = 20
-        self.max_frequency = 10000
-        self.io_dir = [0, 1, 0]  # 0: input, 1: output
-        # The following values show the corresponding I/O line value,
-        # but only if the direction of the I/O line is set to output
-        # i.e.: (io_dir[x] = 1)
-        self.io_val = [0, 0, 0]
-        # I/O lines combination that automatically raises the TRIGGER event
-        self.trigger_io_level = [0, 0, 0]
-        self.trigger_io_enable = [0, 0, 0]
-        # I/O lines combination that automatically raises the STOP event
-        self.stop_io_level = [0, 0, 0]
-        self.stop_io_enable = [0, 0, 0]
-        # I/O lines combination assumed by the driver after a positioning event
-        self.pos_io_level = [0, 0, 0]
-        self.pos_io_enable = [0, 0, 0]
-        # I/O lines combination assumed by the driver after positioning to HOME
-        self.home_io_level = [0, 0, 0]
-        self.home_io_enable = [0, 0, 0]
-        self.running = False  # True: driver is moving
-        self.delayed_execution = False  # True: positioning by TRIGGER event
-        self.ready = False  # True: new position enqueued
-        self.standby_status = True  # True: full current, False: fractioned
-        self.auto_resolution = True
-        self.resolution = self.resolutions.get(0)
-        self.velocity = 0
-        self.baud_rate = self.baud_rates.get(0)
-        self.stop = True
-
-        time.sleep(self.driver_reset_delay)
-
-    def soft_reset(self):
-        self._set_default()
-
-    def soft_trigger(self):
-        if self.ready is True and self.running is False:
-            self._move_to(self.position_queue.get())
-            if self.position_queue.empty() is True:
-                self.ready = False
-
-    def get_status(self):
-        par0 = 0x00  # Reserved for future use
-
-        par1 = (
-            '0'
-            + str(self.io_dir[2])
-            + str(self.io_dir[1])
-            + str(self.io_dir[0])
-            + '0'
-            + str(self.io_val[2])
-            + str(self.io_val[1])
-            + str(self.io_val[0]))
-
-        for key, val in self.resolutions.iteritems():
-            if val == self.resolution:
-                res = key
-                break
-
-        par2 = (
-            str(int(self.running))
-            + str(int(self.delayed_execution))
-            + str(int(self.ready))
-            + str(int(self.standby_status))
-            + str(int(self.auto_resolution))
-            + bin(res)[2:].zfill(3))
-
-        return (
-            chr(par0)
-            + chr(int(par1, 2))
-            + chr(int(par2, 2)))
-
-    def set_reference_position(self, position):
-        # Update enqueued position values?
-        self.reference_position = position
-
-    def set_io_pins(self, param):
-        binary_string = bin(param)[2:].zfill(8)
-
-        self.io_dir[0] = int(binary_string[3], 2)
-        if self.io_dir[0] == 1:
-            self.io_val[0] = int(binary_string[7], 2)
-        else:
-            self.io_val[0] = 0
-
-        self.io_dir[1] = int(binary_string[2], 2)
-        if self.io_dir[1] == 1:
-            self.io_val[1] = int(binary_string[6], 2)
-        else:
-            self.io_val[1] = 0
-
-        self.io_dir[2] = int(binary_string[1], 2)
-        if self.io_dir[2] == 1:
-            self.io_val[2] = int(binary_string[5], 2)
-        else:
-            self.io_val[2] = 0
-
-    def set_resolution(self, param):
-        binary_string = bin(param)[2:].zfill(4)
-
-        if int(binary_string[0], 2) == 1:
-            self.auto_resolution = True
-            self.resolution = self.resolutions.get(0)
-        else:
-            self.auto_resolution = False
-            self.resolution = self.resolutions.get(int(binary_string[-3:], 2))
-
-    def reduce_current(self, param):
-        binary_string = bin(param)[2:].zfill(8)
-
-        self.standby_mode = self.standby_modes.get(int(binary_string[0:2], 2))
-        self.standby_delay_multiplier = int(binary_string[2:], 2)
-
-    def toggle_delayed_execution(self, param):
-        binary_string = bin(param)[2:].zfill(8)
-
-        self.delayed_execution = bool(binary_string[0])
-        # binary_string[1] is currently unused
-
-        self.trigger_io_enable[0] = int(binary_string[7], 2)
-        if self.trigger_io_enable[0] == 1:
-            self.trigger_io_level[0] = int(binary_string[4], 2)
-        else:
-            self.trigger_io_level[0] = 0
-
-        self.trigger_io_enable[1] = int(binary_string[6], 2)
-        if self.trigger_io_enable[1] == 1:
-            self.trigger_io_level[1] = int(binary_string[3], 2)
-        else:
-            self.trigger_io_level[1] = 0
-
-        self.trigger_io_enable[2] = int(binary_string[5], 2)
-        if self.trigger_io_enable[2] == 1:
-            self.trigger_io_level[2] = int(binary_string[2], 2)
-        else:
-            self.trigger_io_level[2] = 0
-
-        # Empty the position queue
-        self.position_queue = Queue.Queue()
-
-    def set_absolute_position(self, position):
-        if self.delayed_execution is True:
-            self.position_queue.put(self.reference_position + position)
-            self.ready = True
-        else:
-            self._move_to(self.reference_position + position)
-
-    def set_relative_position(self, position):
-        if self.delayed_execution is True:
-            self.position_queue.put(self.current_position + position)
-            self.ready = True
-        else:
-            self._move_to(self.current_position + position)
-
-    def rotate(self, sign):
-        if self.running:
-            # Failed command, return False so the parser can return a byte_nak
-            return False
-        else:
-            # The following 3 lines should run in a separate thread
-            self._accel_ramp(sign)
-            self._move(sign * self.max_frequency)
-            self._decel_ramp(sign)
-            return True
-
-    def set_velocity(self, velocity):
-        # Start rotating with given velocity without an acceleration ramp
-        self.velocity = velocity
-
-        if velocity != 0:
-            self._move(velocity)
-
-    def set_stop_io(self, param):
-        binary_string = bin(param)[2:].zfill(8)
-
-        # binary_string[0:2] is currently unused
-
-        self.stop_io_enable[0] = int(binary_string[7], 2)
-        if self.stop_io_enable[0] == 1:
-            self.stop_io_level[0] = int(binary_string[4], 2)
-        else:
-            self.stop_io_level[0] = 0
-
-        self.stop_io_enable[1] = int(binary_string[6], 2)
-        if self.stop_io_enable[1] == 1:
-            self.stop_io_level[1] = int(binary_string[3], 2)
-        else:
-            self.stop_io_level[1] = 0
-
-        self.stop_io_enable[2] = int(binary_string[5], 2)
-        if self.stop_io_enable[2] == 1:
-            self.stop_io_level[2] = int(binary_string[2], 2)
-        else:
-            self.stop_io_level[2] = 0
-
-    def set_positioning_io(self, param):
-        binary_string = bin(param)[2:].zfill(8)
-
-        # binary_string[0:2] is currently unused
-
-        self.pos_io_enable[0] = int(binary_string[7], 2)
-        if self.pos_io_enable[0] == 1:
-            self.pos_io_level[0] = int(binary_string[4], 2)
-        else:
-            self.pos_io_level[0] = 0
-
-        self.pos_io_enable[1] = int(binary_string[6], 2)
-        if self.pos_io_enable[1] == 1:
-            self.pos_io_level[1] = int(binary_string[3], 2)
-        else:
-            self.pos_io_level[1] = 0
-
-        self.pos_io_enable[2] = int(binary_string[5], 2)
-        if self.pos_io_enable[2] == 1:
-            self.pos_io_level[2] = int(binary_string[2], 2)
-        else:
-            self.pos_io_level[2] = 0
-
-    def set_home_io(self, param):
-        binary_string = bin(param)[2:].zfill(8)
-
-        self.home_io_enable[0] = int(binary_string[7], 2)
-        if self.home_io_enable[0] == 1:
-            self.home_io_level[0] = int(binary_string[4], 2)
-        else:
-            self.home_io_level[0] = 0
-
-        self.home_io_enable[1] = int(binary_string[6], 2)
-        if self.home_io_enable[1] == 1:
-            self.home_io_level[1] = int(binary_string[3], 2)
-        else:
-            self.home_io_level[1] = 0
-
-        self.home_io_enable[2] = int(binary_string[5], 2)
-        if self.home_io_enable[2] == 1:
-            self.home_io_level[2] = int(binary_string[2], 2)
-        else:
-            self.home_io_level[2] = 0
-
-    def set_working_mode(self, params):
-        binary_string = bin(params[0])[2:].zfill(8)
-
-        # binary_string[0:7] is currently unused
-        self.baud_rate = self.baud_rates.get(int(binary_string[7], 2))
-
-        #  params[1] is currently unused
-
-    def _accel_ramp(self, sign):
-        # Should gradually accelerate from 0 to min_frequency to max_frequency
-        # Not yet implemented
-        # while False:
-        #     delta = 0
-        #     self.current_position += delta * sign
-        pass
-
-    def _decel_ramp(self, sign):
-        # Should gradually decelerate from max_frequency to min_frequency to 0
-        # Not yet implemented
-        # while False:
-        #     delta = 0
-        #     self.current_position += delta * sign
-        pass
-
-    def _move_to(self, new_position):
-        # Should be launched in a separate thread
-        # ((freq / resolution) / 200) * 60 = RPM
-
-        self.running = True
-        sign = -1 if new_position < self.current_position else +1
-        self._accel_ramp(sign)
-
-        while self.current_position != new_position:
-            if self.stop is False:
-                # Immediate positioning, should be done gradually
-                # i.e.:
-                # delta = sign * ...
-                # self.current_position += delta
-                self.current_position = new_position
-            else:
-                # Stop received, execute the deceleration ramp immediately
-                break
-
-        self._decel_ramp(sign)
-        self.stop = False
-        self.running = False
-        self._go_standby()
-
-    def _move(self, frequency):
-        self.running = True
-
-        while self.stop is False or self.velocity != 0:
-            frequency = frequency  # Placeholder to avoid linter errors
-            break  # Not yet implemented
-
-        self.running = False
-        self._go_standby()
-
-    def _go_standby(self):
-        time.sleep(self.standby_delay_multiplier * self.standby_delay_step)
-        self.current_percentage = 1.0 - self.standby_mode
-        self.standby_status = False if self.standby_mode > 0 else True
-
-
 class System(ListeningSystem):
     """The active surface is composed of 8 sectors, and each sector
     has 12 lines of actuators.  The antenna control software must open
     one TCP socket for each line.  This class represents a line."""
 
     functions = {
-        0x01: "soft_reset",
-        0x02: "soft_trigger",
-        0x10: "get_version",
-        0x11: "soft_stop",
-        0x12: "get_position",
-        0x13: "get_status",
-        0x14: "get_driver_type",
-        0x20: "set_min_frequency",
-        0x21: "set_max_frequency",
-        0x22: "set_slope_multiplier",
-        0x23: "set_reference_position",
-        0x25: "set_io_pins",
-        0x26: "set_resolution",
-        0x27: "reduce_current",
-        0x28: "set_response_delay",
-        0x29: "toggle_delayed_execution",
-        0x30: "set_absolute_position",
-        0x31: "set_relative_position",
-        0x32: "rotate",
-        0x35: "set_velocity",
-        0x2A: "set_stop_io",
-        0x2B: "set_positioning_io",
-        0x2C: "set_home_io",
-        0x2D: "set_working_mode",
+        0x01: "_soft_reset",
+        0x02: "_soft_trigger",
+        0x10: "_get_version",
+        0x11: "_soft_stop",
+        0x12: "_get_position",
+        0x13: "_get_status",
+        0x14: "_get_driver_type",
+        0x20: "_set_min_frequency",
+        0x21: "_set_max_frequency",
+        0x22: "_set_slope_multiplier",
+        0x23: "_set_reference_position",
+        0x25: "_set_io_pins",
+        0x26: "_set_resolution",
+        0x27: "_reduce_current",
+        0x28: "_set_response_delay",
+        0x29: "_toggle_delayed_execution",
+        0x30: "_set_absolute_position",
+        0x31: "_set_relative_position",
+        0x32: "_rotate",
+        0x35: "_set_velocity",
+        0x2A: "_set_stop_io",
+        0x2B: "_set_positioning_io",
+        0x2C: "_set_home_io",
+        0x2D: "_set_working_mode",
     }
 
     byte_switchall = '\x00'
@@ -409,7 +56,7 @@ class System(ListeningSystem):
 
     def __init__(self, driver_reset_delay=0):
         self._set_default()
-        self.drivers = [Driver(driver_reset_delay) for _ in range(32)]
+        self.drivers = [USD(driver_reset_delay) for _ in range(32)]
 
     def _set_default(self):
         self.msg = b''
@@ -502,7 +149,7 @@ class System(ListeningSystem):
         else:
             raise ValueError("Unknown command: " + hex(command))
 
-    def soft_reset(self, params):
+    def _soft_reset(self, params):
         if params[2]:
             if params[0] == -1:
                 return None
@@ -517,7 +164,7 @@ class System(ListeningSystem):
                 self.drivers[params[0]].soft_reset()
                 return self.byte_ack
 
-    def soft_trigger(self, params):
+    def _soft_trigger(self, params):
         if params[2]:
             if params[0] == -1:
                 return None
@@ -532,7 +179,7 @@ class System(ListeningSystem):
                 self.drivers[params[0]].soft_trigger()
                 return self.byte_ack
 
-    def get_version(self, params):
+    def _get_version(self, params):
         if params[0] == -1:
             return None
         if params[2]:
@@ -552,7 +199,7 @@ class System(ListeningSystem):
                 )
             return retval + utils.checksum(retval)
 
-    def soft_stop(self, params):
+    def _soft_stop(self, params):
         if params[2]:
             if params[0] == -1:
                 return None
@@ -567,7 +214,7 @@ class System(ListeningSystem):
                 self.drivers[params[0]].stop = True
                 return self.byte_ack
 
-    def get_position(self, params):
+    def _get_position(self, params):
         if params[0] == -1:
             return None
         if params[2]:
@@ -592,7 +239,7 @@ class System(ListeningSystem):
 
             return retval + utils.checksum(retval)
 
-    def get_status(self, params):
+    def _get_status(self, params):
         if params[0] == -1:
             return None
         if params[2]:
@@ -613,7 +260,7 @@ class System(ListeningSystem):
 
             return retval + utils.checksum(retval)
 
-    def get_driver_type(self, params):
+    def _get_driver_type(self, params):
         if params[0] == -1:
             return None
         if params[2]:
@@ -635,7 +282,7 @@ class System(ListeningSystem):
 
             return retval + utils.checksum(retval)
 
-    def set_min_frequency(self, params):
+    def _set_min_frequency(self, params):
         if len(params[2]) != 2:
             if params[0] == -1:
                 return None
@@ -665,7 +312,7 @@ class System(ListeningSystem):
                 else:
                     return self.byte_nak
 
-    def set_max_frequency(self, params):
+    def _set_max_frequency(self, params):
         if len(params[2]) != 2:
             if params[0] == -1:
                 return None
@@ -695,7 +342,7 @@ class System(ListeningSystem):
                 else:
                     return self.byte_nak
 
-    def set_slope_multiplier(self, params):
+    def _set_slope_multiplier(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
                 return None
@@ -712,7 +359,7 @@ class System(ListeningSystem):
                 self.drivers[params[0]].slope_multiplier = slope_multiplier
                 return self.byte_ack
 
-    def set_reference_position(self, params):
+    def _set_reference_position(self, params):
         if len(params[2]) != 4:
             if params[0] == -1:
                 return None
@@ -733,7 +380,7 @@ class System(ListeningSystem):
                     reference_position)
                 return self.byte_ack
 
-    def set_io_pins(self, params):
+    def _set_io_pins(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
                 return None
@@ -748,7 +395,7 @@ class System(ListeningSystem):
                 self.drivers[params[0]].set_io_pins(params[2][0])
                 return self.byte_ack
 
-    def set_resolution(self, params):
+    def _set_resolution(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
                 return None
@@ -763,7 +410,7 @@ class System(ListeningSystem):
                 self.drivers[params[0]].set_resolution(params[2][0])
                 return self.byte_ack
 
-    def reduce_current(self, params):
+    def _reduce_current(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
                 return None
@@ -778,7 +425,7 @@ class System(ListeningSystem):
                 self.drivers[params[0]].reduce_current(params[2][0])
                 return self.byte_ack
 
-    def set_response_delay(self, params):
+    def _set_response_delay(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
                 return None
@@ -796,7 +443,7 @@ class System(ListeningSystem):
             else:
                 return self.byte_ack
 
-    def toggle_delayed_execution(self, params):
+    def _toggle_delayed_execution(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
                 return None
@@ -811,7 +458,7 @@ class System(ListeningSystem):
                 self.drivers[params[0]].toggle_delayed_execution(params[2][0])
                 return self.byte_ack
 
-    def set_absolute_position(self, params):
+    def _set_absolute_position(self, params):
         if len(params[2]) != 4:
             if params[0] == -1:
                 return None
@@ -832,7 +479,7 @@ class System(ListeningSystem):
                     absolute_position)
                 return self.byte_ack
 
-    def set_relative_position(self, params):
+    def _set_relative_position(self, params):
         if len(params[2]) != 4:
             if params[0] == -1:
                 return None
@@ -853,7 +500,7 @@ class System(ListeningSystem):
                     relative_position)
                 return self.byte_ack
 
-    def rotate(self, params):
+    def _rotate(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
                 return None
@@ -873,7 +520,7 @@ class System(ListeningSystem):
                 else:
                     return self.byte_nak
 
-    def set_velocity(self, params):
+    def _set_velocity(self, params):
         if len(params[2]) != 3:
             if params[0] == -1:
                 return None
@@ -899,7 +546,7 @@ class System(ListeningSystem):
                     self.drivers[params[0]].set_velocity(velocity)
                     return self.byte_ack
 
-    def set_stop_io(self, params):
+    def _set_stop_io(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
                 return None
@@ -914,7 +561,7 @@ class System(ListeningSystem):
                 self.drivers[params[0]].set_stop_io(params[2][0])
                 return self.byte_ack
 
-    def set_positioning_io(self, params):
+    def _set_positioning_io(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
                 return None
@@ -929,7 +576,7 @@ class System(ListeningSystem):
                 self.drivers[params[0]].set_positioning_io(params[2][0])
                 return self.byte_ack
 
-    def set_home_io(self, params):
+    def _set_home_io(self, params):
         if len(params[2]) != 1:
             if params[0] == -1:
                 return None
@@ -944,7 +591,7 @@ class System(ListeningSystem):
                 self.drivers[params[0]].set_home_io(params[2][0])
                 return self.byte_ack
 
-    def set_working_mode(self, params):
+    def _set_working_mode(self, params):
         if len(params[2]) != 2:
             if params[0] == -1:
                 return None
