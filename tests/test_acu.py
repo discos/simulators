@@ -3,11 +3,13 @@ import time
 from datetime import datetime, timedelta
 from simulators import acu
 from simulators import utils
-from simulators.acu_status.acu_utils import Command
-from simulators.acu_status.acu_utils import ModeCommand
-from simulators.acu_status.acu_utils import ParameterCommand
-from simulators.acu_status.acu_utils import ProgramTrackCommand
-from simulators.acu_status.acu_utils import ProgramTrackEntry
+from simulators.acu.acu_utils import (
+    Command,
+    ModeCommand,
+    ParameterCommand,
+    ProgramTrackCommand,
+    ProgramTrackEntry
+)
 
 class TestACU(unittest.TestCase):
 
