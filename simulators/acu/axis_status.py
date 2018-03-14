@@ -501,8 +501,11 @@ class MasterAxisStatus(SimpleAxisStatus):
             if abs(parameter_2) > self.max_velocity:
                 received_command_answer = 5
         elif mode_id == 52:
-            if abs(parameter_2) > 0.5 * self.max_velocity:
-                received_command_answer = 5
+            if self.stow_pos:
+                if int(parameter_1) not in range(len(self.stow_pos)):
+                    received_command_answer = 5
+                if abs(parameter_2) > 0.5 * self.max_velocity:
+                    received_command_answer = 5
 
         return received_command_answer
 
@@ -668,11 +671,16 @@ class MasterAxisStatus(SimpleAxisStatus):
 
     # mode_id == 52
     def _drive_to_stow(self, counter, stow_pos, rate):
+        stow_pos = int(stow_pos)
         if self.stow_pos:
             desired_pos = int(round(self.stow_pos[int(stow_pos)] * 1000000))
             desired_rate = int(round(rate * 1000000))
             self.curr_mode_counter = counter
-            self._move(counter, desired_pos, desired_rate)
+            if not self._move(counter, desired_pos, desired_rate):
+                return
+            self.stow_pin_out = self.stow_pin_selection
+            self.stow_pin_in = '0' * 16
+            self.stowed = 1
         self._executed_mode_command(counter, 52, 1)
 
     # -------------------- Parameter Command --------------------

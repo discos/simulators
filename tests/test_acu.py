@@ -827,14 +827,12 @@ class TestACU(unittest.TestCase):
         self.assertEqual(el_mcs.executed.command, mode_id)
         self.assertEqual(el_mcs.executed.answer, 1)
 
-    def test_mode_command_drive_to_stow_wrong_parameters(self):
-        # Axis needs to be unstowed and activated before sending this command
-        self.test_mode_command_unstow()
-        self.test_mode_command_active()
+    def test_mode_command_drive_to_stow_stop(self):
+        self.test_mode_command_preset_absolute()
 
         mode_id = 52  # 52: drive_to_stow
-        az_drive_to_stow = ModeCommand(1, mode_id, None, 1.2)
-        el_drive_to_stow = ModeCommand(2, mode_id, None, 1.2)
+        az_drive_to_stow = ModeCommand(1, mode_id, None, 0.42)
+        el_drive_to_stow = ModeCommand(2, mode_id, None, 0.25)
 
         command = Command(az_drive_to_stow, el_drive_to_stow)
         self._send(command.get())
@@ -845,10 +843,58 @@ class TestACU(unittest.TestCase):
         az_mcs = self.system.AZ.mcs
         el_mcs = self.system.EL.mcs
 
-        # Check if the azimuth command has been received with wrong params
+        # Check if the azimuth command has been received
         self.assertEqual(az_mcs.received.counter, az_command_counter)
         self.assertEqual(az_mcs.received.command, mode_id)
-        self.assertEqual(az_mcs.received.answer, 5)
+        self.assertEqual(az_mcs.received.answer, 9)
+
+        # Check if the elevation command has been received
+        self.assertEqual(el_mcs.received.counter, el_command_counter)
+        self.assertEqual(el_mcs.received.command, mode_id)
+        self.assertEqual(el_mcs.received.answer, 9)
+
+        # Make sure the azimuth command has been executed (no stow pos)
+        self.assertEqual(az_mcs.executed.counter, az_command_counter)
+        self.assertEqual(az_mcs.executed.command, mode_id)
+        self.assertEqual(az_mcs.executed.answer, 1)
+
+        # Check if elevation command has started the execution
+        self.assertEqual(el_mcs.executed.counter, el_command_counter)
+        self.assertEqual(el_mcs.executed.command, mode_id)
+        self.assertEqual(el_mcs.executed.answer, 2)
+
+        time.sleep(1)
+
+        # Send a stop command
+        self.test_mode_command_stop(activate=False)
+
+        time.sleep(1)
+
+        # Make sure the elevation axis is not stowed
+        self.assertEqual(self.system.EL.stowed, 0)
+
+    def test_mode_command_drive_to_stow_wrong_parameters(self):
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
+        self.test_mode_command_active()
+
+        mode_id = 52  # 52: drive_to_stow
+        az_drive_to_stow = ModeCommand(1, mode_id, 1, 1.2)
+        el_drive_to_stow = ModeCommand(2, mode_id, 1, 1.2)
+
+        command = Command(az_drive_to_stow, el_drive_to_stow)
+        self._send(command.get())
+
+        az_command_counter = command.get_counter(0)
+        el_command_counter = command.get_counter(1)
+
+        az_mcs = self.system.AZ.mcs
+        el_mcs = self.system.EL.mcs
+
+        # Check if the azimuth command has been received (no stow_pos)
+        self.assertEqual(az_mcs.received.counter, az_command_counter)
+        self.assertEqual(az_mcs.received.command, mode_id)
+        self.assertEqual(az_mcs.received.answer, 9)
 
         # Check if the elevation command has been received with wrong params
         self.assertEqual(el_mcs.received.counter, el_command_counter)
@@ -956,8 +1002,8 @@ class TestACU(unittest.TestCase):
 
         self.assertEqual(self.system.PS.timeSource, acu_time_mode)
 
-        now_min = datetime.utcnow() - timedelta(milliseconds=25)
-        now_max = datetime.utcnow() + timedelta(milliseconds=25)
+        now_min = datetime.utcnow() - timedelta(milliseconds=50)
+        now_max = datetime.utcnow() + timedelta(milliseconds=50)
 
         ps_time = self.system.PS.actual_time()
 
