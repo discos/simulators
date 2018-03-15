@@ -59,14 +59,6 @@ class TestACU(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self._send(command.get())
 
-    def test_mode_command_azimuth(self):
-        command_string = Command(ModeCommand(1, 1)).get()
-        self._send(command_string)
-
-    def test_mode_command_elevation(self):
-        command_string = Command(ModeCommand(2, 1)).get()
-        self._send(command_string)
-
     def test_mode_command_unknown_subsystem(self):
         command_string = Command(ModeCommand(3, 1)).get()
 
@@ -133,6 +125,9 @@ class TestACU(unittest.TestCase):
         az_mcs = self.system.AZ.mcs
         el_command_counter = command.get_counter(1)
         el_mcs = self.system.EL.mcs
+
+        # Update the status
+        self.system.get_message()
 
         # Check if the azimuth command has been received
         self.assertEqual(az_mcs.received.counter, az_command_counter)
@@ -202,7 +197,8 @@ class TestACU(unittest.TestCase):
         self.assertEqual(el_mcs.received.answer, 4)
 
     def test_mode_command_preset_absolute(self):
-        # Axis needs to be activated before sending this command
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
         self.test_mode_command_active()
 
         preset_abs_id = 3
@@ -256,7 +252,8 @@ class TestACU(unittest.TestCase):
         az_start_pos = round(float(self.system.AZ.p_Ist) / 1000000, 2)
         el_start_pos = round(float(self.system.EL.p_Ist) / 1000000, 2)
 
-        # Axis needs to be activated before sending this command
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
         self.test_mode_command_active()
 
         preset_abs_id = 3
@@ -321,7 +318,8 @@ class TestACU(unittest.TestCase):
         self.assertEqual(el_mcs.executed.answer, 1)
 
     def test_mode_command_preset_absolute_wrong_parameters(self):
-        # Axis needs to be activated before sending this command
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
         self.test_mode_command_active()
 
         preset_abs_id = 3
@@ -357,7 +355,8 @@ class TestACU(unittest.TestCase):
         az_start_pos = round(float(self.system.AZ.p_Ist) / 1000000, 2)
         el_start_pos = round(float(self.system.EL.p_Ist) / 1000000, 2)
 
-        # Axis needs to be activated before sending this command
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
         self.test_mode_command_active()
 
         pres_rel_id = 4
@@ -398,7 +397,7 @@ class TestACU(unittest.TestCase):
         self.assertEqual(el_mcs.executed.command, pres_rel_id)
         self.assertEqual(el_mcs.executed.answer, 2)  # 2 == executing
 
-        # Should be in position in ~1 seconds but we give it 8 to be sure
+        # Should be in position in ~1 seconds but we give it 2 to be sure
         time.sleep(2)
 
         az_res_pos = round(float(self.system.AZ.p_Ist) / 1000000, 2)
@@ -421,7 +420,8 @@ class TestACU(unittest.TestCase):
         self.assertEqual(el_mcs.executed.answer, 1)
 
     def test_mode_command_preset_relative_wrong_parameters(self):
-        # Axis needs to be activated before sending this command
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
         self.test_mode_command_active()
 
         pres_rel_id = 4
@@ -455,6 +455,10 @@ class TestACU(unittest.TestCase):
     def test_mode_command_slew(self):
         # Move the axis in different positions from the starting one
         self.test_mode_command_preset_absolute()
+
+        # We save the current position for further comparison
+        az_start_pos = round(float(self.system.AZ.p_Ist) / 1000000, 2)
+        el_start_pos = round(float(self.system.EL.p_Ist) / 1000000, 2)
 
         slew_id = 5
         az_slew = ModeCommand(1, slew_id, -1, 0.5)
@@ -490,25 +494,17 @@ class TestACU(unittest.TestCase):
 
         time.sleep(2)
 
-        # Make sure the azimuth axis has started moving
+        # Make sure the azimuth axis moved
         az_res_pos = self.system.AZ.p_Ist
-        az_stow_pos = self.system.AZ.stow_pos[0]
-        self.assertNotEqual(az_res_pos, az_stow_pos)
+        self.assertNotEqual(az_res_pos, az_start_pos)
 
-        # Make sure the elevation axis has reached limit position
-        el_max_pos = self.system.EL.max_pos
-        el_res_pos = float(self.system.EL.p_Ist) / 1000000
-        self.assertEqual(el_res_pos, el_max_pos)
-
-        el_mcs = self.system.EL.mcs
-
-        # Check if the elevation command has been completely executed
-        self.assertEqual(el_mcs.executed.counter, el_command_counter)
-        self.assertEqual(el_mcs.executed.command, slew_id)
-        self.assertEqual(el_mcs.executed.answer, 1)
+        # Make sure the elevation axis moved
+        el_res_pos = self.system.EL.p_Ist
+        self.assertNotEqual(el_res_pos, el_start_pos)
 
     def test_mode_command_slew_zero_speed(self):
-        # Axis needs to be activated before sending this command
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
         self.test_mode_command_active()
 
         slew_id = 5
@@ -544,7 +540,8 @@ class TestACU(unittest.TestCase):
         self.assertEqual(el_mcs.executed.answer, 1)
 
     def test_mode_command_slew_wrong_parameters(self):
-        # Axis needs to be activated before sending this command
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
         self.test_mode_command_active()
 
         slew_id = 5
@@ -570,8 +567,9 @@ class TestACU(unittest.TestCase):
         self.assertEqual(el_mcs.received.answer, 5)
 
     def test_mode_command_stop(self, activate=True):
-        # Axis needs to be activated before sending this command
+        # Axis needs to be unstowed and activated before sending this command
         if activate:
+            self.test_mode_command_unstow()
             self.test_mode_command_active()
 
         stop_id = 7
@@ -607,7 +605,8 @@ class TestACU(unittest.TestCase):
         self.assertEqual(el_mcs.executed.answer, 1)
 
     def test_mode_command_program_track(self):
-        # Axis needs to be activated before sending this command
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
         self.test_mode_command_active()
 
         program_track_id = 8
@@ -714,20 +713,15 @@ class TestACU(unittest.TestCase):
         az_mcs = self.system.AZ.mcs
         el_mcs = self.system.EL.mcs
 
-        # Check if the azimuth command has been received
+        # Check if the azimuth command has been received in wrong mode
         self.assertEqual(az_mcs.received.counter, az_command_counter)
         self.assertEqual(az_mcs.received.command, mode_id)
-        self.assertEqual(az_mcs.received.answer, 9)
+        self.assertEqual(az_mcs.received.answer, 4)
 
         # Check if the elevation command has been received
         self.assertEqual(el_mcs.received.counter, el_command_counter)
         self.assertEqual(el_mcs.received.command, mode_id)
         self.assertEqual(el_mcs.received.answer, 9)
-
-        # Make sure the azimuth command has been executed
-        self.assertEqual(az_mcs.executed.counter, az_command_counter)
-        self.assertEqual(az_mcs.executed.command, mode_id)
-        self.assertEqual(az_mcs.executed.answer, 1)
 
         # Make sure the elevation command has been executed
         self.assertEqual(el_mcs.executed.counter, el_command_counter)
@@ -814,10 +808,10 @@ class TestACU(unittest.TestCase):
         self.assertEqual(el_mcs.received.command, mode_id)
         self.assertEqual(el_mcs.received.answer, 9)
 
-        # Check if azimuth command has started the execution
+        # Make sure the azimuth command has been executed (no stow pos)
         self.assertEqual(az_mcs.executed.counter, az_command_counter)
         self.assertEqual(az_mcs.executed.command, mode_id)
-        self.assertEqual(az_mcs.executed.answer, 2)
+        self.assertEqual(az_mcs.executed.answer, 1)
 
         # Check if elevation command has started the execution
         self.assertEqual(el_mcs.executed.counter, el_command_counter)
@@ -826,26 +820,19 @@ class TestACU(unittest.TestCase):
 
         time.sleep(2)
 
-        az_mcs = self.system.AZ.mcs
         el_mcs = self.system.EL.mcs
-
-        # Make sure the azimuth command has been executed
-        self.assertEqual(az_mcs.executed.counter, az_command_counter)
-        self.assertEqual(az_mcs.executed.command, mode_id)
-        self.assertEqual(az_mcs.executed.answer, 1)
 
         # Make sure the elevation command has been executed
         self.assertEqual(el_mcs.executed.counter, el_command_counter)
         self.assertEqual(el_mcs.executed.command, mode_id)
         self.assertEqual(el_mcs.executed.answer, 1)
 
-    def test_mode_command_drive_to_stow_wrong_parameters(self):
-        # Axis needs to be activated before sending this command
-        self.test_mode_command_active()
+    def test_mode_command_drive_to_stow_stop(self):
+        self.test_mode_command_preset_absolute()
 
         mode_id = 52  # 52: drive_to_stow
-        az_drive_to_stow = ModeCommand(1, mode_id, None, 1.2)
-        el_drive_to_stow = ModeCommand(2, mode_id, None, 1.2)
+        az_drive_to_stow = ModeCommand(1, mode_id, None, 0.42)
+        el_drive_to_stow = ModeCommand(2, mode_id, None, 0.25)
 
         command = Command(az_drive_to_stow, el_drive_to_stow)
         self._send(command.get())
@@ -856,10 +843,58 @@ class TestACU(unittest.TestCase):
         az_mcs = self.system.AZ.mcs
         el_mcs = self.system.EL.mcs
 
-        # Check if the azimuth command has been received with wrong params
+        # Check if the azimuth command has been received
         self.assertEqual(az_mcs.received.counter, az_command_counter)
         self.assertEqual(az_mcs.received.command, mode_id)
-        self.assertEqual(az_mcs.received.answer, 5)
+        self.assertEqual(az_mcs.received.answer, 9)
+
+        # Check if the elevation command has been received
+        self.assertEqual(el_mcs.received.counter, el_command_counter)
+        self.assertEqual(el_mcs.received.command, mode_id)
+        self.assertEqual(el_mcs.received.answer, 9)
+
+        # Make sure the azimuth command has been executed (no stow pos)
+        self.assertEqual(az_mcs.executed.counter, az_command_counter)
+        self.assertEqual(az_mcs.executed.command, mode_id)
+        self.assertEqual(az_mcs.executed.answer, 1)
+
+        # Check if elevation command has started the execution
+        self.assertEqual(el_mcs.executed.counter, el_command_counter)
+        self.assertEqual(el_mcs.executed.command, mode_id)
+        self.assertEqual(el_mcs.executed.answer, 2)
+
+        time.sleep(1)
+
+        # Send a stop command
+        self.test_mode_command_stop(activate=False)
+
+        time.sleep(1)
+
+        # Make sure the elevation axis is not stowed
+        self.assertEqual(self.system.EL.stowed, 0)
+
+    def test_mode_command_drive_to_stow_wrong_parameters(self):
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
+        self.test_mode_command_active()
+
+        mode_id = 52  # 52: drive_to_stow
+        az_drive_to_stow = ModeCommand(1, mode_id, 1, 1.2)
+        el_drive_to_stow = ModeCommand(2, mode_id, 1, 1.2)
+
+        command = Command(az_drive_to_stow, el_drive_to_stow)
+        self._send(command.get())
+
+        az_command_counter = command.get_counter(0)
+        el_command_counter = command.get_counter(1)
+
+        az_mcs = self.system.AZ.mcs
+        el_mcs = self.system.EL.mcs
+
+        # Check if the azimuth command has been received (no stow_pos)
+        self.assertEqual(az_mcs.received.counter, az_command_counter)
+        self.assertEqual(az_mcs.received.command, mode_id)
+        self.assertEqual(az_mcs.received.answer, 9)
 
         # Check if the elevation command has been received with wrong params
         self.assertEqual(el_mcs.received.counter, el_command_counter)
@@ -867,8 +902,10 @@ class TestACU(unittest.TestCase):
         self.assertEqual(el_mcs.received.answer, 5)
 
     def test_parameter_command_absolute_position_offset(self):
-        # Axis must be active in order to send this command
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
         self.test_mode_command_active()
+
         command = Command(
             ParameterCommand(1, 11, 5, 0),
             ParameterCommand(2, 11, -5, 0)
@@ -913,8 +950,10 @@ class TestACU(unittest.TestCase):
         self.assertEqual(self.system.EL.p_Offset, -10000000)
 
     def test_parameter_command_axis_unknown_parameter_id(self):
-        # Axis must be active in order to send this command
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
         self.test_mode_command_active()
+
         command = Command(
             ParameterCommand(1, 100),  # 100: unknown parameter id
             ParameterCommand(2, 100)
@@ -963,8 +1002,8 @@ class TestACU(unittest.TestCase):
 
         self.assertEqual(self.system.PS.timeSource, acu_time_mode)
 
-        now_min = datetime.utcnow() - timedelta(milliseconds=25)
-        now_max = datetime.utcnow() + timedelta(milliseconds=25)
+        now_min = datetime.utcnow() - timedelta(milliseconds=50)
+        now_max = datetime.utcnow() + timedelta(milliseconds=50)
 
         ps_time = self.system.PS.actual_time()
 
@@ -1542,6 +1581,9 @@ class TestACU(unittest.TestCase):
 
     def test_program_track_execution(self):
         self.test_program_track_command_load_new_table()
+
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
         self.test_mode_command_active()
 
         start_azimuth = ModeCommand(1, 8, None, 0.5)
@@ -1562,6 +1604,9 @@ class TestACU(unittest.TestCase):
     def test_program_track_execution_with_offset(self):
         self.test_program_track_command_load_new_table()
         self.test_parameter_command_pt_time_correction()
+
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
         self.test_mode_command_active()
 
         start_azimuth = ModeCommand(1, 8, None, 0.5)
@@ -1589,6 +1634,9 @@ class TestACU(unittest.TestCase):
 
     def test_program_track_load_new_table_while_positioning(self):
         self.test_program_track_command_load_new_table()
+
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
         self.test_mode_command_active()
 
         start_azimuth = ModeCommand(1, 8, None, 0.5)
@@ -1612,6 +1660,9 @@ class TestACU(unittest.TestCase):
 
     def test_program_track_load_new_table_while_running(self):
         self.test_program_track_command_load_new_table()
+
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
         self.test_mode_command_active()
 
         start_azimuth = ModeCommand(1, 8, None, 0.5)
@@ -1635,6 +1686,9 @@ class TestACU(unittest.TestCase):
 
     def test_program_track_stop_positioning(self):
         self.test_program_track_command_load_new_table()
+
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
         self.test_mode_command_active()
 
         start_azimuth = ModeCommand(1, 8, None, 0.5)
@@ -1658,6 +1712,9 @@ class TestACU(unittest.TestCase):
 
     def test_program_track_stop_tracking(self):
         self.test_program_track_command_load_new_table()
+
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
         self.test_mode_command_active()
 
         start_azimuth = ModeCommand(1, 8, None, 0.5)
@@ -1681,6 +1738,9 @@ class TestACU(unittest.TestCase):
 
     def test_program_track_out_of_range_rate(self):
         self.test_program_track_command_load_new_table()
+
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
         self.test_mode_command_active()
 
         start_azimuth = ModeCommand(1, 8, None, 1.5)

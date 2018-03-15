@@ -2,7 +2,7 @@ from threading import Thread
 from simulators import utils
 from simulators.common import ListeningSystem, SendingSystem
 from simulators.acu.general_status import GeneralStatus
-from simulators.acu.axis_status import AxisStatus
+from simulators.acu.axis_status import MasterAxisStatus, SlaveAxisStatus
 from simulators.acu.pointing_status import PointingStatus
 from simulators.acu.facility_status import FacilityStatus
 
@@ -44,21 +44,20 @@ class System(ListeningSystem, SendingSystem):
         self.cmd_counter = None
 
         self.GS = GeneralStatus()
-        self.AZ = AxisStatus(
-            axis_name='azimuth',
+        self.AZ = MasterAxisStatus(
             n_motors=8,
             max_rates=(0.85, 0.4),
             op_range=(-90, 450),
-            stow_pos=[180],
+            start_pos=180
         )
-        self.EL = AxisStatus(
-            axis_name='elevation',
+        self.EL = MasterAxisStatus(
             n_motors=4,
             max_rates=(0.5, 0.25),
             op_range=(5, 90),
+            start_pos=90,
             stow_pos=[90],
         )
-        self.CW = AxisStatus(axis_name='cable wrap')
+        self.CW = SlaveAxisStatus(n_motors=1, master=self.AZ)
         self.PS = PointingStatus(self.AZ, self.EL, self.CW)
         self.FS = FacilityStatus()
 
