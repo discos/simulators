@@ -285,8 +285,12 @@ class PointingStatus(object):
 
             if pt_index:
                 self.ptActTableIndex = pt_index
+                self.relative_times = self.relative_times[pt_index:]
+                self.azimuth_positions = self.azimuth_positions[pt_index:]
+                self.elevation_positions = self.elevation_positions[pt_index:]
+                self.ptTableLength -= 1
             else:
-                self.ptActTableIndex = len(self.relative_times)
+                self.ptActTableIndex = self.ptEndTableIndex
                 self.ptState = 4
 
     def actual_time(self):
@@ -503,13 +507,13 @@ class PointingStatus(object):
         self._update_status()
 
         if load_mode == 1:
+            self.ptEndTableIndex = 0
             self.ptState = 2
         elif self.ptState != 3:
             self.ptState = 2
 
         self.ptInterpolMode = interpolation_mode
-        self.ptTableLength = len(relative_times)
-        self.ptEndTableIndex = self.ptTableLength - 1
+        self.ptEndTableIndex += sequence_length
 
         self.az_tck = interpolate.splrep(
             np.array(relative_times),
