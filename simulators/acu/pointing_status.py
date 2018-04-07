@@ -187,6 +187,9 @@ class PointingStatus(object):
         # parameter_command_status, refer to ParameterCommandStatus class
         self.pcs = ParameterCommandStatus()
 
+        # Counter relative to the load table command
+        self.pt_command_id = None
+
     def _pointing_error(self):
         binary_string = (
             str(self.Data_Overflow)
@@ -262,7 +265,7 @@ class PointingStatus(object):
         self.posEncEl = self.elevation.p_Ist
         self.pointOffsetEl = self.elevation.p_Offset
 
-        if self.ptState == 0:
+        if self.ptState in [0, 4]:
             return
 
         start_time = (
@@ -277,17 +280,23 @@ class PointingStatus(object):
             current_pt_time = current_pt_time.total_seconds() * 1000
 
             pt_index = None
-
             for index in range(len(self.relative_times)):
                 if current_pt_time < self.relative_times[index]:
                     pt_index = index
                     break
 
-            if pt_index:
-                self.ptActTableIndex = pt_index
-            else:
-                self.ptActTableIndex = len(self.relative_times)
+            if pt_index is None:
                 self.ptState = 4
+                self.ptTableLength = 0
+                self.ptActTableIndex = 0
+                self.ptEndTableIndex = 0
+            else:
+                self.ptActTableIndex = pt_index
+                self.relative_times = self.relative_times[pt_index:]
+                self.azimuth_positions = self.azimuth_positions[pt_index:]
+                self.elevation_positions = self.elevation_positions[pt_index:]
+                self.ptTableLength = len(self.relative_times)
+                self.ptEndTableIndex = self.ptTableLength - 1
 
     def actual_time(self):
         return (
@@ -414,7 +423,7 @@ class PointingStatus(object):
             self.pcs.answer = 5
             return
 
-        if load_mode == 2 and not self.relative_times:
+        if load_mode == 2 and not self.ptTableLength:
             self.pcs.answer = 5
             return
 
@@ -426,7 +435,6 @@ class PointingStatus(object):
             return
 
         if load_mode == 1:
-            self.pt_command_id = cmd_cnt
             self.relative_times = []
             self.azimuth_positions = []
             self.elevation_positions = []
@@ -503,13 +511,15 @@ class PointingStatus(object):
         self._update_status()
 
         if load_mode == 1:
+            self.pt_command_id = cmd_cnt
+            self.ptEndTableIndex = 0
             self.ptState = 2
         elif self.ptState != 3:
             self.ptState = 2
 
         self.ptInterpolMode = interpolation_mode
-        self.ptTableLength = len(relative_times)
-        self.ptEndTableIndex = self.ptTableLength - 1
+        self.ptTableLength = sequence_length
+        self.ptEndTableIndex += sequence_length
 
         self.az_tck = interpolate.splrep(
             np.array(relative_times),
@@ -522,18 +532,12 @@ class PointingStatus(object):
 
         self.pcs.answer = 1
 
-    def get_start_end_pos(self, subsystem):
-        retval = (None, None)
-        if subsystem is self.azimuth:
-            retval = (
-                int(round(self.azimuth_positions[0] * 1000000)),
-                int(round(self.azimuth_positions[-1] * 1000000))
-            )
-        elif subsystem is self.elevation:
-            retval = (
-                int(round(self.elevation_positions[0] * 1000000)),
-                int(round(self.elevation_positions[-1] * 1000000))
-            )
+    def get_next_position(self, subsystem):
+        retval = None
+        if subsystem is self.azimuth and self.azimuth_positions:
+            retval = int(round(self.azimuth_positions[0] * 1000000))
+        elif subsystem is self.elevation and self.elevation_positions:
+            retval = int(round(self.elevation_positions[0] * 1000000))
         return retval
 
     def get_trajectory_values(self, subsystem):
