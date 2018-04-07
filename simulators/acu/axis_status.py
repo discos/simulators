@@ -573,16 +573,16 @@ class MasterAxisStatus(SimpleAxisStatus):
     def _program_track(self, counter, _, rate):
         self.curr_mode_counter = counter
         if self.pointing.ptState in [0, 1, 4]:
-            self._executed_mode_command(counter, 8, 3)
+            self._executed_mode_command(counter, 8, 1)
             return
 
         self.axis_trajectory_state = 7  # 7: tracking
 
-        start_pos, end_pos = self.pointing.get_start_end_pos(self)
+        next_pos = self.pointing.get_next_position(self)
 
         # We do not add the tracking offset to the desired position
         # because it is already been handled by the `_move` method
-        desired_pos = start_pos
+        desired_pos = next_pos
         desired_rate = int(round(rate * 1000000))
 
         pt_counter = self.pointing.pt_command_id
@@ -598,8 +598,12 @@ class MasterAxisStatus(SimpleAxisStatus):
 
             program_track_state = self._update_trajectory_values()
 
+            next_p = self.pointing.get_next_position(self)
+            if next_p:
+                next_pos = next_p
+
             if program_track_state == 4:
-                if self.p_Ist == end_pos + self.p_Offset:
+                if self.p_Ist == next_pos + self.p_Offset:
                     self._executed_mode_command(counter, 8, 1)
                     break
                 else:

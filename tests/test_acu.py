@@ -631,15 +631,15 @@ class TestACU(unittest.TestCase):
         self.assertEqual(el_mcs.received.command, program_track_id)
         self.assertEqual(el_mcs.received.answer, 9)
 
-        # Make sure the azimuth command has not been executed (no table)
+        # Make sure the azimuth command has been executed
         self.assertEqual(az_mcs.executed.counter, az_command_counter)
         self.assertEqual(az_mcs.executed.command, program_track_id)
-        self.assertEqual(az_mcs.executed.answer, 3)
+        self.assertEqual(az_mcs.executed.answer, 1)
 
-        # Make sure the elevation command has not been executed (no table)
+        # Make sure the elevation command has been executed
         self.assertEqual(el_mcs.executed.counter, el_command_counter)
         self.assertEqual(el_mcs.executed.command, program_track_id)
-        self.assertEqual(el_mcs.executed.answer, 3)
+        self.assertEqual(el_mcs.executed.answer, 1)
 
     def test_mode_command_interlock(self):
         mode_id = 14  # 14: interlock
@@ -1239,6 +1239,57 @@ class TestACU(unittest.TestCase):
         self.assertEqual(pcs.counter, command_counter)
         self.assertEqual(pcs.command, 61)
         self.assertEqual(pcs.answer, 1)
+
+    def test_program_track_command_add_entries_during_execution(self):
+        start_time = datetime.utcnow() + timedelta(seconds=1)
+
+        self.test_program_track_command_load_new_table(start_time)
+
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
+        self.test_mode_command_active()
+
+        start_azimuth = ModeCommand(1, 8, None, 0.5)
+        start_elevation = ModeCommand(2, 8, None, 0.5)
+
+        command = Command(
+            start_azimuth,
+            start_elevation,
+        )
+
+        self._send(command.get())
+
+        # Wait for execution to start
+        time.sleep(2)
+
+        pt_command = ProgramTrackCommand(
+            load_mode=2,
+            start_time=utils.mjd(start_time),
+            axis_rates=(1, 1)
+        )
+        entry = ProgramTrackEntry(
+            relative_time=10000,
+            azimuth_position=184,
+            elevation_position=88
+        )
+        pt_command.append_entry(entry)
+
+        command = Command(pt_command)
+        self._send(command.get())
+
+        command_counter = command.get_counter(0)
+        pcs = self.system.PS.pcs
+
+        # Check if the command has been correctly received and executed
+        self.assertEqual(pcs.counter, command_counter)
+        self.assertEqual(pcs.command, 61)
+        self.assertEqual(pcs.answer, 1)
+
+        # Wait for execution to complete
+        time.sleep(9)
+
+        self.assertEqual(self.system.AZ.p_Ist, 184000000)
+        self.assertEqual(self.system.EL.p_Ist, 88000000)
 
     def test_program_track_command_add_entries_wrong_start_time(self):
         start_time = datetime.utcnow() + timedelta(seconds=1)
