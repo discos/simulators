@@ -347,7 +347,7 @@ class MasterAxisStatus(SimpleAxisStatus):
             self.stow_pin_in = '0' * 16
         else:
             self.stow_pin_out = '0' * 16
-            self.stow_pin_int = self.stow_pin_selection
+            self.stow_pin_in = self.stow_pin_selection
 
     def _calc_position(self, delta_time, desired_pos, desired_rate):
         current_pos = self.p_Ist
