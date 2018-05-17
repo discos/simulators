@@ -134,15 +134,18 @@ class System(ListeningSystem):
         if name is not None:
             params = [driver, byte_start, [ord(x) for x in cparams]]
             method = getattr(self, name)
+            t0 = time.time()
             retval = method(params)
             if driver != -1:
                 if self.drivers[driver].delay_multiplier == 255:
                     return True
                 else:
-                    time.sleep(
+                    time_to_sleep = (
                         self.drivers[driver].delay_multiplier
                         * self.delay_step
                     )
+                    elapsed_time = time.time() - t0
+                    time.sleep(max(0, time_to_sleep - elapsed_time))
                 return retval
             else:
                 return True
