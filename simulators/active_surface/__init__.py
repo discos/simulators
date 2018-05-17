@@ -55,6 +55,8 @@ class System(ListeningSystem):
     slope_time = 10  # msec
 
     def __init__(self, driver_reset_delay=0):
+        #: param driver_reset_delay: a parameter that is passed down to all of
+        #: the children USDs. Refer to USD class to further documentation
         self._set_default()
         self.drivers = [USD(driver_reset_delay) for _ in range(32)]
 

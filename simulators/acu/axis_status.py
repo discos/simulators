@@ -9,7 +9,9 @@ from simulators.acu.command_status import (
 
 
 class SimpleAxisStatus(object):
-
+    """
+    :param n_motors: The number of motors that move the axis.
+    """
     def __init__(self, n_motors=1):
         self.motor_status = []
 
@@ -284,7 +286,6 @@ class SimpleAxisStatus(object):
             + self.mcs.get_status()
             + self.pcs.get_status()
         )
-
         return response
 
     def get_motor_status(self):
@@ -295,7 +296,16 @@ class SimpleAxisStatus(object):
 
 
 class MasterAxisStatus(SimpleAxisStatus):
-
+    """
+    :param n_motors: The number of motors that move the axis.
+    :param max_rates: A tuple containing the maximum speed and
+        the maximum accelation rates of the axis.
+    :param op_range: A tuple containing the minimum and maximum values
+        to which the axis can go. [degrees]
+    :param start_pos: The starting position of the axis.
+    :param stop_pos: A list of stow positions of the axis.
+        Default value is None since an axis could not have a stow position.
+    """
     mode_commands = {
         0: '_ignore',
         1: '_inactive',
@@ -350,6 +360,13 @@ class MasterAxisStatus(SimpleAxisStatus):
             self.stow_pin_in = self.stow_pin_selection
 
     def _calc_position(self, delta_time, desired_pos, desired_rate):
+        """This method calculates the current position of the axis
+        from the given parameters.
+
+        :param delta_time: the time elapsed since the previous iteration.
+        :param desired_pos: the commanded (final) position.
+        :param desired_rate: the speed rate of the rotation.
+        """
         current_pos = self.p_Ist
         sign = utils.sign(desired_pos - current_pos)
         if sign != 0:
@@ -362,7 +379,19 @@ class MasterAxisStatus(SimpleAxisStatus):
         return current_pos
 
     def _move(self, counter, desired_pos, desired_rate, pt_counter=None):
+        """This method performs a positioning loop by calling the method
+        `_calc_position` every iteration.
 
+        :param counter: the command counter of the positioning action.
+            It is used to eventually stop the movement when a different
+            command is received.
+        :param desired_pos: the commanded (final) position.
+        :param desired_rate: the speed rate of the rotation.
+        :param pt_counter: the command counter of the eventual program track
+            command. Similarly to the `counter` param, it is used to
+            eventually stop the movement of the axis when a different
+            program track command is received.
+        """
         self.p_Soll = desired_pos
         self.v_Soll = desired_rate
 
@@ -407,8 +436,8 @@ class MasterAxisStatus(SimpleAxisStatus):
             time.sleep(0.01)
 
     def _update_status(self):
-        # This method is called to update some of the values before comparison
-        # or sending.
+        """This method is called to update some of the values before comparison
+        or sending."""
         if self.stow_pos:
             if float(self.p_Ist) / 1000000 in self.stow_pos:
                 self.stow_pos_ok = 1
@@ -422,11 +451,17 @@ class MasterAxisStatus(SimpleAxisStatus):
         self._update_trajectory_values()
 
     def _update_trajectory_values(self):
+        """This method retrieves the trajectory status and values from the
+        pointing module of the ACU simulator."""
         data = self.pointing.get_trajectory_values(self)
         pt_status, self.p_Bahn, self.v_Bahn, self.a_Bahn = data
         return pt_status
 
     def get_axis_status(self):
+        """This method overrides the one from `SimpleAxisStatus` class, from
+        which the `MasterAxisStatus` class is inherited. Before calling the
+        base `get_axis_status` method, it calls the `_update_status` method
+        to update the necessary values to be sent to the caller."""
         self._update_status()
 
         return SimpleAxisStatus.get_axis_status(self)
@@ -434,6 +469,14 @@ class MasterAxisStatus(SimpleAxisStatus):
     # -------------------- Mode Command --------------------
 
     def mode_command(self, cmd):
+        """This method parses and executes the received mode command.
+        Before launching the command execution, this method calls the
+        `_validate_mode_command` method and retrieves its return value.
+        Depending from the retrieved value, the parsed command gets
+        executed (valid command) or not (invalid command).
+
+        :param cmd: the received command.
+        """
         cmd_cnt = utils.bytes_to_int(cmd[4:8])
         mode_id = utils.bytes_to_int(cmd[8:10])
         par_1 = utils.bytes_to_real(cmd[10:18], 2)
@@ -465,6 +508,14 @@ class MasterAxisStatus(SimpleAxisStatus):
             method(cmd_cnt, par_1, par_2)
 
     def _validate_mode_command(self, mode_id, parameter_1, parameter_2):
+        """This method performs a validation check on the received
+        mode command. It is called from the `mode_command` method
+        to check if a command must be executed or not.
+
+        :param mode_id: the mode_id of the received command.
+        :param parameter_1: the first parameter of the received command.
+        :param parameter_2: the second parameter of the reveived command.
+        """
         received_command_answer = 9  # Command accepted
 
         self._update_status()
@@ -510,6 +561,13 @@ class MasterAxisStatus(SimpleAxisStatus):
         return received_command_answer
 
     def _executed_mode_command(self, counter, command, answer):
+        """This method updates the last executed mode command
+        (`mcs.executed`).
+
+        :param counter: the last executed command counter.
+        :param command: the last executed mode id.
+        :param answer: the last executed command answer.
+        """
         executed = CommandStatus()
         executed.counter = counter
         executed.command = command
@@ -518,12 +576,20 @@ class MasterAxisStatus(SimpleAxisStatus):
 
     # mode_id == 1
     def _inactive(self, counter, *_):
+        """This method de-activate the axis and engage the motors brakes.
+
+        :param counter: the current command counter.
+        """
         self.axis_state = 0
         self.brakes_open = '0' * 16
         self._executed_mode_command(counter, 1, 1)
 
     # mode_id == 2
     def _active(self, counter, *_):
+        """This method activate the axis and disengage the motors brakes.
+
+        :param counter: same as the `_inactive` method.
+        """
         self.axis_state = 3
         self.brakes_open = (
             '0' * (16 - len(self.motor_status))
@@ -533,6 +599,13 @@ class MasterAxisStatus(SimpleAxisStatus):
 
     # mode_id == 3
     def _preset_absolute(self, counter, angle, rate):
+        """This method moves the axis to a given position,
+        moving at a given rate.
+
+        :param counter: same as the `_inactive` method.
+        :param angle: the final absolute position of the axis.
+        :param rate: the maximum rotation speed of the axis.
+        """
         self.curr_mode_counter = counter
         self.axis_trajectory_state = 6
         desired_pos = int(round(angle * 1000000))
@@ -542,6 +615,14 @@ class MasterAxisStatus(SimpleAxisStatus):
 
     # mode_id == 4
     def _preset_relative(self, counter, angle, rate):
+        """This method moves the axis by a given offset,
+        moving at a given rate.
+
+        :param counter: same as the `_inactive` method.
+        :param angle: the angle to be added to the current angle,
+            to which the axis should move.
+        :param rate: the maximum rotation speed of the axis.
+        """
         self.curr_mode_counter = counter
         self.axis_trajectory_state = 6
         desired_pos = self.p_Soll + int(round(angle * 1000000))
@@ -551,6 +632,13 @@ class MasterAxisStatus(SimpleAxisStatus):
 
     # mode_id == 5
     def _slew(self, counter, percentage, rate):
+        """This method moves the axis at a given rate, multiplied by
+        a given percentage.
+
+        :param counter: same as the `_inactive` method.
+        :param percentage: the percentage by which the rate is multiplied.
+        :param rate: the desired rotation rate.
+        """
         self.curr_mode_counter = counter
         self.axis_trajectory_state = 4
         desired_rate = int(round(rate * 1000000 * percentage))
@@ -565,12 +653,25 @@ class MasterAxisStatus(SimpleAxisStatus):
 
     # mode_id == 7
     def _stop(self, counter, *_):
+        """This method stops the axis movement and therefore the execution
+        of any positioning or tracking command.
+
+        :param counter: same as the `_inactive` method.
+        """
         self.curr_mode_counter = counter
         self.axis_trajectory_state = 3
         self._executed_mode_command(counter, 7, 1)
 
     # mode_id == 8
     def _program_track(self, counter, _, rate):
+        """This method starts the tracking with a pre-loaded trajectory.
+        The trajectory is loaded sending a 'program_track_parameter_command'
+        to the pointing subsystem of the ACU. Refer to the `PointingStatus`
+        class for further documentation.
+
+        :param counter: same as the `_inactive` method.
+        :param rate: the maximum rotation rate while tracking.
+        """
         self.curr_mode_counter = counter
         if self.pointing.ptState in [0, 1, 4]:
             self._executed_mode_command(counter, 8, 1)
@@ -624,10 +725,18 @@ class MasterAxisStatus(SimpleAxisStatus):
 
     # mode_id == 14
     def _interlock(self, counter, *_):
+        """This method should start an interlock. Currently, it does nothing.
+
+        :param counter: same as the `_inactive` method.
+        """
         self._executed_mode_command(counter, 14, 1)
 
     # mode_id == 15
     def _reset(self, counter, *_):
+        """This method resets the errors of the axis to their default value.
+
+        :param counter: same as the `_inactive` method.
+        """
         self.Error_Active = 0
         self.System_fault = 0
         self.Em_Stop = 0
@@ -659,6 +768,10 @@ class MasterAxisStatus(SimpleAxisStatus):
 
     # mode_id == 50
     def _stow(self, counter, *_):
+        """This method stows the axis by extending its stow pins.
+
+        :param counter: same as the `_inactive` method.
+        """
         if self.stow_pos:
             self.stow_pin_out = self.stow_pin_selection
             self.stow_pin_in = '0' * 16
@@ -667,6 +780,10 @@ class MasterAxisStatus(SimpleAxisStatus):
 
     # mode_id == 51
     def _unstow(self, counter, *_):
+        """This method unstows the axis by retracting its stow pins.
+
+        :param counter: same as the `_inactive` method.
+        """
         if self.stow_pos:
             self.stow_pin_out = '0' * 16
             self.stow_pin_in = self.stow_pin_selection
@@ -675,6 +792,13 @@ class MasterAxisStatus(SimpleAxisStatus):
 
     # mode_id == 52
     def _drive_to_stow(self, counter, stow_pos, rate):
+        """This method moves the axis to the given stow position
+        at a given rate.
+
+        :param counter: same as the `_inactive` method.
+        :param stow_pos: the index of the desired stow position.
+        :param rate: the desired rotation rate.
+        """
         stow_pos = int(stow_pos)
         if self.stow_pos:
             desired_pos = int(round(self.stow_pos[int(stow_pos)] * 1000000))
@@ -690,6 +814,10 @@ class MasterAxisStatus(SimpleAxisStatus):
     # -------------------- Parameter Command --------------------
 
     def parameter_command(self, cmd):
+        """This method parses and executes the received parameter command.
+
+        :param cmd: the received command.
+        """
         cmd_cnt = utils.bytes_to_uint(cmd[4:8])
         parameter_id = utils.bytes_to_uint(cmd[8:10])
         parameter_1 = utils.bytes_to_real(cmd[10:18], 2)

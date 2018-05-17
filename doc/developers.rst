@@ -328,7 +328,6 @@ Server class
 
 .. autoclass:: Server
    :members:
-   :inherited-members:
 
 
 Simulator class
@@ -373,6 +372,15 @@ System class
 .. autoclass:: System
     :members:
     :inherited-members:
+
+
+Axis_status class
+~~~~~~~~~~~~~~~~~
+
+.. autoclass:: MasterAxisStatus
+    :members:
+    :inherited-members:
+    :private-members:
 
 
 IF Distributor module
