@@ -129,18 +129,23 @@ class SendHandler(BaseHandler):
 
 
 class Server(ThreadingMixIn, ThreadingTCPServer):
+    """This class inherits from the ThreadingTCPServer class.
+    It instances a TCP server for the given address(es), and pass it the
+    given system instance. A server could be a listening server,
+    if param l_address is provided, or a sending server,
+    if param s_address is provided. If both addresses are provided,
+    the server acts as both as a listening server and a sending server.
+    Be aware that if the server both listens and send to its clients,
+    `l_address` and `s_address` must have at least different ports,
+    if not different ips.
 
+    :param system: the system instance needed by the server.
+    :param l_address: a tuple (ip, port), the address of the server that
+        exposes the `System.parse()` method.
+    :param s_address: a tuple (ip, port), the address of the server that
+        exposes the `System.get_message()` method.
+    """
     def __init__(self, system, l_address=None, s_address=None):
-        """
-        :param system: the system instance needed by the server.
-        :param l_address: a tuple (ip, port), the address of the server that
-                          exposes the `System.parse()` method
-        :param s_address: a tuple (ip, port), the address of the server that
-                          exposes the `System.get_message()` method
-        Be aware that if the server both listens and send to its clients,
-        `l_address` and `s_address` must have at least different ports,
-        if not different ips.
-        """
         self.child_server = None
         if l_address:
             self.address = l_address
@@ -155,19 +160,25 @@ class Server(ThreadingMixIn, ThreadingTCPServer):
         else:
             raise ValueError('You must specify at least one server.')
 
-    def run(self):
+    def serve_forever(self, poll_interval=0.5):
+        """This method overrides the ThreadingTCPServer `serve_forever`
+        method. Before calling the base method, which would stay in a loop
+        until the process is stopped, it starts the eventual child server
+        as a daemon thread.
+        """
         if self.child_server:
             self.child_server.start()
-        self.serve_forever()
+        ThreadingTCPServer.serve_forever(self, poll_interval)
 
     def start(self):
-        t1 = threading.Thread(target=self.serve_forever)
-        t1.daemon = True
-        t1.start()
-        if self.child_server:
-            self.child_server.start()
+        """This method starts a daemon thread which calls the `serve_forever`
+        method. The server is therefore started as a daemon."""
+        server_thread = threading.Thread(target=self.serve_forever)
+        server_thread.daemon = True
+        server_thread.start()
 
     def stop(self):
+        """This method stops the server and its eventual child."""
         if self.child_server:
             self.child_server.shutdown()
         self.shutdown()
@@ -175,14 +186,13 @@ class Server(ThreadingMixIn, ThreadingTCPServer):
 
 class Simulator(object):
     """This class represents the whole simulator, composed of one
-    or more servers."""
+    or more servers.
 
-    def __init__(self, system_module):
-        """
-        :param system_module: the module that implements the system. It could
+    :param system_module: the module that implements the system. It could
         also be a module name. In that case the module will be loaded
         dynamically.
-        """
+    """
+    def __init__(self, system_module):
         if not isinstance(system_module, types.ModuleType):
             self.system_module = importlib.import_module(
                 'simulators.%s'
@@ -192,10 +202,19 @@ class Simulator(object):
             self.system_module = system_module
 
     def start(self, daemon=False):
+        """This method starts a simulator by instancing
+        the servers listed in the given module.
+
+        :param daemon: if true, the server processes are created as daemons,
+            meaning that when this simulator object is destroyed, they get
+            destroyed as well. Default value is false, meaning that the server
+            processes will continue to run even if the simulator object gets
+            destroyed. To stop these processes, method `stop` must be called.
+        """
         for l_address, s_address, args in self.system_module.servers:
             system = self.system_module.System(*args)
             s = Server(system, l_address, s_address)
-            p = Process(target=s.run)
+            p = Process(target=s.serve_forever)
             p.daemon = daemon
             p.start()
             if not daemon:
@@ -205,6 +224,8 @@ class Simulator(object):
                     print('Server %s up and running.' % (s_address,))
 
     def stop(self):
+        """This method stops a simulator by sending the custom `$system_stop!`
+        command to all servers of the given simulator."""
         for entry in self.system_module.servers:
             for address in entry[:-1]:
                 if not address:

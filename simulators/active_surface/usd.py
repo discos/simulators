@@ -8,11 +8,11 @@ class USD(object):
 
     standby_delay_step = 0.004096  # 4096 microseconds
 
-    #: Resolution denominator, i.e.:
-    #: 0 -> 1/1, full step
-    #: 1 -> 1/2, half step
-    #: ...
-    #: 7 -> 1/128th of step
+    # Resolution denominator, i.e.:
+    # 0 -> 1/1, full step
+    # 1 -> 1/2, half step
+    # ...
+    # 7 -> 1/128th of step
     resolutions = {
         0: 1,
         1: 2,
@@ -24,7 +24,7 @@ class USD(object):
         7: 128,
     }
 
-    #: Current reduction percentage
+    # Current reduction percentage
     standby_modes = {
         0: 0,
         1: 0,
@@ -38,10 +38,15 @@ class USD(object):
     }
 
     def __init__(self, driver_reset_delay=0):
+        #: param driver_reset_delay: this argument represents the time in which
+        #: the driver performs its reset procedure. It defaults to 0 to speed
+        #: up the testing process.
         self.driver_reset_delay = driver_reset_delay  # Real delay: 100ms
         self._set_default()
 
     def _set_default(self):
+        t0 = time.time()
+
         self.reference_position = 0
         self.current_position = 0
         self.position_queue = Queue()
@@ -81,7 +86,9 @@ class USD(object):
         self.baud_rate = self.baud_rates.get(0)
         self.stop = True
 
-        time.sleep(self.driver_reset_delay)
+        elapsed_time = time.time() - t0
+
+        time.sleep(max(self.driver_reset_delay - elapsed_time, 0))
 
     def soft_reset(self):
         self._set_default()
