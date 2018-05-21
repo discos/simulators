@@ -15,8 +15,7 @@ def system_from_arg(system_name):
     try:
         return importlib.import_module('simulators.%s' % system_name)
     except ImportError:
-        raise ArgumentTypeError('system "%s" unavailable' % system_name)
-
+        raise ArgumentTypeError('System "%s" unavailable.' % system_name)
 
 parser = ArgumentParser()
 parser.add_argument(
@@ -26,11 +25,32 @@ parser.add_argument(
     help='System name: active_surface, acu, ...',
 )
 parser.add_argument(
+    '-t', '--type',
+    required=False,
+    help='System configuration type: IFD_14_channels for if_distributor, ...',
+)
+parser.add_argument(
     'action',
-    choices=['start', 'stop'])
+    choices=['start', 'stop']
+)
+
 args = parser.parse_args()
 
-
+if args.type:
+    try:
+        systems = getattr(args.system, 'systems')
+    except AttributeError:
+        raise ArgumentTypeError(
+            ('System %s has no configurations other than the default one. '
+            % args.system.__name__.rsplit('.', 1)[1])
+            + "Omit the '--type' flag to start the simulator properly."
+        )
+    if args.type not in systems:
+        raise ArgumentTypeError(
+            'Configuration %s for system %s not found.'
+            % (args.type, args.system.__name__.rsplit('.', 1)[1])
+        )
+    args.system.system_type = args.type
 
 simulator = Simulator(args.system)
 if args.action == 'start':
