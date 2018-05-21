@@ -1,7 +1,11 @@
 #!/usr/bin/python
 import math
 import struct
+import importlib
+import inspect
+import os
 from datetime import datetime, timedelta
+from simulators.common import BaseSystem
 
 
 def checksum(msg):
@@ -440,6 +444,24 @@ def day_percentage(date=None):
         raise ValueError('Date parameter must be a datetime object.')
 
     return float(microseconds) / 86400000000
+
+
+def get_systems():
+    module = inspect.getmodule(inspect.stack()[1][0])
+    module_path = module.__file__.rsplit('/', 1)[0] + '/'
+    systems = {}
+    for f in os.listdir(os.path.dirname(module_path)):
+        if f[-3:] == '.py' and f != '__init__.py':
+            mod = importlib.import_module(
+                '%s.%s' % (module.__name__, f[:-3])
+            )
+            for _, obj in inspect.getmembers(mod):
+                if (inspect.isclass(obj)
+                        and obj is not BaseSystem
+                        and issubclass(obj, BaseSystem)
+                        and BaseSystem not in obj.__bases__):
+                    systems[mod.__name__.rsplit('.', 1)[1]] = mod
+    return systems
 
 
 if __name__ == '__main__':
