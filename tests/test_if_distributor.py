@@ -2,8 +2,15 @@ import unittest
 from simulators import if_distributor
 
 
+class TestIFDistributorUnknownType(unittest.TestCase):
 
-class TestIFDistributorParse(unittest.TestCase):
+    def test_unknown_type(self):
+        if_distributor.system_type = 'unknown'
+        with self.assertRaises(ValueError):
+            self.system = if_distributor.System()
+
+
+class TestIFDistributor14Channels(unittest.TestCase):
 
     def setUp(self):
         self.system = if_distributor.System()
