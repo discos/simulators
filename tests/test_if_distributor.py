@@ -2,15 +2,200 @@ import unittest
 from simulators import if_distributor
 
 
-class TestIFDistributorUnknownType(unittest.TestCase):
+class TestIFDistributorDefaultConfiguration(unittest.TestCase):
 
-    def test_unknown_type(self):
-        if_distributor.system_type = 'unknown'
+    @classmethod
+    def setUpClass(cls):
+        reload(if_distributor)
+
+    def setUp(self):
+        self.system = if_distributor.System()
+
+    def _send(self, message):
+        for byte in message[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(message[-1])
+        response = response.strip().split('\n')
+        if len(response) == 2:
+            response[1] = [int(v) for v in response[1].split(',')]
+            self.assertEqual(len(response[1]), 12)
+        return response
+
+    def test_known_headers(self):
+        for header in ['?', 'B', 'S', 'A', 'I']:
+            self.assertTrue(self.system.parse(header))
+            self.system.msg = b''
+
+    def test_unknown_header(self):
+        self.assertFalse(self.system.parse('U'))
+
+    def test_max_msg_length_reached(self):
+        message = b'? 0000000000000'
         with self.assertRaises(ValueError):
-            self.system = if_distributor.System()
+            self._send(message)
+
+    def test_message_too_short(self):
+        with self.assertRaises(ValueError):
+            self._send(b'? \n')
+
+    def test_too_few_arguments(self):
+        with self.assertRaises(ValueError):
+            self._send(b'????????\n')
+
+    def test_unrecognized_command(self):
+        with self.assertRaises(ValueError):
+            self._send(b'??? 0\n')
+
+    def test_wrong_args_type(self):
+        with self.assertRaises(ValueError):
+            self._send(b'? ONE\n')
+
+    def test_out_of_range_board(self):
+        with self.assertRaises(IndexError):
+            self.test_get_status(board=50)
+
+    def test_get_status(self, board=0):
+        message = b'? %d\n' % board
+
+        response = self._send(message)
+
+        self.assertEqual(len(response), 2)
+        self.assertEqual(response[0], 'ack')
+        self.assertEqual(response[1][0], board)
+
+        return response
+
+    def test_get_status_wrong_argc(self):
+        with self.assertRaises(ValueError):
+            self._send(b'? 0 0\n')
+
+    def test_set_lo(self, board=0, ref_freq=10, lo_freq=2300, lo_enable=1):
+        message = b'S %d %d %d %d\n' % (board, ref_freq, lo_freq, lo_enable)
+
+        response = self._send(message)
+        self.assertEqual(len(response), 1)
+        self.assertEqual(response[0], 'ack')
+
+        response = self.test_get_status(board=board)
+
+        self.assertEqual(response[1][0], board)
+        self.assertEqual(response[1][3], ref_freq)
+        self.assertEqual(response[1][4], lo_freq)
+        self.assertEqual(response[1][9], 8 * lo_enable)
+        self.assertEqual(response[1][10], 0)
+        self.assertEqual(response[1][11], lo_enable)
+
+    def test_set_lo_off(self):
+        self.test_set_lo(lo_enable=0)
+
+    def test_set_lo_wrong_board(self):
+        with self.assertRaises(IndexError):
+            self.test_set_lo(board=5)
+
+    def test_set_lo_wrong_argc(self):
+        with self.assertRaises(ValueError):
+            self._send(b'S 0\n')
+
+    def test_set_lo_wrong_enable(self):
+        with self.assertRaises(ValueError):
+            self._send(b'S 0 10 2300 5\n')
+
+    def test_set_lo_wrong_ref_freq(self):
+        with self.assertRaises(ValueError):
+            self._send(b'S 0 100 2300 1\n')
+
+    def test_set_bw(self, board=1, bandwidth=3):
+        message = b'B %d %d\n' % (board, bandwidth)
+
+        response = self._send(message)
+        self.assertEqual(len(response), 1)
+        self.assertEqual(response[0], 'ack')
+
+        response = self.test_get_status(board=board)
+
+        self.assertEqual(response[1][0], board)
+        self.assertEqual(response[1][9], 8 * bandwidth)
+
+    def test_set_bw_wrong_board(self):
+        with self.assertRaises(IndexError):
+            self.test_set_bw(board=5)
+
+    def test_set_bw_wrong_bandwidth(self):
+        with self.assertRaises(ValueError):
+            self.test_set_bw(bandwidth=4)
+
+    def test_set_bw_wrong_argc(self):
+        with self.assertRaises(ValueError):
+            self._send(b'B 1 3 0\n')
+
+    def test_set_att(self, board=5, channel=0, attenuation=25.5):
+        message = b'A %d %d %.2f\n' % (board, channel, attenuation)
+
+        response = self._send(message)
+        self.assertEqual(len(response), 1)
+        self.assertEqual(response[0], 'ack')
+
+        response = self.test_get_status(board=board)
+
+        expected_attenuation = int(attenuation / self.system.attenuation_step)
+
+        self.assertEqual(response[1][0], board)
+        self.assertEqual(response[1][5 + channel], expected_attenuation)
+
+    def test_set_att_out_of_range_board(self):
+        with self.assertRaises(IndexError):
+            self.test_set_att(board=1)
+
+    def test_set_att_out_of_range_channel(self):
+        with self.assertRaises(IndexError):
+            self.test_set_att(channel=10)
+
+    def test_set_att_out_of_range_attenuation(self):
+        with self.assertRaises(ValueError):
+            self.test_set_att(attenuation=50)
+
+    def test_set_att_wrong_argc(self):
+        with self.assertRaises(ValueError):
+            self._send('A 5 0\n')
+
+    def test_set_input(self, board=2, conversion=0):
+        message = b'I %d %d\n' % (board, conversion)
+
+        response = self._send(message)
+        self.assertEqual(len(response), 1)
+        self.assertEqual(response[0], 'ack')
+
+        response = self.test_get_status(board=board)
+
+        self.assertEqual(response[1][0], board)
+
+        received_input = bin(response[1][9])[2:].zfill(8)[-3:-1]
+        expected_input = bin(conversion + 1)[2:].zfill(2)
+
+        self.assertEqual(received_input, expected_input)
+
+    def test_set_input_no_conversion(self):
+        self.test_set_input(conversion=1)
+
+    def test_set_input_wrong_argc(self):
+        with self.assertRaises(ValueError):
+            self._send(b'I 2\n')
+
+    def test_set_input_out_of_range_board(self):
+        with self.assertRaises(IndexError):
+            self.test_set_input(board=0)
+
+    def test_set_input_wrong_conversion(self):
+        with self.assertRaises(ValueError):
+            self.test_set_input(conversion=2)
 
 
 class TestIFDistributor14Channels(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        reload(if_distributor)
+        if_distributor.system_type = 'IFD_14_channels'
 
     def setUp(self):
         self.system = if_distributor.System()
@@ -46,7 +231,7 @@ class TestIFDistributor14Channels(unittest.TestCase):
         msg = b'#aaa 99 999\n'  # aaa is not a valid command type
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
-        with self.assertRaisesRegexp(ValueError, 'command aaa not in'):
+        with self.assertRaisesRegexp(ValueError, 'Command aaa not in'):
             self.system.parse(msg[-1])
 
     def test_setup_channel_not_integer(self):
@@ -55,7 +240,7 @@ class TestIFDistributor14Channels(unittest.TestCase):
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         with self.assertRaisesRegexp(
-                ValueError, 'the channel ID must be an integer'):
+                ValueError, 'The channel ID must be an integer'):
             self.system.parse(msg[-1])
 
     def test_setup_channel_not_allowed(self):
@@ -63,7 +248,7 @@ class TestIFDistributor14Channels(unittest.TestCase):
         msg = b'#ATT 99 999\n'  # The ID 99 does not exist
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
-        with self.assertRaisesRegexp(ValueError, 'channel 99 does not exist'):
+        with self.assertRaisesRegexp(ValueError, 'Channel 99 does not exist'):
             self.system.parse(msg[-1])
 
     def test_setup_value_not_integer(self):
@@ -72,7 +257,7 @@ class TestIFDistributor14Channels(unittest.TestCase):
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         with self.assertRaisesRegexp(
-                ValueError, 'the command value must be an integer'):
+                ValueError, 'The command value must be an integer'):
             self.system.parse(msg[-1])
 
     def test_setup_value_not_allowed(self):
@@ -80,7 +265,7 @@ class TestIFDistributor14Channels(unittest.TestCase):
         msg = b'#ATT 00 999\n'  # The value 999, for the ATT 00, does not exist
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
-        with self.assertRaisesRegexp(ValueError, 'value 999 not allowed'):
+        with self.assertRaisesRegexp(ValueError, 'Value 999 not allowed'):
             self.system.parse(msg[-1])
 
     def test_setup_sets_the_value(self):
@@ -109,7 +294,7 @@ class TestIFDistributor14Channels(unittest.TestCase):
         msg = b'#aaa 00?\n'  # aaa is not a valid command type
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
-        with self.assertRaisesRegexp(ValueError, 'command aaa not in'):
+        with self.assertRaisesRegexp(ValueError, 'Command aaa not in'):
             self.system.parse(msg[-1])
 
     def test_get_channel_not_integer(self):
@@ -118,7 +303,7 @@ class TestIFDistributor14Channels(unittest.TestCase):
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         with self.assertRaisesRegexp(
-                ValueError, 'the channel ID must be an integer'):
+                ValueError, 'The channel ID must be an integer'):
             self.system.parse(msg[-1])
 
     def test_get_channel_not_allowed(self):
@@ -126,7 +311,7 @@ class TestIFDistributor14Channels(unittest.TestCase):
         msg = b'#ATT 99?\n'  # The ID 99 does not exist
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
-        with self.assertRaisesRegexp(ValueError, 'channel 99 does not exist'):
+        with self.assertRaisesRegexp(ValueError, 'Channel 99 does not exist'):
             self.system.parse(msg[-1])
 
     def test_set_and_get_value(self):
@@ -215,6 +400,18 @@ class TestIFDistributor14Channels(unittest.TestCase):
         with self.assertRaisesRegexp(
             ValueError, 'SWT command accepts only values 00 or 01'):
             self.system.parse(msg[-1])
+
+
+class TestIFDistributorUnknownType(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        reload(if_distributor)
+        if_distributor.system_type = 'unknown'
+
+    def test_unknown_type(self):
+        with self.assertRaises(ValueError):
+            self.system = if_distributor.System()
 
 
 if __name__ == '__main__':
