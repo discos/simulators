@@ -19,7 +19,6 @@ class System(ListeningSystem):
     version = b'SRT IF Distributor Simulator 1.0'
 
     def __init__(self):
-        self.ciao = 'ciao'
         self.msg = b''
         self._set_default()
 
@@ -42,8 +41,8 @@ class System(ListeningSystem):
             if byte != self.tail:
                 self.msg = b''
                 raise ValueError(
-                    'message too long: max length should be %d.' %
-                    self.max_msg_length
+                    'Message too long: max length should be %d.'
+                    % self.max_msg_length
                 )
 
         msg = self.msg[1:-1]  # Remove the header and tail
@@ -56,33 +55,33 @@ class System(ListeningSystem):
                 command, channel, value = msg.split()
             except ValueError:
                 raise ValueError(
-                    'the setup message must have three items: '
+                    'The setup message must have three items: '
                     'command, channel, and value.'
                 )
 
             if command not in self.allowed_commands:
                 raise ValueError(
-                    'command %s not in %s'
+                    'Command %s not in %s'
                     % (command, self.allowed_commands)
                 )
 
             try:
                 channel = int(channel)
             except ValueError:
-                raise ValueError('the channel ID must be an integer.')
+                raise ValueError('The channel ID must be an integer.')
 
             if channel >= self.max_channels or channel < 0:
                 raise ValueError(
-                    'channel %d does not exist.' % channel)
+                    'Channel %d does not exist.' % channel)
 
             try:
                 value = int(value)
             except ValueError:
-                raise ValueError('the command value must be an integer.')
+                raise ValueError('The command value must be an integer.')
 
             if command == 'ATT':
                 if value < 0 or value >= self.max_att_multiplier:
-                    raise ValueError('value %d not allowed' % value)
+                    raise ValueError('Value %d not allowed' % value)
                 else:
                     self.channels[channel] = value
             elif command == 'SWT':
@@ -100,18 +99,18 @@ class System(ListeningSystem):
                 command, channel = msg.split()
             except ValueError:
                 raise ValueError(
-                    'the get message must have two items: '
+                    'The get message must have two items: '
                     'command and channel.'
                 )
 
             try:
                 channel = int(channel)
             except ValueError:
-                raise ValueError('the channel ID must be an integer.')
+                raise ValueError('The channel ID must be an integer.')
 
             if channel >= self.max_channels or channel < 0:
                 raise ValueError(
-                    'channel %d does not exist.' % channel)
+                    'Channel %d does not exist.' % channel)
             else:
                 if command == 'ATT':
                     return b'#%s\n' % str(
@@ -120,7 +119,7 @@ class System(ListeningSystem):
                     return b'#%s\n' % (1 if self.switched else 0)
                 else:
                     raise ValueError(
-                        'command %s not in %s'
+                        'Command %s not in %s'
                         % (command, self.allowed_commands))
         elif msg == b'*IDN?':  # IDN request
             return self.version

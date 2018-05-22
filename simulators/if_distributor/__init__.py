@@ -9,7 +9,7 @@ from simulators import utils
 servers = [(('127.0.0.1', 12000), (), ())]
 
 systems = utils.get_systems()
-default_system_type = 'IFD_14_channels'
+default_system_type = 'IFD'
 system_type = default_system_type
 
 
