@@ -6,8 +6,8 @@ class System(ListeningSystem):
     tail = b'\n'
     ref_freq = 10
     ol_freq = 2300
+    max_attenuation = 31.5
     max_msg_length = 15  # b'S 0 100 2300 1\n'
-    attenuation_step = 0.125
 
     ack = b'ack\n'
     nak = b'nak\n'
@@ -45,15 +45,23 @@ class System(ListeningSystem):
             255,
             255,
             0,
-            0,
+            1,
             0
         ]
+
+        if pcb_type in range(2):
+            board_status[3] = board_status[4] = 65535
+            board_status[10] = board_status[11] = -1
 
         if pcb_type == 1:
             board_status[9] = int('00000010', 2)
 
         if pcb_type in range(2, 6):
             board_status[4] = self.ol_freq
+            board_status[10] = 1
+
+        if pcb_type == 5:
+            board_status[5:9] = 4 * [63]
 
         return board_status
 
@@ -92,7 +100,7 @@ class System(ListeningSystem):
 
         cmd = self.commands.get(args[0])
         if not cmd:
-            raise ValueError('Unrecognized command: %s' % args[0])
+            return self.nak
         cmd = getattr(self, cmd)
 
         args = args[1:]
@@ -107,7 +115,7 @@ class System(ListeningSystem):
         except ValueError:
             raise ValueError(
                 'Wrong argument format. '
-                + 'Use only integers or floating point numbers'
+                + 'Use only integers or floating point numbers.'
             )
 
         if params[0] not in range(len(self.boards)):
@@ -141,9 +149,7 @@ class System(ListeningSystem):
         status = self.boards[params[0]]
 
         if status[2] not in [0, 1]:
-            raise IndexError(
-                'Wrong board slot for command `B`.'
-            )
+            return self.nak
 
         sr = bin(status[9])[2:].zfill(8)
         status[9] = int(
@@ -171,9 +177,7 @@ class System(ListeningSystem):
         status = self.boards[params[0]]
 
         if status[2] != 2:
-            raise IndexError(
-                'Wrong board slot for command `S`.'
-            )
+            return self.nak
 
         status[3] = params[1]
         status[4] = params[2]
@@ -186,6 +190,7 @@ class System(ListeningSystem):
             ),
             2
         )
+        status[10] = params[3] ^ 1
         status[11] = params[3]
         self.boards[params[0]] = status
         return self.ack
@@ -197,20 +202,15 @@ class System(ListeningSystem):
             raise IndexError(
                 'Wrong channel number for command `A`. Please, use [0:3].'
             )
-        if params[2] < 0 or params[2] > 31.5:
-            raise ValueError(
-                'Wrong attenuation value for command `A`. '
-                + 'Please, use values between 0 and 31.5 dB'
-            )
+        if params[2] < 0 or params[2] > self.max_attenuation:
+            return self.nak
 
         status = self.boards[params[0]]
 
         if status[2] != 5:
-            raise IndexError(
-                'Wrong board slot for command `A`. Please, use [5:20].'
-            )
+            return self.nak
 
-        status[5 + params[1]] = int(params[2] / self.attenuation_step)
+        status[5 + params[1]] = int(params[2] * 2)
         self.boards[params[0]] = status
         return self.ack
 
@@ -225,9 +225,7 @@ class System(ListeningSystem):
         status = self.boards[params[0]]
 
         if status[2] != 1:
-            raise IndexError(
-                'Wrong board slot for command `I`.'
-            )
+            return self.nak
 
         sr = bin(status[9])[2:].zfill(8)
         status[9] = int(
