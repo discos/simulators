@@ -19,6 +19,8 @@ class TestIFDistributorDefaultConfiguration(unittest.TestCase):
         if len(response) == 2:
             response[1] = [int(v) for v in response[1].split(',')]
             self.assertEqual(len(response[1]), 12)
+        if response[0] == 'nak':
+            raise Exception('Received nak')
         return response
 
     def test_known_headers(self):
@@ -43,7 +45,7 @@ class TestIFDistributorDefaultConfiguration(unittest.TestCase):
             self._send(b'????????\n')
 
     def test_unrecognized_command(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegexp(Exception, 'Received nak'):
             self._send(b'??? 0\n')
 
     def test_wrong_args_type(self):
@@ -82,14 +84,14 @@ class TestIFDistributorDefaultConfiguration(unittest.TestCase):
         self.assertEqual(response[1][3], ref_freq)
         self.assertEqual(response[1][4], lo_freq)
         self.assertEqual(response[1][9], 8 * lo_enable)
-        self.assertEqual(response[1][10], 0)
+        self.assertEqual(response[1][10], lo_enable ^ 1)
         self.assertEqual(response[1][11], lo_enable)
 
     def test_set_lo_off(self):
         self.test_set_lo(lo_enable=0)
 
     def test_set_lo_wrong_board(self):
-        with self.assertRaises(IndexError):
+        with self.assertRaisesRegexp(Exception, 'Received nak'):
             self.test_set_lo(board=5)
 
     def test_set_lo_wrong_argc(self):
@@ -117,7 +119,7 @@ class TestIFDistributorDefaultConfiguration(unittest.TestCase):
         self.assertEqual(response[1][9], 8 * bandwidth)
 
     def test_set_bw_wrong_board(self):
-        with self.assertRaises(IndexError):
+        with self.assertRaisesRegexp(Exception, 'Received nak'):
             self.test_set_bw(board=5)
 
     def test_set_bw_wrong_bandwidth(self):
@@ -137,13 +139,11 @@ class TestIFDistributorDefaultConfiguration(unittest.TestCase):
 
         response = self.test_get_status(board=board)
 
-        expected_attenuation = int(attenuation / self.system.attenuation_step)
-
         self.assertEqual(response[1][0], board)
-        self.assertEqual(response[1][5 + channel], expected_attenuation)
+        self.assertEqual(response[1][5 + channel], int(attenuation * 2))
 
     def test_set_att_out_of_range_board(self):
-        with self.assertRaises(IndexError):
+        with self.assertRaisesRegexp(Exception, 'Received nak'):
             self.test_set_att(board=1)
 
     def test_set_att_out_of_range_channel(self):
@@ -151,7 +151,7 @@ class TestIFDistributorDefaultConfiguration(unittest.TestCase):
             self.test_set_att(channel=10)
 
     def test_set_att_out_of_range_attenuation(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegexp(Exception, 'Received nak'):
             self.test_set_att(attenuation=50)
 
     def test_set_att_wrong_argc(self):
@@ -182,7 +182,7 @@ class TestIFDistributorDefaultConfiguration(unittest.TestCase):
             self._send(b'I 2\n')
 
     def test_set_input_out_of_range_board(self):
-        with self.assertRaises(IndexError):
+        with self.assertRaisesRegexp(Exception, 'Received nak'):
             self.test_set_input(board=0)
 
     def test_set_input_wrong_conversion(self):
