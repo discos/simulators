@@ -147,10 +147,12 @@ If you want to see an example, have a look at
 
 The ``System`` class
 --------------------
-The ``System`` class must inherit from one of the classes defined in
-:download:`common.py <../simulators/common.py>`,
-it can be inherited from ``server.ListeningSystem``
-or ``server.SendingSystem``, or from both simultaneously.
+The ``System`` class must inherit from ``ListeningSystem``
+or ``SendingSystem``, which are defined in
+:download:`common.py <../simulators/common.py>` and both
+inherits from the ``BaseSystem`` class, also defined in ``common.py``.
+A more complex ``System`` class can inherit from both ``ListeningSystem``
+and ``SendingSystem``, behaving simultaneously as the two of them.
 
 The ``ListeningSystem`` class and the ``System.parse()`` method
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -271,6 +273,32 @@ its ``servers`` list in defined in the following way::
     for line in range(96):  # 96 servers
         l_address = ('127.0.0.1', 11000 + line)
         servers.append((l_address, (), ()))  # No sending servers or extra args
+
+
+The ``ConfigurableSystem`` class
+--------------------------------
+
+A system can have multiple configurations. For instance, we have multiple
+IF distributor systems, a simpler one, called ``IFD``, and a more complex one,
+called ``IFD_14_channels``. Both of them inherits from the ``ListeningSystem``
+class, and uses the same server configuration. Instead of writing two
+different systems, along with two different server configurations, we
+created a generic IF distributor system, by means of the ``ConfigurableSystem``
+class. This class, defined in
+:download:`common.py <../simulators/common.py>` acts as a ``class factory``,
+meaning that given a ``system_type`` parameter, that must be defined in the
+module ``__init__`` file, the class gets instanced with the type defined by the
+``system_type`` parameter. For instance, the default configuration for the
+IF distributor is the ``IFD`` one. So, creating an object calling
+``if_distributor.System()`` will actually instance a ``if_distributor.IFD.System()``
+object. If you want to create a ``if_distributor.IFD_14_channels.System()``
+object, you have to modify the ``system_type`` parameter after importing the
+``if_distributor`` module and before calling ``if_distributor.System()``.
+If an unknown configuration is given, the ``ConfigurableSystem`` class
+``__new__`` method will raise a ``ValueError``. To check if a configuration
+is known, the ``__new__`` method of the ``ConfigurableSystem`` class, will
+check for every ``System`` class present in all files of the selected system
+package.
 
 
 Custom commands

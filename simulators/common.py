@@ -35,3 +35,20 @@ class SendingSystem(BaseSystem):
         its client(s). The message is sent periodically and the system
         must have an attribute called 'sampling_rate'. Make sure that
         the method is implemented thread safely."""
+
+
+class ConfigurableSystem(object):
+
+    def __new__(cls, *args):
+        """This class acts as a 'class factory', it means that given the
+        attributes `cls.system_type` and `cls.systems` (that must be
+        present in inherited classes), creating an instance of
+        `ConfigurableSystem` (or some other class that inherits from this one)
+        will actually create an object of `cls.system_type` type if it's
+        found in the `cls.systems` list. This class is useful when we have
+        more than one configuration for the same system."""
+
+        if cls.system_type not in cls.systems:
+            raise ValueError('Configuration %s not found.' % cls.system_type)
+
+        return cls.systems[cls.system_type].System(*args)
