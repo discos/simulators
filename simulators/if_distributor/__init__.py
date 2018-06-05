@@ -1,4 +1,5 @@
 from simulators import utils
+from simulators.common import ConfigurableSystem
 
 # Each system module (like active_surface.py, acu.py, etc.) has to
 # define a list called servers.s This list contains tuples
@@ -13,13 +14,9 @@ default_system_type = 'IFD'
 system_type = default_system_type
 
 
-class System(object):
+class System(ConfigurableSystem):
 
     def __new__(cls, *args):
-        if system_type not in systems:
-            raise ValueError(
-                'Configuration %s for system if_distributor not found.'
-                % system_type
-            )
-
-        return systems[system_type].System(*args)
+        cls.systems = systems
+        cls.system_type = system_type
+        return ConfigurableSystem.__new__(cls, *args)

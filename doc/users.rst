@@ -35,5 +35,16 @@ To stop the simulator:
 
    $ discos-simulator stop -s active_surface
 
-Currently only two simulators are available: ``active_surface`` and
-``if_distributor``.
+To run a specific configuration for some of the simulators:
+
+.. code-block:: bash
+
+    $ discos-simulator --system if_distributor --type IFD start
+
+The ``--type`` flag, or its shortcut ``-t``, will let you specify a
+configuration for the desired simulator. Not all simulators have multiple
+configurations. Providing an unknown configuration will prevent the system
+from starting and the operation will fail.
+
+Currently available simulators are: ``active_surface``, ``acu`` and
+``if_distributor`` with configurations ``IFD`` and ``IFD_14_channels``.
