@@ -143,8 +143,8 @@ class System(ListeningSystem, SendingSystem):
                 commands_string = commands_string[26:]
             elif current_id == 4:
                 try:
-                    sequence_length = utils.bytes_to_uint(commands_string[16:18])
-                    command_length = 42 + (sequence_length * 20)
+                    sequence_len = utils.bytes_to_uint(commands_string[16:18])
+                    command_length = 42 + (sequence_len * 20)
                     command = commands_string[:command_length]
                     commands_string = commands_string[command_length:]
                 except ValueError:
