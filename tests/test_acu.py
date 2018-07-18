@@ -1620,15 +1620,8 @@ class TestACU(unittest.TestCase):
             + command_string[34:]
         )
 
-        self._send(command_string)
-
-        command_counter = command.get_counter(0)
-        pcs = self.system.PS.pcs
-
-        # Make sure that command has been received but not executed
-        self.assertEqual(pcs.counter, command_counter)
-        self.assertEqual(pcs.command, 61)
-        self.assertEqual(pcs.answer, 5)
+        with self.assertRaises(ValueError):
+            self._send(command_string)
 
     def test_program_track_execution(self):
         self.test_program_track_command_load_new_table()

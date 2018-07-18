@@ -139,7 +139,6 @@ class ProgramTrackCommand(object):
             + utils.real_to_bytes(self.azimuth_rate, 2)
             + utils.real_to_bytes(self.elevation_rate, 2)
             + sequence_bytes
-            + end_flag
         )
 
 

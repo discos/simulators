@@ -142,9 +142,13 @@ class System(ListeningSystem, SendingSystem):
                 command = commands_string[:26]
                 commands_string = commands_string[26:]
             elif current_id == 4:
-                command_ending = commands_string.find(end_flag)
-                command = commands_string[:command_ending]
-                commands_string = commands_string[command_ending + 4:]
+                try:
+                    sequence_len = utils.bytes_to_uint(commands_string[16:18])
+                    command_length = 42 + (sequence_len * 20)
+                    command = commands_string[:command_length]
+                    commands_string = commands_string[command_length:]
+                except ValueError:
+                    raise ValueError('Malformed message.')
             else:
                 raise ValueError('Unknown command.')
 
