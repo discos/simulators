@@ -1,10 +1,16 @@
 import time
 from Queue import Queue
+from threading import Thread
 
 
 class USD(object):
     """This class represents a single USD actuator driver. It is completely
-    handled by the active surface System class."""
+    handled by the active surface System class.
+
+    :param driver_reset_delay: this argument represents the time in which the
+        driver performs its reset procedure. It defaults to 0 to speed up the
+        testing process.
+    """
 
     standby_delay_step = 0.004096  # 4096 microseconds
 
@@ -38,10 +44,7 @@ class USD(object):
     }
 
     def __init__(self, driver_reset_delay=0):
-        #: param driver_reset_delay: this argument represents the time in which
-        #: the driver performs its reset procedure. It defaults to 0 to speed
-        #: up the testing process.
-        self.driver_reset_delay = driver_reset_delay  # Real delay: 100ms
+        self.driver_reset_delay = driver_reset_delay  # Actual delay: 100ms
         self._set_default()
 
     def _set_default(self):
@@ -84,7 +87,10 @@ class USD(object):
         self.resolution = self.resolutions.get(0)
         self.velocity = 0
         self.baud_rate = self.baud_rates.get(0)
-        self.stop = True
+        self.stop = False
+        self.running = False
+        self.move_thread = None
+        self.move_to_thread = None
 
         elapsed_time = time.time() - t0
 
@@ -94,10 +100,32 @@ class USD(object):
         self._set_default()
 
     def soft_trigger(self):
-        if self.ready is True and self.running is False:
-            self._move_to(self.position_queue.get())
+        if self.ready is True:
+            if self.move_to_thread:
+                self.running = False
+                time.sleep(0.01)
+                self.move_to_thread.join()
+                self.move_to_thread = None
+            next_position = self.position_queue.get()
+            self.running = True
+            self.move_to_thread = Thread(
+                target=self._move_to,
+                args=(next_position,)
+            )
+            self.move_to_thread.daemon = True
+            self.move_to_thread.start()
             if self.position_queue.empty() is True:
                 self.ready = False
+
+    def soft_stop(self):
+        t = Thread(target=self._soft_stop)
+        t.daemon = True
+        t.start()
+
+    def _soft_stop(self):
+        self.stop = True
+        time.sleep(0.025)
+        self.stop = False
 
     def get_status(self):
         par0 = 0x00  # Reserved for future use
@@ -199,36 +227,62 @@ class USD(object):
         self.position_queue = Queue()
 
     def set_absolute_position(self, position):
+        cmd_position = self.reference_position + position
         if self.delayed_execution is True:
-            self.position_queue.put(self.reference_position + position)
+            self.position_queue.put(cmd_position)
             self.ready = True
         else:
-            self._move_to(self.reference_position + position)
+            t = Thread(target=self._position, args=(cmd_position,))
+            t.daemon = True
+            t.start()
 
     def set_relative_position(self, position):
+        cmd_position = self.current_position + position
         if self.delayed_execution is True:
-            self.position_queue.put(self.current_position + position)
+            self.position_queue.put(cmd_position)
             self.ready = True
         else:
-            self._move_to(self.current_position + position)
+            t = Thread(target=self._position, args=(cmd_position,))
+            t.daemon = True
+            t.start()
 
     def rotate(self, sign):
         if self.running:
             # Failed command, return False so the parser can return a byte_nak
             return False
         else:
-            # The following 3 lines should run in a separate thread
-            self._accel_ramp(sign)
-            self._move(sign * self.max_frequency)
-            self._decel_ramp(sign)
+            t = Thread(target=self._rotate, args=(sign,))
+            t.daemon = True
+            t.start()
             return True
+
+    def _rotate(self, sign):
+        self.running = True
+        if not self.stop:
+            self._accel_ramp(sign)
+        if not self.stop:
+            cmd_position = 2147483647
+            if sign < 0:
+                cmd_position += 1
+            self._move_to(sign * cmd_position)
+        self.running = False
 
     def set_velocity(self, velocity):
         # Start rotating with given velocity without an acceleration ramp
         self.velocity = velocity
 
         if velocity != 0:
-            self._move(velocity)
+            self.running = True
+            if not self.move_thread:
+                self.move_thread = Thread(target=self._move)
+                self.move_thread.daemon = True
+                self.move_thread.start()
+        else:
+            self.running = False
+            if self.move_thread:
+                self.move_thread.join()
+                self.move_thread = None
+            self._go_standby()
 
     def set_stop_io(self, param):
         binary_string = bin(param)[2:].zfill(8)
@@ -313,47 +367,57 @@ class USD(object):
         #     self.current_position += delta * sign
         pass
 
-    def _decel_ramp(self, sign):
-        # Should gradually decelerate from max_frequency to min_frequency to 0
-        # Not yet implemented
-        # while False:
-        #     delta = 0
-        #     self.current_position += delta * sign
-        pass
-
-    def _move_to(self, new_position):
-        # Should be launched in a separate thread
-        # ((freq / resolution) / 200) * 60 = RPM
-
+    def _position(self, cmd_position):
         self.running = True
-        sign = -1 if new_position < self.current_position else +1
-        self._accel_ramp(sign)
+        sign = -1 if cmd_position < self.current_position else +1
 
-        while self.current_position != new_position:
-            if self.stop is False:
-                # Immediate positioning, should be done gradually
-                # i.e.:
-                # delta = sign * ...
-                # self.current_position += delta
-                self.current_position = new_position
-            else:
-                # Stop received, execute the deceleration ramp immediately
+        if not self.stop:
+            self._accel_ramp(sign)
+        if not self.stop:
+            self._move_to(cmd_position)
+        if not self.stop:
+            self._go_standby()
+        self.running = False
+
+    def _move_to(self, cmd_position):
+        sign0 = -1 if cmd_position < self.current_position else +1
+        t0 = time.time()
+        while not self.stop and self.running:
+            t1 = time.time()
+            elapsed = t1 - t0
+            t0 = t1
+            new_position = self.current_position + int(round(
+                (self.max_frequency / self.resolution) * elapsed
+            ))
+            sign1 = -1 if cmd_position < new_position else +1
+            if sign0 != sign1:
+                self.current_position = cmd_position
+                self.running = False
                 break
+            else:
+                self.current_position = new_position
+            time.sleep(0.005)
 
-        self._decel_ramp(sign)
-        self.stop = False
-        self.running = False
-        self._go_standby()
-
-    def _move(self, frequency):
-        self.running = True
-
-        while self.stop is False or self.velocity != 0:
-            frequency = frequency  # Placeholder to avoid linter errors
-            break  # Not yet implemented
-
-        self.running = False
-        self._go_standby()
+    def _move(self):
+        t0 = time.time()
+        while not self.stop and self.running:
+            t1 = time.time()
+            elapsed = t1 - t0
+            t0 = t1
+            new_position = self.current_position + int(round(
+                (self.velocity / self.resolution) * elapsed
+            ))
+            if new_position <= -2147483648:
+                self.current_position = -2147483648
+                self.running = False
+                break
+            elif new_position >= 2147483647:
+                self.current_position = 2147483647
+                self.running = False
+                break
+            else:
+                self.current_position = new_position
+            time.sleep(0.005)
 
     def _go_standby(self):
         time.sleep(self.standby_delay_multiplier * self.standby_delay_step)
