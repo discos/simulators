@@ -4,8 +4,8 @@ except ImportError:
     from distutils.core import setup, find_packages
 
 additional_packages = [
-    'numpy',
-    'scipy',
+    'numpy==1.14.3',
+    'scipy==1.1.0rc1',
 ]
 
 extras = {
