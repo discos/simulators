@@ -1,15 +1,805 @@
 import unittest
-from simulators import active_surface, utils
-
+import time
+from simulators.active_surface import command_library, System
+from simulators import utils
 
 byte_ack = '\x06'
 byte_nak = '\x15'
 
 
+class TestCommandLibrary(unittest.TestCase):
+
+    @staticmethod
+    def _compose(command, usd_index=None, address_on_response=True):
+        if usd_index is None:
+            cmd = '\x00'
+            cmd += utils.int_to_bytes(
+                val=len(command),
+                n_bytes=1
+            )
+        else:
+            length = bin(len(command))[2:].zfill(3)
+            address = bin(usd_index)[2:].zfill(5)
+            cmd = utils.int_to_bytes(
+                val=utils.twos_to_int(length + address),
+                n_bytes=1
+            )
+
+        if address_on_response:
+            cmd = b'\xFC' + cmd
+        else:
+            cmd = b'\xFA' + cmd
+
+        cmd += command
+        cmd += utils.checksum(cmd)
+        return cmd
+
+    def test_out_of_range_usd_index(self):
+        with self.assertRaises(IndexError):
+            command_library.soft_reset(usd_index=100)
+
+    def test_wrong_usd_index_type(self):
+        with self.assertRaises(TypeError):
+            command_library.soft_reset(usd_index='foo')
+
+    def test_soft_reset(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                cmd = command_library.soft_reset(
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                expected_cmd = self._compose(
+                    '\x01',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.soft_reset(
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+                '\x01',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_soft_trigger(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                cmd = command_library.soft_trigger(
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                expected_cmd = self._compose(
+                    '\x02',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.soft_trigger(
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+                '\x02',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_get_version(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                cmd = command_library.get_version(
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                expected_cmd = self._compose(
+                    '\x10',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.get_version(
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+                '\x10',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_soft_stop(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                cmd = command_library.soft_stop(
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                expected_cmd = self._compose(
+                    '\x11',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.soft_stop(
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+                '\x11',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_get_position(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                cmd = command_library.get_position(
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                expected_cmd = self._compose(
+                    '\x12',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.get_position(
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+                '\x12',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_get_status(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                cmd = command_library.get_status(
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                expected_cmd = self._compose(
+                    '\x13',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.get_status(
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+                '\x13',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_driver_type(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                cmd = command_library.get_driver_type(
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                expected_cmd = self._compose(
+                    '\x14',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.get_driver_type(
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+                '\x14',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_set_min_frequency(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                cmd = command_library.set_min_frequency(
+                    frequency=20,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                expected_cmd = self._compose(
+                    '\x20\x00\x14',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.set_min_frequency(
+                frequency=20,
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+               '\x20\x00\x14',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_wrong_set_min_frequency(self):
+        with self.assertRaises(TypeError):
+            command_library.set_min_frequency(frequency='foo')
+
+    def test_set_max_frequency(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                cmd = command_library.set_max_frequency(
+                    frequency=10000,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                expected_cmd = self._compose(
+                    '\x21\x27\x10',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.set_max_frequency(
+                frequency=10000,
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+               '\x21\x27\x10',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_wrong_set_max_frequency(self):
+        with self.assertRaises(TypeError):
+            command_library.set_max_frequency(frequency='foo')
+
+    def test_set_slope_multiplier(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                cmd = command_library.set_slope_multiplier(
+                    multiplier=0,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                expected_cmd = self._compose(
+                    '\x22\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.set_slope_multiplier(
+                multiplier=0,
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+               '\x22\x00',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_wrong_set_slope_multiplier(self):
+        with self.assertRaises(TypeError):
+            command_library.set_slope_multiplier(multiplier='foo')
+
+    def test_set_reference_position(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                cmd = command_library.set_reference_position(
+                    position=0,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                expected_cmd = self._compose(
+                    '\x23\x00\x00\x00\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.set_reference_position(
+                position=0,
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+               '\x23\x00\x00\x00\x00',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_wrong_set_reference_position(self):
+        with self.assertRaises(TypeError):
+            command_library.set_reference_position(position='foo')
+
+    def test_set_out_of_range_reference_position(self):
+        with self.assertRaises(ValueError):
+            command_library.set_reference_position(position=10000000000)
+
+    def test_set_io_pins(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                expected_cmd = self._compose(
+                    '\x25\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                cmd = command_library.set_io_pins(
+                    byte_value=0,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+                cmd = command_library.set_io_pins(
+                    byte_value='\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.set_io_pins(
+                byte_value=0,
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+               '\x25\x00',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_wrong_set_io_pins(self):
+        with self.assertRaises(TypeError):
+            command_library.set_io_pins(byte_value='foo')
+
+    def test_set_resolution(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                expected_cmd = self._compose(
+                    '\x26\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                cmd = command_library.set_resolution(
+                    resolution=0,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+                cmd = command_library.set_resolution(
+                    resolution='\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.set_resolution(
+                resolution=0,
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+               '\x26\x00',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_wrong_set_resolution(self):
+        with self.assertRaises(TypeError):
+            command_library.set_resolution(resolution='foo')
+
+    def test_reduce_current(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                expected_cmd = self._compose(
+                    '\x27\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                cmd = command_library.reduce_current(
+                    byte_value=0,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+                cmd = command_library.reduce_current(
+                    byte_value='\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.reduce_current(
+                byte_value=0,
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+               '\x27\x00',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_wrong_reduce_current(self):
+        with self.assertRaises(TypeError):
+            command_library.reduce_current(byte_value='foo')
+
+    def test_set_response_delay(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                cmd = command_library.set_response_delay(
+                    delay=0,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                expected_cmd = self._compose(
+                    '\x28\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.set_response_delay(
+                delay=0,
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+               '\x28\x00',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_wrong_set_response_delay(self):
+        with self.assertRaises(TypeError):
+            command_library.set_response_delay(delay='foo')
+
+    def test_toggle_delayed_execution(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                expected_cmd = self._compose(
+                    '\x29\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                cmd = command_library.toggle_delayed_execution(
+                    byte_value=0,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+                cmd = command_library.toggle_delayed_execution(
+                    byte_value='\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.toggle_delayed_execution(
+                byte_value=0,
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+               '\x29\x00',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_wrong_toggle_delayed_execution(self):
+        with self.assertRaises(TypeError):
+            command_library.toggle_delayed_execution(byte_value='foo')
+
+    def test_set_absolute_position(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                cmd = command_library.set_absolute_position(
+                    position=0,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                expected_cmd = self._compose(
+                    '\x30\x00\x00\x00\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.set_absolute_position(
+                position=0,
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+               '\x30\x00\x00\x00\x00',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_wrong_set_absolute_position(self):
+        with self.assertRaises(TypeError):
+            command_library.set_absolute_position(position='foo')
+
+    def test_set_out_of_range_absolute_position(self):
+        with self.assertRaises(ValueError):
+            command_library.set_absolute_position(position=10000000000)
+
+    def test_set_relative_position(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                cmd = command_library.set_relative_position(
+                    position=0,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                expected_cmd = self._compose(
+                    '\x31\x00\x00\x00\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.set_relative_position(
+                position=0,
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+               '\x31\x00\x00\x00\x00',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_wrong_set_relative_position(self):
+        with self.assertRaises(TypeError):
+            command_library.set_relative_position(position='foo')
+
+    def test_set_out_of_range_relative_position(self):
+        with self.assertRaises(ValueError):
+            command_library.set_relative_position(position=10000000000)
+
+    def test_rotate(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                cmd = command_library.rotate(
+                    direction=1,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                expected_cmd = self._compose(
+                    '\x32\x01',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.rotate(
+                direction=1,
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+               '\x32\x01',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_wrong_rotate(self):
+        with self.assertRaises(TypeError):
+            command_library.rotate(direction='foo')
+
+    def test_set_velocity(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                cmd = command_library.set_velocity(
+                    velocity=0,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                expected_cmd = self._compose(
+                    '\x35\x00\x00\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.set_velocity(
+                velocity=0,
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+               '\x35\x00\x00\x00',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_wrong_set_velocity(self):
+        with self.assertRaises(TypeError):
+            command_library.set_velocity(velocity='foo')
+
+    def test_set_stop_io(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                expected_cmd = self._compose(
+                    '\x2A\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                cmd = command_library.set_stop_io(
+                    byte_value=0,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+                cmd = command_library.set_stop_io(
+                    byte_value='\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.set_stop_io(
+                byte_value=0,
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+               '\x2A\x00',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_wrong_set_stop_io(self):
+        with self.assertRaises(TypeError):
+            command_library.set_stop_io(byte_value='foo')
+
+    def test_set_positioning_io(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                expected_cmd = self._compose(
+                    '\x2B\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                cmd = command_library.set_positioning_io(
+                    byte_value=0,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+                cmd = command_library.set_positioning_io(
+                    byte_value='\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.set_positioning_io(
+                byte_value=0,
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+               '\x2B\x00',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_wrong_set_positioning_io(self):
+        with self.assertRaises(TypeError):
+            command_library.set_positioning_io(byte_value='foo')
+
+    def test_set_home_io(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                expected_cmd = self._compose(
+                    '\x2C\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                cmd = command_library.set_home_io(
+                    byte_value=0,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+                cmd = command_library.set_home_io(
+                    byte_value='\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.set_home_io(
+                byte_value=0,
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+               '\x2C\x00',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_wrong_set_home_io(self):
+        with self.assertRaises(TypeError):
+            command_library.set_home_io(byte_value='foo')
+
+    def test_set_working_mode(self):
+        for address_on_response in [True, False]:
+            for i in range(32):
+                expected_cmd = self._compose(
+                    '\x2D\x00\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                cmd = command_library.set_working_mode(
+                    byte_value=0,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+                cmd = command_library.set_working_mode(
+                    byte_value='\x00',
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(cmd, expected_cmd)
+
+            cmd = command_library.set_working_mode(
+                byte_value=0,
+                address_on_response=address_on_response
+            )
+            expected_cmd = self._compose(
+               '\x2D\x00\x00',
+                address_on_response=address_on_response
+            )
+            self.assertEqual(cmd, expected_cmd)
+
+    def test_wrong_set_working_mode(self):
+        with self.assertRaises(TypeError):
+            command_library.set_working_mode(byte_value='foo')
+
+
 class TestASParse(unittest.TestCase):
 
     def setUp(self):
-        self.system = active_surface.System()
+        self.system = System()
+        # Set the response delay to 0 to speed up the tests
+        for driver in self.system.drivers:
+            driver.delay_multiplier = 0
+
+    def _send_cmd(self, cmd):
+        """This method is useful to send the whole command without repeating
+        the `for` loop every test. If an exception is expected this method can
+        be called from inside a `assertRaises` block."""
+        for byte in cmd[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        return self.system.parse(cmd[-1])
+
+    def _test_wrong_cmd(self, command):
+        """This method receives a wrong command string, it builds the whole
+        command around it and sends it to every driver first in a separate
+        transmission and then in a broadcast one. For each driver it checks
+        that the response is equal to `nak` for a single driver transmission,
+        or equal to `True` for a broadcast one, as expected by the protocol.
+        """
+        binary_length = bin(len(command))[2:].zfill(3)
+        for i in range(len(self.system.drivers)):
+            binary_index = bin(i)[2:].zfill(5)
+            byte_nbyte_address = binary_length + binary_index
+            byte_nbyte_address = utils.binary_to_bytes(byte_nbyte_address)
+
+            for header in ['\xFA', '\xFC']:
+                msg = header
+                msg += byte_nbyte_address
+                msg += command
+                msg += utils.checksum(msg)
+                self.assertEqual(self._send_cmd(msg), byte_nak)
+
+        for header in ['\xFA', '\xFC']:
+            msg = header
+            msg += '\x00'  # Test the broadcast command
+            msg += utils.int_to_bytes(len(command), 1)
+            msg += command
+            msg += utils.checksum(msg)
+            self.assertTrue(self._send_cmd(msg))
 
     def test_fa_header(self):
         """Return True when the first byte is the 0xFA header."""
@@ -41,34 +831,29 @@ class TestASParse(unittest.TestCase):
             self.system.parse('\x0F')
 
     def test_wrong_message_lenght(self):
-        msg = b'\xFA\x40\x01\x02'  # The ckecksum is '0xC2'
-        for byte in msg:
-            self.system.parse(byte)
         # Declaring a lenght of 2 but sending 3 bytes
+        msg = b'\xFA\x40\x01\x02\x03'
+        msg += utils.checksum(msg)
         with self.assertRaises(ValueError):
-            self.system.parse('\x01')
+            self._send_cmd(msg)
 
     def test_wrong_message_broadcast_lenght(self):
-        msg = b'\xFA\x00\x02\x01\x02'  # The ckecksum is 0
-        for byte in msg:
-            self.system.parse(byte)
         # Declaring a lenght of 2 but sending 3 bytes
+        msg = b'\xFA\x00\x02\x01\x02\x03'
+        msg += utils.checksum(msg)
         with self.assertRaises(ValueError):
-            self.system.parse('\x01')
+            self._send_cmd(msg)
 
     def test_unknown_command(self):
         msg = b'\xFA\x20\x00'
-        for byte in msg:
-            self.system.parse(byte)
+        msg += utils.checksum(msg)
         with self.assertRaises(ValueError):
-            self.system.parse(utils.checksum(msg))
+            self._send_cmd(msg)
 
     def test_too_high_message_length(self):
         msg = b'\xFA\x00\x08'
-        for byte in msg[:-1]:
-            self.system.parse(byte)
         with self.assertRaises(ValueError):
-            self.system.parse(msg[-1])
+            self._send_cmd(msg)
 
     def test_wait_for_header_after_wrong_message_lenght(self):
         msg = b'\xFA\x40\x01\x02\x01'  # The ckecksum is '0xC2'
@@ -83,783 +868,796 @@ class TestASParse(unittest.TestCase):
     def test_soft_reset(self):
         """The system returns True for every proper byte, and
         returns the byte_ack when the message is completed."""
-        msg = b'\xFA\x20\x01'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
+        for i in range(len(self.system.drivers)):
+            for address_on_response in [True, False]:
+                msg = command_library.soft_reset(
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(self._send_cmd(msg), byte_ack)
 
     def test_wrong_soft_reset(self):
-        msg = b'\xFA\x40\x01\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        command = '\x01\x00'
+        self._test_wrong_cmd(command)
 
     def test_broadcast_soft_reset(self):
         """A proper broadcast command always returns True, also when
         the message is completed."""
-        msg = b'\xFA\x00\x01\x01'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
-
-    def test_wrong_broadcast_soft_reset(self):
-        msg = b'\xFA\x00\x02\x01\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for address_on_response in [True, False]:
+            msg = command_library.soft_reset(
+                address_on_response=address_on_response
+            )
+            self.assertTrue(self._send_cmd(msg))
 
     def test_soft_trigger(self):
-        msg = b'\xFA\x20\x02'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
+        for i in range(len(self.system.drivers)):
+            for address_on_response in [True, False]:
+                msg = command_library.soft_trigger(
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(self._send_cmd(msg), byte_ack)
 
     def test_wrong_soft_trigger(self):
-        msg = b'\xFA\x40\x02\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        command = '\x02\x00'
+        self._test_wrong_cmd(command)
 
     def test_broadcast_soft_trigger(self):
-        msg = b'\xFA\x00\x01\x02'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for address_on_response in [True, False]:
+            msg = command_library.soft_trigger(
+                address_on_response=address_on_response
+            )
+            self.assertTrue(self._send_cmd(msg))
 
-    def test_wrong_broadcast_soft_trigger(self):
-        msg = b'\xFA\x00\x02\x02\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
-
-    def test_get_version_1(self):
+    def test_get_version(self):
         """The system returns True for every proper byte, and
         returns the byte_ack followed by the driver version
         expressed as a byte when the message is completed."""
-        msg = b'\xFA\x20\x10'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        response = self.system.parse(utils.checksum(msg))
-        # byte_ack + byte_start + version + byte_checksum
-        expected_length = 4
-        self.assertEqual(expected_length, len(response))
-        self.assertEqual(response[0], byte_ack)
+        expected_version = '\x13'
+        binary_length = bin(len(expected_version))[2:].zfill(3)
+        for i in range(len(self.system.drivers)):
+            for address_on_response in [True, False]:
+                msg = command_library.get_version(
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                response = self._send_cmd(msg)
 
-    def test_get_version_2(self):
-        msg = b'\xFC\x20\x10'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        response = self.system.parse(utils.checksum(msg))
-        # byte_ack + byte_start + byte_nbyte_address + version + byte_checksum
-        expected_length = 5
-        self.assertEqual(expected_length, len(response))
-        self.assertEqual(response[0], byte_ack)
+                expected_response = byte_ack
+
+                binary_index = bin(i)[2:].zfill(5)
+                byte_nbyte_address = binary_length + binary_index
+                byte_nbyte_address = utils.binary_to_bytes(byte_nbyte_address)
+
+                if address_on_response:
+                    expected_response += '\xFC'
+                    expected_response += byte_nbyte_address
+                else:
+                    expected_response += '\xFA'
+
+                expected_response += expected_version
+                expected_response += utils.checksum(expected_response)
+                self.assertEqual(response, expected_response)
 
     def test_wrong_get_version(self):
-        msg = b'\xFA\x40\x10\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        response = self.system.parse(utils.checksum(msg))
-        # byte_ack + byte_start + version + byte_checksum
-        expected_length = 1
-        self.assertEqual(expected_length, len(response))
-        self.assertEqual(response[0], byte_nak)
+        command = '\x10\x00'
+        self._test_wrong_cmd(command)
 
     def test_broadcast_get_version(self):
-        msg = b'\xFA\x00\x01\x10'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
-
-    def test_wrong_broadcast_get_version(self):
-        msg = b'\xFA\x00\x02\x10\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for address_on_response in [True, False]:
+            msg = command_library.get_version(
+                address_on_response=address_on_response
+            )
+            self.assertTrue(self._send_cmd(msg))
 
     def test_soft_stop(self):
-        msg = b'\xFA\x20\x11'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
+        for i in range(len(self.system.drivers)):
+            for address_on_response in [True, False]:
+                msg = command_library.soft_stop(
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(self._send_cmd(msg), byte_ack)
 
     def test_wrong_soft_stop(self):
-        msg = b'\xFA\x40\x11\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        command = '\x11\x00'
+        self._test_wrong_cmd(command)
 
     def test_broadcast_soft_stop(self):
-        msg = b'\xFA\x00\x01\x11'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for address_on_response in [True, False]:
+            msg = command_library.soft_stop(
+                address_on_response=address_on_response
+            )
+            self.assertTrue(self._send_cmd(msg), byte_ack)
 
-    def test_wrong_broadcast_soft_stop(self):
-        msg = b'\xFA\x00\x02\x11\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
-
-    def test_get_position_1(self):
+    def test_get_position(self):
         """The system returns True for every proper byte, and
         returns the byte_ack followed by the current driver position
         expressed as 4 bytes when the message is completed."""
-        msg = b'\xFA\x20\x12'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        response = self.system.parse(utils.checksum(msg))
-        expected_length = 7  # byte_ack + byte_start + pos 3-0 + byte_checksum
-        self.assertEqual(expected_length, len(response))
-        self.assertEqual(response[0], byte_ack)
+        expected_position = '\x00\x00\x00\x00'  # Default position is 0
+        binary_length = bin(len(expected_position))[2:].zfill(3)
+        for i in range(len(self.system.drivers)):
+            for address_on_response in [True, False]:
+                msg = command_library.get_position(
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                response = self._send_cmd(msg)
 
-    def test_get_position_2(self):
-        msg = b'\xFC\x20\x12'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        response = self.system.parse(utils.checksum(msg))
-        expected_length = 8
-        # byte_ack + byte_start + byte_nbyte_address + pos 3-0 + byte_checksum
-        self.assertEqual(expected_length, len(response))
-        self.assertEqual(response[0], byte_ack)
+                expected_response = byte_ack
+
+                binary_index = bin(i)[2:].zfill(5)
+                byte_nbyte_address = binary_length + binary_index
+                byte_nbyte_address = utils.binary_to_bytes(byte_nbyte_address)
+
+                if address_on_response:
+                    expected_response += '\xFC'
+                    expected_response += byte_nbyte_address
+                else:
+                    expected_response += '\xFA'
+
+                expected_response += expected_position
+                expected_response += utils.checksum(expected_response)
+                self.assertEqual(response, expected_response)
 
     def test_wrong_get_position(self):
-        msg = b'\xFA\x40\x12\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        command = '\x12\x00'
+        self._test_wrong_cmd(command)
 
     def test_broadcast_get_position(self):
-        msg = b'\xFA\x00\x01\x12'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for address_on_response in [True, False]:
+            msg = command_library.get_position(
+                address_on_response=address_on_response
+            )
+            self.assertTrue(self._send_cmd(msg))
 
-    def test_wrong_broadcast_get_position(self):
-        msg = b'\xFA\x00\x02\x12\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
-
-    def test_get_status_1(self):
+    def test_get_status(self):
         """The system returns True for every proper byte, and
         returns the byte_ack followed by the current driver status
         expressed as 3 bytes when the message is completed."""
-        msg = b'\xFA\x20\x13'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        response = self.system.parse(utils.checksum(msg))
-        # byte_ack + byte_start + status 0-2 + byte_checksum
-        expected_length = 6
-        self.assertEqual(expected_length, len(response))
-        self.assertEqual(response[0], byte_ack)
+        expected_status = '\x00\x20\x18'
+        binary_length = bin(len(expected_status))[2:].zfill(3)
+        for i in range(len(self.system.drivers)):
+            for address_on_response in [True, False]:
+                msg = command_library.get_status(
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                response = self._send_cmd(msg)
 
-    def test_get_status_2(self):
-        msg = b'\xFC\x20\x13'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        response = self.system.parse(utils.checksum(msg))
-        # byte_ack
-        # + byte_start
-        # + byte_nbyte_address
-        # + status 0-2
-        # + byte_checksum
-        expected_length = 7
-        self.assertEqual(expected_length, len(response))
-        self.assertEqual(response[0], byte_ack)
+                expected_response = byte_ack
+
+                binary_index = bin(i)[2:].zfill(5)
+                byte_nbyte_address = binary_length + binary_index
+                byte_nbyte_address = utils.binary_to_bytes(byte_nbyte_address)
+
+                if address_on_response:
+                    expected_response += '\xFC'
+                    expected_response += byte_nbyte_address
+                else:
+                    expected_response += '\xFA'
+
+                expected_response += expected_status
+                expected_response += utils.checksum(expected_response)
+                self.assertEqual(response, expected_response)
 
     def test_wrong_get_status(self):
-        msg = b'\xFA\x40\x13\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        command = '\x13\x00'
+        self._test_wrong_cmd(command)
 
     def test_broadcast_get_status(self):
-        msg = b'\xFA\x00\x01\x13'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for address_on_response in [True, False]:
+            msg = command_library.get_status(
+                address_on_response=address_on_response
+            )
+            self.assertTrue(self._send_cmd(msg))
 
-    def test_wrong_broadcast_get_status(self):
-        msg = b'\xFA\x00\x02\x13\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
-
-    def test_get_driver_type_1(self):
+    def test_get_driver_type(self):
         """The system returns True for every proper byte, and
         returns the byte_ack followed by the current driver type
         expressed as a byte when the message is completed."""
-        msg = b'\xFA\x20\x14'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        response = self.system.parse(utils.checksum(msg))
-        # byte_ack + byte_start + driver_type + byte_checksum
-        expected_length = 4
-        self.assertEqual(expected_length, len(response))
-        self.assertEqual(response[0], byte_ack)
+        expected_type = '\x20'  # Default type is USD50XXX
+        binary_length = bin(len(expected_type))[2:].zfill(3)
+        for i in range(len(self.system.drivers)):
+            for address_on_response in [True, False]:
+                msg = command_library.get_driver_type(
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                response = self._send_cmd(msg)
 
-    def test_get_driver_type_2(self):
-        msg = b'\xFC\x20\x14'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        response = self.system.parse(utils.checksum(msg))
-        # byte_ack
-        # + byte_start
-        # + byte_nbyte_address
-        # + driver_type
-        # + byte_checksum
-        expected_length = 5
-        self.assertEqual(expected_length, len(response))
-        self.assertEqual(response[0], byte_ack)
+                expected_response = byte_ack
+
+                binary_index = bin(i)[2:].zfill(5)
+                byte_nbyte_address = binary_length + binary_index
+                byte_nbyte_address = utils.binary_to_bytes(byte_nbyte_address)
+
+                if address_on_response:
+                    expected_response += '\xFC'
+                    expected_response += byte_nbyte_address
+                else:
+                    expected_response += '\xFA'
+
+                expected_response += expected_type
+                expected_response += utils.checksum(expected_response)
+                self.assertEqual(response, expected_response)
 
     def test_wrong_get_driver_type(self):
-        msg = b'\xFA\x40\x14\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        command = '\x14\x00'
+        self._test_wrong_cmd(command)
 
     def test_broadcast_get_driver_type(self):
-        msg = b'\xFA\x00\x01\x14'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for address_on_response in [True, False]:
+            msg = command_library.get_driver_type(
+                address_on_response=address_on_response
+            )
+            self.assertTrue(self._send_cmd(msg))
 
-    def test_wrong_broadcast_get_driver_type(self):
-        msg = b'\xFA\x00\x02\x14\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+    def test_set_in_range_min_frequency(self, frequency=20):
+        """Setting min freq to 20Hz, allowed range is 20-10000Hz, so the
+        system returns the byte_ack"""
+        for i in range(len(self.system.drivers)):
+            for address_on_response in [True, False]:
+                msg = command_library.set_min_frequency(
+                    frequency=frequency,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(self._send_cmd(msg), byte_ack)
 
-    def test_set_in_range_min_frequency(self):
-        """Setting min freq to 1000Hz (\x03\xE8), allowed range is 20-10000Hz,
-        so the system returns the byte_ack"""
-        msg = b'\xFA\x60\x20\x03\xE8'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
-
-    def test_broadcast_set_in_range_min_frequency(self):
-        msg = b'\xFA\x00\x03\x20\x03\x08'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+    def test_broadcast_set_in_range_min_frequency(self, frequency=20):
+        for address_on_response in [True, False]:
+            msg = command_library.set_min_frequency(
+                frequency=frequency,
+                address_on_response=address_on_response
+            )
+            self.assertTrue(self._send_cmd(msg))
 
     def test_set_out_range_min_frequency(self):
-        """Setting min freq to 10Hz (\x00\x0A), outside the allowed range,
-        so the system returns the byte_nak"""
-        msg = b'\xFA\x60\x20\x00\x0A'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        """Setting min freq to 10Hz, outside the allowed range, so the system
+        returns the byte_nak"""
+        for i in range(len(self.system.drivers)):
+            for address_on_response in [True, False]:
+                msg = command_library.set_min_frequency(
+                    frequency=10,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(self._send_cmd(msg), byte_nak)
 
     def test_broadcast_set_out_range_min_frequency(self):
-        msg = b'\xFA\x00\x03\x20\x00\x0A'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for address_on_response in [True, False]:
+            msg = command_library.set_min_frequency(
+                frequency=10,
+                address_on_response=address_on_response
+            )
+            self.assertTrue(self._send_cmd(msg))
 
     def test_wrong_set_min_frequency(self):
-        msg = b'\xFA\x20\x20'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
-
-    def test_wrong_broadcast_set_min_frequency(self):
-        msg = b'\xFA\x00\x01\x20'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        command = b'\x20\x20'
+        self._test_wrong_cmd(command)
 
     def test_set_exceeding_min_frequency(self):
-        self.test_set_in_range_max_frequency()
-        msg = b'\xFA\x60\x20\x27\x10'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        self.test_set_in_range_max_frequency(frequency=1000)
+        for i in range(len(self.system.drivers)):
+            for address_on_response in [True, False]:
+                msg = command_library.set_min_frequency(
+                    frequency=10000,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(self._send_cmd(msg), byte_nak)
 
-    def test_set_in_range_max_frequency(self):
-        """Setting max freq to 9000Hz (\x23\x28), allowed range is 20-10000Hz,
-        so the system returns the byte_ack"""
-        msg = b'\xFA\x60\x21\x23\x28'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
+    def test_set_in_range_max_frequency(self, frequency=10000):
+        """Setting max freq to 10000Hz, allowed range is 20-10000Hz, so the
+        system returns the byte_ack"""
+        for i in range(len(self.system.drivers)):
+            for address_on_response in [True, False]:
+                msg = command_library.set_max_frequency(
+                    frequency=frequency,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(self._send_cmd(msg), byte_ack)
 
-    def test_broadcast_set_in_range_max_frequency(self):
-        msg = b'\xFA\x00\x03\x21\x23\x28'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+    def test_broadcast_set_in_range_max_frequency(self, frequency=10000):
+        for address_on_response in [True, False]:
+            msg = command_library.set_max_frequency(
+                frequency=frequency,
+                address_on_response=address_on_response
+            )
+            self.assertTrue(self._send_cmd(msg))
 
     def test_set_out_range_max_frequency(self):
-        """Setting max freq to 11000Hz (\x2A\xF8), outside the allowed range,
+        """Setting max freq to 11000Hz, outside the allowed range,
         so the system returns the byte_nak"""
-        msg = b'\xFA\x60\x21\x2A\xF8'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        for i in range(len(self.system.drivers)):
+            for address_on_response in [True, False]:
+                msg = command_library.set_max_frequency(
+                    frequency=11000,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(self._send_cmd(msg), byte_nak)
 
     def test_broadcast_set_out_range_max_frequency(self):
-        msg = b'\xFA\x00\x03\x21\x2A\xF8'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for address_on_response in [True, False]:
+            msg = command_library.set_max_frequency(
+                frequency=11000,
+                address_on_response=address_on_response
+            )
+            self.assertTrue(self._send_cmd(msg))
 
     def test_wrong_set_max_frequency(self):
-        msg = b'\xFA\x20\x21'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
-
-    def test_wrong_broadcast_set_max_frequency(self):
-        msg = b'\xFA\x00\x01\x21'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        command = '\x21\x21'
+        self._test_wrong_cmd(command)
 
     def test_set_exceeding_max_frequency(self):
-        self.test_set_in_range_min_frequency()
-        msg = b'\xFA\x60\x21\x00\x14'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        self.test_set_in_range_min_frequency(frequency=1000)
+        for i in range(len(self.system.drivers)):
+            for address_on_response in [True, False]:
+                msg = command_library.set_max_frequency(
+                    frequency=20,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(self._send_cmd(msg), byte_nak)
 
-    def test_set_slope(self):
-        msg = b'\xFA\x40\x22\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
+    def test_set_slope_multiplier(self):
+        for i in range(len(self.system.drivers)):
+            for address_on_response in [True, False]:
+                msg = command_library.set_slope_multiplier(
+                    multiplier=10,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(self._send_cmd(msg), byte_ack)
 
-    def test_wrong_set_slope(self):
-        msg = b'\xFA\x20\x22'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+    def test_wrong_set_slope_multiplier(self):
+        # Send no multiplier value
+        command = '\x22'
+        self._test_wrong_cmd(command)
 
-    def test_broadcast_set_slope(self):
-        msg = b'\xFA\x00\x02\x22\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
-
-    def test_wrong_broadcast_set_slope(self):
-        msg = b'\xFA\x00\x01\x22'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+    def test_broadcast_set_slope_multiplier(self):
+        for address_on_response in [True, False]:
+            msg = command_library.set_slope_multiplier(
+                multiplier=10,
+                address_on_response=address_on_response
+            )
+            self.assertTrue(self._send_cmd(msg))
 
     def test_set_reference_position(self):
-        msg = b'\xFA\xA0\x23\x00\x00\x00\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
+        for i in range(len(self.system.drivers)):
+            for address_on_response in [True, False]:
+                msg = command_library.set_reference_position(
+                    position=0,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(self._send_cmd(msg), byte_ack)
 
     def test_wrong_set_reference_position(self):
-        msg = b'\xFA\x20\x23'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        command = '\x23'
+        self._test_wrong_cmd(command)
 
     def test_broadcast_set_reference_position(self):
-        msg = b'\xFA\x00\x05\x23\x00\x00\x00\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for address_on_response in [True, False]:
+            msg = command_library.set_reference_position(
+                position=0,
+                address_on_response=address_on_response
+            )
+            self.assertTrue(self._send_cmd(msg))
 
-    def test_wrong_broadcast_set_reference_position(self):
-        msg = b'\xFA\x00\x01\x23'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
-
-    def test_set_IO_pins_1(self):
-        msg = b'\xFA\x40\x25\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
-
-    def test_set_IO_pins_2(self):
-        msg = b'\xFA\x40\x25\xFF'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
+    def test_set_IO_pins(self):
+        for byte_value in range(256):
+            for i in range(len(self.system.drivers)):
+                for address_on_response in [True, False]:
+                    msg = command_library.set_io_pins(
+                        byte_value=byte_value,
+                        usd_index=i,
+                        address_on_response=address_on_response
+                    )
+                    self.assertEqual(self._send_cmd(msg), byte_ack)
 
     def test_wrong_set_IO_pins(self):
-        msg = b'\xFA\x20\x25'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        command = '\x25'
+        self._test_wrong_cmd(command)
 
     def test_broadcast_set_IO_pins(self):
-        msg = b'\xFA\x00\x02\x25\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
-
-    def test_wrong_broadcast_set_IO_pins(self):
-        msg = b'\xFA\x00\x01\x25'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for byte_value in range(256):
+            for address_on_response in [True, False]:
+                msg = command_library.set_io_pins(
+                    byte_value=byte_value,
+                    address_on_response=address_on_response
+                )
+                self.assertTrue(self._send_cmd(msg))
 
     def test_set_resolution(self):
-        msg = b'\xFA\x40\x26\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
-
-    def test_set_auto_resolution(self):
-        msg = b'\xFA\x40\x26\xFF'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
+        for resolution in range(256):
+            for i in range(len(self.system.drivers)):
+                for address_on_response in [True, False]:
+                    msg = command_library.set_resolution(
+                        resolution=resolution,
+                        usd_index=i,
+                        address_on_response=address_on_response
+                    )
+                    self.assertEqual(self._send_cmd(msg), byte_ack)
 
     def test_wrong_set_resolution(self):
-        msg = b'\xFA\x20\x26'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        command = '\x26'
+        self._test_wrong_cmd(command)
 
     def test_broadcast_set_resolution(self):
-        msg = b'\xFA\x00\x02\x26\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
-
-    def test_wrong_broadcast_set_resolution(self):
-        msg = b'\xFA\x00\x01\x26'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for resolution in range(256):
+            for address_on_response in [True, False]:
+                msg = command_library.set_resolution(
+                    resolution=resolution,
+                    address_on_response=address_on_response
+                )
+                self.assertTrue(self._send_cmd(msg))
 
     def test_reduce_current(self):
-        msg = b'\xFA\x40\x27\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
+        for byte_value in range(256):
+            for i in range(len(self.system.drivers)):
+                for address_on_response in [True, False]:
+                    msg = command_library.reduce_current(
+                        byte_value=byte_value,
+                        usd_index=i,
+                        address_on_response=address_on_response
+                    )
+                    self.assertEqual(self._send_cmd(msg), byte_ack)
 
     def test_wrong_reduce_current(self):
-        msg = b'\xFA\x20\x27'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        command = '\x27'
+        self._test_wrong_cmd(command)
 
     def test_broadcast_reduce_current(self):
-        msg = b'\xFA\x00\x02\x27\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
-
-    def test_wrong_broadcast_reduce_current(self):
-        msg = b'\xFA\x00\x01\x27'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for byte_value in range(256):
+            for address_on_response in [True, False]:
+                msg = command_library.reduce_current(
+                    byte_value=byte_value,
+                    address_on_response=address_on_response
+                )
+                self.assertTrue(self._send_cmd(msg))
 
     def test_set_finite_delay(self):
-        msg = b'\xFA\x40\x28\x00'  # Setting a delay step equal to 0
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
+        for i in range(len(self.system.drivers)):
+            for address_on_response in [True, False]:
+                msg = command_library.set_response_delay(
+                    delay=0,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(self._send_cmd(msg), byte_ack)
 
     def test_broadcast_set_finite_delay(self):
-        msg = b'\xFA\x00\x02\x28\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for address_on_response in [True, False]:
+            msg = command_library.set_response_delay(
+                delay=0,
+                address_on_response=address_on_response
+            )
+            self.assertTrue(self._send_cmd(msg))
 
     def test_set_infinite_delay(self):
-        msg = b'\xFA\x40\x28\xFF'  # Setting an infinite delay
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for i in range(len(self.system.drivers)):
+            for address_on_response in [True, False]:
+                msg = command_library.set_response_delay(
+                    delay=255,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertTrue(self._send_cmd(msg))
 
     def test_broadcast_set_inifinte_delay(self):
-        msg = b'\xFA\x00\x02\x28\xFF'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for address_on_response in [True, False]:
+            msg = command_library.set_response_delay(
+                delay=255,
+                address_on_response=address_on_response
+            )
+            self.assertTrue(self._send_cmd(msg))
 
     def test_wrong_set_delay(self):
-        msg = b'\xFA\x20\x28'  # Setting a delay step equal to 0
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        command = '\x28'
+        self._test_wrong_cmd(command)
 
-    def test_wrong_broadcast_set_delay(self):
-        msg = b'\xFA\x00\x01\x28'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
-
-    def test_toggle_delayed_execution_1(self):
-        msg = b'\xFA\x40\x29\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
-
-    def test_toggle_delayed_execution_2(self):
-        msg = b'\xFA\x40\x29\xFF'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
+    def test_toggle_delayed_execution(self):
+        for byte_value in range(256):
+            for i in range(len(self.system.drivers)):
+                for address_on_response in [True, False]:
+                    msg = command_library.toggle_delayed_execution(
+                        byte_value=byte_value,
+                        usd_index=i,
+                        address_on_response=address_on_response
+                    )
+                    self.assertEqual(self._send_cmd(msg), byte_ack)
 
     def test_wrong_toggle_delayed_execution(self):
-        msg = b'\xFA\x20\x29'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        command = '\x29'
+        self._test_wrong_cmd(command)
 
     def test_broadcast_toggle_delayed_execution(self):
-        msg = b'\xFA\x00\x02\x29\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for byte_value in range(256):
+            for address_on_response in [True, False]:
+                msg = command_library.toggle_delayed_execution(
+                    byte_value=byte_value,
+                    address_on_response=address_on_response
+                )
+                self.assertTrue(self._send_cmd(msg))
 
-    def test_wrong_broadcast_toggle_delayed_execution(self):
-        msg = b'\xFA\x00\x01\x29'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
-
-    def test_set_absolute_position(self):
-        msg = b'\xFA\xA0\x30\x00\x00\x00\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
+    def test_set_absolute_position(self, position=0):
+        for i in range(len(self.system.drivers)):
+            for address_on_response in [True, False]:
+                msg = command_library.set_absolute_position(
+                    position=position,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(self._send_cmd(msg), byte_ack)
 
     def test_wrong_set_absolute_position(self):
-        msg = b'\xFA\x20\x30'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        command = '\x30'
+        self._test_wrong_cmd(command)
 
     def test_broadcast_set_absolute_position(self):
-        msg = b'\xFA\x00\x05\x30\x00\x00\x00\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for address_on_response in [True, False]:
+            msg = command_library.set_absolute_position(
+                position=0,
+                address_on_response=address_on_response
+            )
+            self.assertTrue(self._send_cmd(msg))
 
-    def test_wrong_broadcast_set_absolute_position(self):
-        msg = b'\xFA\x00\x01\x30'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
-
-    def test_set_relative_position(self):
-        msg = b'\xFA\xA0\x31\x00\x00\x00\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
+    def test_set_relative_position(self, position=0):
+        for i in range(len(self.system.drivers)):
+            for address_on_response in [True, False]:
+                msg = command_library.set_relative_position(
+                    position=position,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(self._send_cmd(msg), byte_ack)
 
     def test_wrong_set_relative_position(self):
-        msg = b'\xFA\x20\x31'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        command = '\x31'
+        self._test_wrong_cmd(command)
 
     def test_broadcast_set_relative_position(self):
-        msg = b'\xFA\x00\x05\x31\x00\x00\x00\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for address_on_response in [True, False]:
+            msg = command_library.set_relative_position(
+                position=0,
+                address_on_response=address_on_response
+            )
+            self.assertTrue(self._send_cmd(msg))
 
-    def test_wrong_broadcast_set_relative_position(self):
-        msg = b'\xFA\x00\x01\x31'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
-
-    def test_rotate(self):
+    def test_rotate(self, should_fail=False):
         """The driver starts to rotate according to its set velocity.
-        The last byte of the message (before the checksum, \x00)
+        The last byte of the message (before the checksum)
         holds an int in twos complement notation, its sign (+ or -)
-        represents the direction in which the motor will rotate"""
-        msg = b'\xFA\x40\x32\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
+        represents the direction in which the motor will rotate."""
+        if should_fail:
+            expected_response = byte_nak
+        else:
+            expected_response = byte_ack
+        for direction in [-1, 1]:
+            for address_on_response in [True, False]:
+                for i in range(len(self.system.drivers)):
+                    msg = command_library.rotate(
+                        direction=direction,
+                        usd_index=i,
+                        address_on_response=address_on_response
+                    )
+                    self.assertEqual(self._send_cmd(msg), expected_response)
+                self.test_soft_stop()
+                time.sleep(0.025)
 
     def test_wrong_rotate(self):
-        msg = b'\xFA\x20\x32'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        command = '\x32'
+        self._test_wrong_cmd(command)
 
     def test_broadcast_rotate(self):
-        msg = b'\xFA\x00\x02\x32\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for direction in [-1, 1]:
+            for address_on_response in [True, False]:
+                msg = command_library.rotate(
+                    direction=direction,
+                    address_on_response=address_on_response
+                )
+                self.assertTrue(self._send_cmd(msg))
 
-    def test_wrong_broadcast_rotate(self):
-        msg = b'\xFA\x00\x01\x32'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+    def test_set_velocity(self, velocity=0):
+        for i in range(len(self.system.drivers)):
+            for address_on_response in [True, False]:
+                msg = command_library.set_velocity(
+                    velocity=velocity,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(self._send_cmd(msg), byte_ack)
 
     def test_set_in_range_velocity(self):
         """Setting velocity in a range between -100000 and +100000
-        tenths of Hz.  The value is stored in the last 3 bytes
-        (\x00\x00\x00 in this case)"""
-        msg = b'\xFA\x80\x35\x00\x00\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
+        tenths of Hz."""
+        starting_pos = []
+        for driver in self.system.drivers:
+            starting_pos.append(driver.current_position)
+
+        self.test_set_velocity(100000)
+
+        time.sleep(0.01)
+
+        current_pos = []
+        for driver in self.system.drivers:
+            current_pos.append(driver.current_position)
+
+        for i in range(len(self.system.drivers)):
+            self.assertNotEqual(starting_pos[i], current_pos[i])
 
     def test_broadcast_set_in_range_velocity(self):
-        msg = b'\xFA\x00\x04\x35\x00\x00\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for address_on_response in [True, False]:
+            msg = command_library.set_velocity(
+                velocity=0,
+                address_on_response=address_on_response
+            )
+            self.assertTrue(self._send_cmd(msg))
 
     def test_set_out_range_velocity(self):
-        """Setting velocity outside allowed range.
-        Bytes \xEF\xFF\xFF represents a velocity of 8388607 tenths of Hz"""
-        msg = b'\xFA\x80\x35\xEF\xFF\xFF'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        """Setting velocity outside allowed range. (8388607 tenths of Hz)."""
+        for i in range(len(self.system.drivers)):
+            for address_on_response in [True, False]:
+                msg = command_library.set_velocity(
+                    velocity=8388607,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(self._send_cmd(msg), byte_nak)
 
     def test_broadcast_set_out_range_velocity(self):
-        msg = b'\xFA\x00\x04\x35\xEF\xFF\xFF'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for address_on_response in [True, False]:
+            msg = command_library.set_velocity(
+                velocity=8388607,
+                address_on_response=address_on_response
+            )
+            self.assertTrue(self._send_cmd(msg))
 
     def test_wrong_set_velocity(self):
-        msg = b'\xFA\x20\x35'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        command = '\x35'
+        self._test_wrong_cmd(command)
 
-    def test_wrong_broadcast_set_velocity(self):
-        msg = b'\xFA\x00\x01\x35'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
-
-    def test_set_stop_IO_1(self):
-        msg = b'\xFA\x40\x2A\x09'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
-
-    def test_set_stop_IO_2(self):
-        msg = b'\xFA\x40\x2A\x36'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
+    def test_set_stop_IO(self):
+        for byte_value in range(256):
+            for i in range(len(self.system.drivers)):
+                for address_on_response in [True, False]:
+                    msg = command_library.set_stop_io(
+                        byte_value=byte_value,
+                        usd_index=i,
+                        address_on_response=address_on_response
+                    )
+                    self.assertEqual(self._send_cmd(msg), byte_ack)
 
     def test_wrong_set_stop_IO(self):
-        msg = b'\xFA\x20\x2A'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        command = '\x2A'
+        self._test_wrong_cmd(command)
 
     def test_broadcast_set_stop_IO(self):
-        msg = b'\xFA\x00\x02\x2A\x09'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for byte_value in range(256):
+            for address_on_response in [True, False]:
+                msg = command_library.set_stop_io(
+                    byte_value=byte_value,
+                    address_on_response=address_on_response
+                )
+                self.assertTrue(self._send_cmd(msg))
 
-    def test_wrong_broadcast_set_stop_IO(self):
-        msg = b'\xFA\x00\x01\x2A'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
-
-    def test_set_positioning_IO_1(self):
-        msg = b'\xFA\x40\x2B\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
-
-    def test_set_positioning_IO_2(self):
-        msg = b'\xFA\x40\x2B\xFF'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
+    def test_set_positioning_IO(self):
+        for byte_value in range(256):
+            for i in range(len(self.system.drivers)):
+                for address_on_response in [True, False]:
+                    msg = command_library.set_positioning_io(
+                        byte_value=byte_value,
+                        usd_index=i,
+                        address_on_response=address_on_response
+                    )
+                    self.assertEqual(self._send_cmd(msg), byte_ack)
 
     def test_wrong_set_positioning_IO(self):
-        msg = b'\xFA\x20\x2B'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        command = '\x2B'
+        self._test_wrong_cmd(command)
 
     def test_broadcast_set_positioning_IO(self):
-        msg = b'\xFA\x00\x02\x2B\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for byte_value in range(256):
+            for address_on_response in [True, False]:
+                msg = command_library.set_positioning_io(
+                    byte_value=byte_value,
+                    address_on_response=address_on_response
+                )
+                self.assertTrue(self._send_cmd(msg))
 
-    def test_wrong_broadcast_set_positioning_IO(self):
-        msg = b'\xFA\x00\x01\x2B'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
-
-    def test_set_home_IO_1(self):
-        msg = b'\xFA\x40\x2C\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
-
-    def test_set_home_IO_2(self):
-        msg = b'\xFA\x40\x2C\xFF'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
+    def test_set_home_IO(self):
+        for byte_value in range(256):
+            for i in range(len(self.system.drivers)):
+                for address_on_response in [True, False]:
+                    msg = command_library.set_home_io(
+                        byte_value=byte_value,
+                        usd_index=i,
+                        address_on_response=address_on_response
+                    )
+                    self.assertEqual(self._send_cmd(msg), byte_ack)
 
     def test_wrong_set_home_IO(self):
-        msg = b'\xFA\x20\x2C'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        command = '\x2C'
+        self._test_wrong_cmd(command)
 
     def test_broadcast_set_home_IO(self):
-        msg = b'\xFA\x00\x02\x2C\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
-
-    def test_wrong_broadcast_set_home_IO(self):
-        msg = b'\xFA\x00\x01\x2C'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for byte_value in range(256):
+            for address_on_response in [True, False]:
+                msg = command_library.set_home_io(
+                    byte_value=byte_value,
+                    address_on_response=address_on_response
+                )
+                self.assertTrue(self._send_cmd(msg))
 
     def test_set_working_mode(self):
-        msg = b'\xFA\x60\x2D\x00\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_ack)
+        for byte_value in range(256):
+            for i in range(len(self.system.drivers)):
+                for address_on_response in [True, False]:
+                    msg = command_library.set_working_mode(
+                        byte_value=byte_value,
+                        usd_index=i,
+                        address_on_response=address_on_response
+                    )
+                    self.assertEqual(self._send_cmd(msg), byte_ack)
 
     def test_wrong_set_working_mode(self):
-        msg = b'\xFA\x20\x2D'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(utils.checksum(msg)), byte_nak)
+        command = '\x2D'
+        self._test_wrong_cmd(command)
 
     def test_broadcast_set_working_mode(self):
-        msg = b'\xFA\x00\x03\x2D\x00\x00'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
-
-    def test_wrong_broadcast_set_working_mode(self):
-        msg = b'\xFA\x00\x01\x2D'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertTrue(self.system.parse(utils.checksum(msg)))
+        for byte_value in range(256):
+            for address_on_response in [True, False]:
+                msg = command_library.set_working_mode(
+                    byte_value=byte_value,
+                    address_on_response=address_on_response
+                )
+                self.assertTrue(self._send_cmd(msg))
 
     def test_delayed_execution(self):
-        self.test_toggle_delayed_execution_1()
-        self.test_set_relative_position()
-        self.test_set_absolute_position()
+        self.test_toggle_delayed_execution()
+        self.test_set_absolute_position(2000)
+        self.test_set_relative_position(4000)
+
+        for driver in self.system.drivers:
+            self.assertEqual(driver.current_position, 0)
+
         self.test_soft_trigger()
+
+        time.sleep(0.25)
+        for driver in self.system.drivers:
+            self.assertEqual(driver.current_position, 2000)
+
         self.test_soft_trigger()
+
+        time.sleep(0.25)
+        for driver in self.system.drivers:
+            self.assertEqual(driver.current_position, 4000)
+
+    def test_rotate_while_moving(self):
+        self.test_set_in_range_velocity()
+        self.test_rotate(should_fail=True)
+
+    def test_multiple_set_velocity(self):
+        self.test_set_in_range_velocity()
+        self.test_set_velocity()
+
+    def test_velocity_upper_limit(self):
+        for driver in self.system.drivers:
+            driver.current_position = 2147483640
+
+        self.test_set_velocity(1000)
+        time.sleep(0.3)
+
+    def test_velocity_lower_limit(self):
+        for driver in self.system.drivers:
+            driver.current_position = -2147483640
+
+        self.test_set_velocity(-1000)
+        time.sleep(0.3)
 
 
 if __name__ == '__main__':
