@@ -7,6 +7,12 @@ from simulators import utils
 
 
 class PointingStatus(object):
+    """This class handles the trajectory generation for the antenna axes.
+
+    :param azimuth: a reference to the azimuth status object
+    :param elevation: a reference to the elevation status object
+    :param cable_wrap: a reference to the cable wrap status object
+    """
 
     def __init__(self, azimuth, elevation, cable_wrap):
         self.azimuth = azimuth
@@ -191,6 +197,8 @@ class PointingStatus(object):
         self.pt_command_id = None
 
     def _pointing_error(self):
+        """This method returns the in bit mode coded status of the pointing
+        erroris."""
         binary_string = (
             str(self.Data_Overflow)
             + str(self.Time_Distance_Fault)
@@ -201,6 +209,9 @@ class PointingStatus(object):
         return utils.binary_to_bytes(binary_string)
 
     def get_status(self):
+        """This method composes and returns the pointing status message. It is
+        meant to be called by the System class to compose the whole status
+        message."""
         self._update_status()
 
         response = (
@@ -251,6 +262,8 @@ class PointingStatus(object):
         return response
 
     def _update_status(self):
+        """This method updates some attributes (I.e. the ACU time and tracking
+        status)."""
         curr_time = self.actual_time()
         self.year = curr_time.year
         self.month = curr_time.month
@@ -299,6 +312,8 @@ class PointingStatus(object):
                 self.ptEndTableIndex = self.ptTableLength - 1
 
     def actual_time(self):
+        """This method returns the actual ACU time, which is equal to the
+        current UTC time plus an arbitrary offset."""
         return (
             datetime.utcnow()
             + self.time_source_offset
@@ -308,6 +323,10 @@ class PointingStatus(object):
     # -------------------- Parameter Command --------------------
 
     def parameter_command(self, command):
+        """This method parses and executes the received parameter command.
+
+        :param command: the received command.
+        """
         cmd_cnt = utils.bytes_to_uint(command[4:8])
         parameter_id = utils.bytes_to_uint(command[8:10])
         parameter_1 = utils.bytes_to_real(command[10:18], 2)
@@ -326,6 +345,14 @@ class PointingStatus(object):
             self.pcs.answer = 5
 
     def _time_source(self, parameter_1, parameter_2):
+        """This method is called when a time source parameter command is
+        received. It will set the ACU time offset according to the given time
+        source.
+
+        :param parameter_1: the desired time source
+        :param parameter_2: the absolute time set via host computer (only for
+            time source = 1)
+        """
         parameter_1 = int(parameter_1)
 
         if parameter_1 not in [1, 2, 3]:
@@ -345,6 +372,13 @@ class PointingStatus(object):
         self.pcs.answer = 1
 
     def _time_offset(self, parameter_1, parameter_2):
+        """This method is called when a time offset parameter command is
+        received. It is used to add a time offset onto the actual servo control
+        system time.
+
+        :param parameter_1: offset time mode
+        :param parameter_2: offset time [s]
+        """
         parameter_1 = int(parameter_1)
 
         if not (1 <= parameter_1 <= 4) or abs(parameter_2) > 86400000:
@@ -373,6 +407,13 @@ class PointingStatus(object):
         self.pcs.answer = 1
 
     def _program_track_time_correction(self, time_offset):
+        """This method is called when a program track time offset parameter
+        command is received. It is used to chift the start time of program
+        tracks.
+
+        :param time_offset: the offset time added to start time of the program
+            track
+        """
         # time_offset = offset time [s]
 
         if abs(time_offset) > 86400000:
@@ -385,6 +426,13 @@ class PointingStatus(object):
     # --------------- Program Track Parameter Command ---------------
 
     def program_track_parameter_command(self, command):
+        """This method parses the received program track parameter command.
+        It interpolates the received tracking points and stores the generated
+        trajectories in order for the axes to use them while tracking some
+        celestial source.
+
+        :param command: the received program track parameter command.
+        """
         cmd_cnt = utils.bytes_to_uint(command[4:8])
         parameter_id = utils.bytes_to_uint(command[8:10])
 
@@ -453,10 +501,6 @@ class PointingStatus(object):
         else:
             expected_delta = None
             last_relative_time = 0
-
-        if len(byte_entries) != sequence_length * 20:
-            self.pcs.answer = 5
-            return
 
         for i in range(sequence_length):
             offset = i * 20
@@ -533,6 +577,11 @@ class PointingStatus(object):
         self.pcs.answer = 1
 
     def get_next_position(self, subsystem):
+        """This method returns the next fixed point of the generated
+        trajectory. It is meant to be called from an axis subsystem.
+
+        :param subsystem: the axis asking for its next trajectory fixed point
+        """
         retval = None
         if subsystem is self.azimuth and self.azimuth_positions:
             retval = int(round(self.azimuth_positions[0] * 1000000))
@@ -541,11 +590,16 @@ class PointingStatus(object):
         return retval
 
     def get_trajectory_values(self, subsystem):
+        """This method returns the trajectory value for the given subsystem
+        (axis). It is meant to be called from an axis subsystem.
+
+        :param subsystem: the axis asking for its trajectory values
+        """
         self._update_status()
 
         if (not self.start_time
                 or subsystem not in [self.azimuth, self.elevation]):
-            return self.ptState, 0, 0, 0
+            return self.ptState, None, None, None
         elif subsystem is self.azimuth:
             trajectory = self.az_tck
         elif subsystem is self.elevation:
@@ -560,20 +614,15 @@ class PointingStatus(object):
             (self.actual_time() - start_time).total_seconds() * 1000
         )
 
-        if elapsed <= self.relative_times[0]:
+        if self.ptState == 2:
             start_pos = 0
             if subsystem is self.azimuth:
                 start_pos = int(round(self.azimuth_positions[0] * 1000000))
             elif subsystem is self.elevation:
                 start_pos = int(round(self.elevation_positions[0] * 1000000))
-            return self.ptState, start_pos, 0, 0
-        elif elapsed >= self.relative_times[-1]:
-            end_pos = 0
-            if subsystem is self.azimuth:
-                end_pos = int(round(self.azimuth_positions[-1] * 1000000))
-            elif subsystem is self.elevation:
-                end_pos = int(round(self.elevation_positions[-1] * 1000000))
-            return self.ptState, end_pos, 0, 0
+            return self.ptState, start_pos, None, None
+        elif self.ptState == 4:
+            return self.ptState, None, None, None
 
         pos = interpolate.splev(elapsed, trajectory).item(0) * 1000000
         vel = interpolate.splev(elapsed, trajectory, der=1).item(0) * 1000000
