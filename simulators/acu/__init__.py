@@ -21,6 +21,14 @@ end_flag = b'\xD1\xCF\xFC\xA1'
 
 
 class System(ListeningSystem, SendingSystem):
+    """The ACU, or Antenna Control Unit handles the antenna movement along its
+    azimuth and elevation axes. It also handles the tracking of radio sources
+    by continuously receiving and interpolating the coordinates for a given
+    celestial source.
+
+    :param sampling_time: seconds between the sending of consecutive
+        status messages
+    """
 
     subsystems = {
         1: 'AZ',
@@ -35,10 +43,6 @@ class System(ListeningSystem, SendingSystem):
     }
 
     def __init__(self, sampling_time=0.2):
-        """
-        param sampling_time: seconds between the sending of consecutive
-        status messages
-        """
         self._set_default()
         self.sampling_time = sampling_time
         self.cmd_counter = None
@@ -62,6 +66,9 @@ class System(ListeningSystem, SendingSystem):
         self.FS = FacilityStatus()
 
     def _set_default(self):
+        """This method resets the received command string to its default value.
+        It is called when a tail character is received or when a command is
+        received malformed."""
         self.msg = b''
         self.msg_length = 0
         self.cmds_number = 0
@@ -142,13 +149,13 @@ class System(ListeningSystem, SendingSystem):
                 command = commands_string[:26]
                 commands_string = commands_string[26:]
             elif current_id == 4:
-                try:
-                    sequence_len = utils.bytes_to_uint(commands_string[16:18])
-                    command_length = 42 + (sequence_len * 20)
-                    command = commands_string[:command_length]
-                    commands_string = commands_string[command_length:]
-                except ValueError:
-                    raise ValueError('Malformed message.')
+                header = commands_string[:42]
+                sequence_len = utils.bytes_to_uint(header[16:18])
+                expected_length = 42 + (sequence_len * 20)
+                if len(commands_string) < expected_length:
+                    raise ValueError('Malformed program track sequence.')
+                command = commands_string[:expected_length]
+                commands_string = commands_string[expected_length:]
             else:
                 raise ValueError('Unknown command.')
 

@@ -454,7 +454,10 @@ class MasterAxisStatus(SimpleAxisStatus):
         """This method retrieves the trajectory status and values from the
         pointing module of the ACU simulator."""
         data = self.pointing.get_trajectory_values(self)
-        pt_status, self.p_Bahn, self.v_Bahn, self.a_Bahn = data
+        pt_status, pos, vel, acc = data
+        self.p_Bahn = pos if pos is not None else self.p_Bahn
+        self.v_Bahn = vel if vel is not None else self.v_Bahn
+        self.a_Bahn = acc if acc is not None else self.a_Bahn
         return pt_status
 
     def get_axis_status(self):
@@ -472,10 +475,10 @@ class MasterAxisStatus(SimpleAxisStatus):
         """This method parses and executes the received mode command.
         Before launching the command execution, this method calls the
         `_validate_mode_command` method and retrieves its return value.
-        Depending from the retrieved value, the parsed command gets
+        Depending on the retrieved value, the parsed command gets
         executed (valid command) or not (invalid command).
 
-        :param cmd: the received command.
+        :param cmd: the received mode command.
         """
         cmd_cnt = utils.bytes_to_int(cmd[4:8])
         mode_id = utils.bytes_to_int(cmd[8:10])
@@ -673,54 +676,52 @@ class MasterAxisStatus(SimpleAxisStatus):
         :param rate: the maximum rotation rate while tracking.
         """
         self.curr_mode_counter = counter
-        if self.pointing.ptState in [0, 1, 4]:
-            self._executed_mode_command(counter, 8, 1)
-            return
+        self._executed_mode_command(counter, 8, 1)
 
         self.axis_trajectory_state = 7  # 7: tracking
 
-        next_pos = self.pointing.get_next_position(self)
-
-        # We do not add the tracking offset to the desired position
-        # because it is already been handled by the `_move` method
-        desired_pos = next_pos
-        desired_rate = int(round(rate * 1000000))
-
-        pt_counter = self.pointing.pt_command_id
-
-        if not self._move(counter, desired_pos, desired_rate, pt_counter):
-            return
-
         t0 = time.time()
-        while pt_counter == self.pointing.pt_command_id:
+        next_pos = None
+        while self.axis_trajectory_state == 7:
             t1 = time.time()
             delta_time = t1 - t0
             t0 = t1
 
             program_track_state = self._update_trajectory_values()
-
             next_p = self.pointing.get_next_position(self)
             if next_p:
                 next_pos = next_p
 
-            if program_track_state == 4:
-                if self.p_Ist == next_pos + self.p_Offset:
-                    self._executed_mode_command(counter, 8, 1)
-                    break
-                else:
-                    program_track_state = 3
+            if next_pos:
+                if program_track_state == 2:
+                    if self.p_Ist != next_pos + self.p_Offset:
+                        self._move(
+                            counter,
+                            next_pos,
+                            int(round(rate * 1000000)),
+                            self.pointing.pt_command_id
+                        )
 
-            if program_track_state == 3:
-                desired_pos = self.p_Bahn + self.p_Offset
+                if program_track_state == 4:
+                    if self.p_Ist != next_pos + self.p_Offset:
+                        self.p_Bahn = next_pos
+                        program_track_state = 3
 
-                if counter == self.curr_mode_counter:
-                    self.p_Ist = self._calc_position(
+                if program_track_state == 3:
+                    desired_pos = self.p_Bahn + self.p_Offset
+
+                    calc_position = self._calc_position(
                         delta_time,
                         desired_pos,
                         int(round(self.max_velocity * 1000000)),
                     )
-                else:
-                    break
+
+                    self.v_Ist = int(round(
+                        (calc_position - self.p_Ist) / delta_time
+                    ))
+
+                    self.p_Ist = calc_position
+
             time.sleep(0.01)
 
     # mode_id == 14

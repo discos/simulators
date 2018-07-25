@@ -1184,7 +1184,7 @@ class TestACU(unittest.TestCase):
 
     def test_program_track_command_load_new_table(self, start_time=None):
         if not start_time:
-            start_time = datetime.utcnow() + timedelta(seconds=1)
+            start_time = datetime.utcnow() + timedelta(seconds=2)
 
         pt_command = ProgramTrackCommand(
             load_mode=1,
@@ -1286,7 +1286,7 @@ class TestACU(unittest.TestCase):
         self.assertEqual(pcs.answer, 1)
 
         # Wait for execution to complete
-        time.sleep(9)
+        time.sleep(10)
 
         self.assertEqual(self.system.AZ.p_Ist, 184000000)
         self.assertEqual(self.system.EL.p_Ist, 88000000)
@@ -1593,7 +1593,7 @@ class TestACU(unittest.TestCase):
         self.assertEqual(pcs.command, 61)
         self.assertEqual(pcs.answer, 5)
 
-    def test_program_track_wrong_sequence_length(self):
+    def test_program_track_wrong_sequence_length_short(self):
         pt_command = ProgramTrackCommand(
             load_mode=1,
             start_time=0,
@@ -1623,6 +1623,69 @@ class TestACU(unittest.TestCase):
         with self.assertRaises(ValueError):
             self._send(command_string)
 
+    def test_program_track_wrong_sequence_length_long(self):
+        pt_command = ProgramTrackCommand(
+            load_mode=1,
+            start_time=0,
+            axis_rates=(1, 1),
+        )
+        pt_command.add_entry(
+            relative_time=0,
+            azimuth_position=0,
+            elevation_position=0
+        )
+        pt_command.add_entry(1, 1, 1)
+        pt_command.add_entry(2, 2, 2)
+        pt_command.add_entry(3, 3, 3)
+        pt_command.add_entry(4, 4, 4)
+        pt_command.add_entry(5, 5, 5)
+        pt_command.add_entry(6, 6, 6)
+
+        command = Command(pt_command)
+
+        command_string = command.get()
+        command_string = (
+            command_string[:32]
+            + utils.uint_to_bytes(10, 2)
+            + command_string[34:]
+        )
+
+        with self.assertRaises(ValueError):
+            self._send(command_string)
+
+    def test_wrong_program_track_plus_mode_command(self):
+        pt_command = ProgramTrackCommand(
+            load_mode=1,
+            start_time=0,
+            axis_rates=(1, 1),
+        )
+        pt_command.add_entry(
+            relative_time=0,
+            azimuth_position=0,
+            elevation_position=0
+        )
+        pt_command.add_entry(1, 1, 1)
+        pt_command.add_entry(2, 2, 2)
+        pt_command.add_entry(3, 3, 3)
+        pt_command.add_entry(4, 4, 4)
+        pt_command.add_entry(5, 5, 5)
+        pt_command.add_entry(6, 6, 6)
+
+        start_azimuth = ModeCommand(1, 8, None, 0.5)
+        start_elevation = ModeCommand(2, 8, None, 0.5)
+
+        command = Command(pt_command, start_azimuth, start_elevation)
+
+        command_string = command.get()
+        command_string = (
+            command_string[:32]
+            + utils.uint_to_bytes(8, 2)
+            + command_string[34:]
+        )
+
+        with self.assertRaises(ValueError):
+            self._send(command_string)
+
     def test_program_track_execution(self):
         self.test_program_track_command_load_new_table()
 
@@ -1640,7 +1703,7 @@ class TestACU(unittest.TestCase):
 
         self._send(command.get())
 
-        time.sleep(10)
+        time.sleep(11)
 
         self.assertEqual(self.system.AZ.p_Ist, 183000000)
         self.assertEqual(self.system.EL.p_Ist, 87000000)
@@ -1663,7 +1726,7 @@ class TestACU(unittest.TestCase):
 
         self._send(command.get())
 
-        time.sleep(4.8)
+        time.sleep(5.8)
 
         # Make sure that program track is not started yet
         self.assertEqual(self.system.PS.ptState, 2)
@@ -1671,10 +1734,79 @@ class TestACU(unittest.TestCase):
         self.assertEqual(self.system.EL.p_Ist, 89000000)
 
         # Wait for program track execution
-        time.sleep(10.2)
+        time.sleep(11.2)
 
         self.assertEqual(self.system.AZ.p_Ist, 183000000)
         self.assertEqual(self.system.EL.p_Ist, 87000000)
+
+    def test_program_track_load_new_table_while_running(self):
+        self.test_program_track_command_load_new_table()
+
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
+        self.test_mode_command_active()
+
+        start_azimuth = ModeCommand(1, 8, None, 0.5)
+        start_elevation = ModeCommand(2, 8, None, 0.5)
+
+        command = Command(
+            start_azimuth,
+            start_elevation,
+        )
+
+        self._send(command.get())
+
+        t0 = time.time()
+        # Wait for the pointing subsystem to start tracking
+        while self.system.PS.ptState != 3:
+            if time.time() - t0 >= 5:
+                self.fail('Test is taking too long to complete.')
+            time.sleep(0.01)
+
+        # Let the tracking execute for 0.2 seconds
+        time.sleep(0.2)
+
+        # Send the new table
+        self.test_program_track_command_load_new_table()
+
+        azimuth = self.system.AZ
+        elevation = self.system.EL
+
+        while True:
+            az_pos = False
+            el_pos = False
+            az_vel = False
+            el_vel = False
+
+            if azimuth.p_Ist == 181000000:
+                az_pos = True
+            if elevation.p_Ist == 89000000:
+                el_pos = True
+            if azimuth.v_Ist == 0:
+                az_vel = True
+            if elevation.v_Ist == 0:
+                el_vel = True
+
+            if self.system.PS.ptState == 2:
+                if az_pos and el_pos and az_vel and el_vel:
+                    break
+
+            if time.time() - t0 >= 5:
+                self.fail('Test is taking too long to complete.')
+            time.sleep(0.01)
+
+        # Make sure both axis stopped in the first position of the new sequence
+        # and they are waiting to start tracking
+        self.assertEqual(self.system.AZ.v_Ist, 0)
+        self.assertEqual(self.system.EL.v_Ist, 0)
+        self.assertEqual(self.system.AZ.p_Ist, 181000000)
+        self.assertEqual(self.system.EL.p_Ist, 89000000)
+
+        # Now wait for the tracking to start again
+        while self.system.PS.ptState != 3:
+            if time.time() - t0 >= 5:
+                self.fail('Test is taking too long to complete.')
+            time.sleep(0.01)
 
     def test_program_track_load_new_table_while_positioning(self):
         self.test_program_track_command_load_new_table()
@@ -1694,32 +1826,6 @@ class TestACU(unittest.TestCase):
         self._send(command.get())
 
         time.sleep(0.5)
-
-        self.test_program_track_command_load_new_table()
-
-        # Make sure both axis stopped, they will not restart moving
-        # if they do not receive a new program track mode command
-        self.assertEqual(self.system.AZ.v_Ist, 0)
-        self.assertEqual(self.system.EL.v_Ist, 0)
-
-    def test_program_track_load_new_table_while_running(self):
-        self.test_program_track_command_load_new_table()
-
-        # Axis needs to be unstowed and activated before sending this command
-        self.test_mode_command_unstow()
-        self.test_mode_command_active()
-
-        start_azimuth = ModeCommand(1, 8, None, 0.5)
-        start_elevation = ModeCommand(2, 8, None, 0.5)
-
-        command = Command(
-            start_azimuth,
-            start_elevation,
-        )
-
-        self._send(command.get())
-
-        time.sleep(2)
 
         self.test_program_track_command_load_new_table()
 
