@@ -12,17 +12,13 @@ from simulators.active_surface.usd import USD
 servers = []
 for line in range(96):  # 96 servers
     l_address = ('127.0.0.1', 11000 + line)
-    # We set as extra arg the default driver_reset_delay (100ms)
-    servers.append((l_address, (), (100)))
+    servers.append((l_address, (), ()))
 
 
 class System(ListeningSystem):
     """The active surface is composed of 8 sectors, and each sector
     has 12 lines of actuators.  The antenna control software must open
     one TCP socket for each line.  This class represents a line.
-
-    :param driver_reset_delay: a parameter that is passed down to all of
-        the children USDs. Refer to USD class to further documentation.
     """
 
     functions = {
@@ -59,9 +55,9 @@ class System(ListeningSystem):
     delay_step = 0.000512  # 512 microseconds
     slope_time = 10  # msec
 
-    def __init__(self, driver_reset_delay=0):
+    def __init__(self):
         self._set_default()
-        self.drivers = [USD(driver_reset_delay) for _ in range(32)]
+        self.drivers = [USD() for _ in range(32)]
 
     def _set_default(self):
         """This method reset the received command string to its default value.
