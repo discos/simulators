@@ -1825,14 +1825,25 @@ class TestACU(unittest.TestCase):
 
         self._send(command.get())
 
-        time.sleep(0.5)
+        time.sleep(1.25)
 
         self.test_program_track_command_load_new_table()
 
-        # Make sure both axis stopped, they will not restart moving
-        # if they do not receive a new program track mode command
+        time.sleep(1.25)
+
+        # Make sure both axis stopped in the program track first position
+        self.assertEqual(self.system.AZ.p_Ist, 181000000)
+        self.assertEqual(self.system.EL.p_Ist, 89000000)
         self.assertEqual(self.system.AZ.v_Ist, 0)
         self.assertEqual(self.system.EL.v_Ist, 0)
+
+        time.sleep(1)
+
+        # Make sure the tracking started
+        self.assertNotEqual(self.system.AZ.p_Ist, 181000000)
+        self.assertNotEqual(self.system.EL.p_Ist, 89000000)
+        self.assertNotEqual(self.system.AZ.v_Ist, 0)
+        self.assertNotEqual(self.system.EL.v_Ist, 0)
 
     def test_program_track_stop_positioning(self):
         self.test_program_track_command_load_new_table()
