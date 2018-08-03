@@ -6,12 +6,9 @@ from threading import Thread
 class USD(object):
     """This class represents a single USD actuator driver. It is completely
     handled by the active surface System class.
-
-    :param driver_reset_delay: this argument represents the time in which the
-        driver performs its reset procedure. It defaults to 0 to speed up the
-        testing process.
     """
 
+    driver_reset_delay = 0.1  # 100 milliseconds
     standby_delay_step = 0.004096  # 4096 microseconds
 
     # Resolution denominator, i.e.:
@@ -43,13 +40,10 @@ class USD(object):
         1: 19200
     }
 
-    def __init__(self, driver_reset_delay=0):
-        self.driver_reset_delay = driver_reset_delay  # Actual delay: 100ms
+    def __init__(self):
         self._set_default()
 
     def _set_default(self):
-        t0 = time.time()
-
         self.reference_position = 0
         self.current_position = 0
         self.position_queue = Queue()
@@ -92,12 +86,13 @@ class USD(object):
         self.move_thread = None
         self.move_to_thread = None
 
-        elapsed_time = time.time() - t0
-
-        time.sleep(max(self.driver_reset_delay - elapsed_time, 0))
-
     def soft_reset(self):
+        t0 = time.time()
+
         self._set_default()
+
+        elapsed_time = time.time() - t0
+        time.sleep(max(self.driver_reset_delay - elapsed_time, 0))
 
     def soft_trigger(self):
         if self.ready is True:
