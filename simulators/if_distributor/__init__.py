@@ -1,5 +1,5 @@
 from simulators import utils
-from simulators.common import ConfigurableSystem
+from simulators.common import MultiTypeSystem
 
 # Each system module (like active_surface.py, acu.py, etc.) has to
 # define a list called servers.s This list contains tuples
@@ -14,9 +14,9 @@ default_system_type = 'IFD'
 system_type = default_system_type
 
 
-class System(ConfigurableSystem):
+class System(MultiTypeSystem):
 
     def __new__(cls, *args):
         cls.systems = systems
         cls.system_type = system_type
-        return ConfigurableSystem.__new__(cls, *args)
+        return MultiTypeSystem.__new__(cls, *args)

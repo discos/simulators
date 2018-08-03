@@ -275,30 +275,56 @@ its ``servers`` list in defined in the following way::
         servers.append((l_address, (), ()))  # No sending servers or extra args
 
 
-The ``ConfigurableSystem`` class
+The ``MultiTypeSystem`` class
 --------------------------------
 
-A system can have multiple configurations. For instance, we have multiple
-IF distributor systems, a simpler one, called ``IFD``, and a more complex one,
+A system can have multiple types. For instance, we have multiple IF distributor
+system types, one more simple system, called ``IFD``, and a more complex one,
 called ``IFD_14_channels``. Both of them inherits from the ``ListeningSystem``
-class, and uses the same server configuration. Instead of writing two
-different systems, along with two different server configurations, we
-created a generic IF distributor system, by means of the ``ConfigurableSystem``
-class. This class, defined in
-:download:`common.py <../simulators/common.py>` acts as a ``class factory``,
-meaning that given a ``system_type`` parameter, that must be defined in the
-module ``__init__`` file, the class gets instanced with the type defined by the
-``system_type`` parameter. For instance, the default configuration for the
-IF distributor is the ``IFD`` one. So, creating an object calling
-``if_distributor.System()`` will actually instance a ``if_distributor.IFD.System()``
-object. If you want to create a ``if_distributor.IFD_14_channels.System()``
-object, you have to modify the ``system_type`` parameter after importing the
-``if_distributor`` module and before calling ``if_distributor.System()``.
-If an unknown configuration is given, the ``ConfigurableSystem`` class
-``__new__`` method will raise a ``ValueError``. To check if a configuration
-is known, the ``__new__`` method of the ``ConfigurableSystem`` class, will
-check for every ``System`` class present in all files of the selected system
-package.
+class, and uses the same server address configuration. Instead of writing two
+slightly different modules, along with two different server configurations, we
+created a generic IF distributor system, by means of the ``MultiTypeSystem``
+class. This class, defined in :download:`common.py <../simulators/common.py>`
+acts as a ``class factory``, meaning that given a ``system_type`` parameter,
+that must be defined in the module ``__init__`` file, the class gets instanced
+with the type defined by the ``system_type`` parameter. For instance, the
+default type of the IF distributor is the ``IFD`` one. So, creating a
+``System`` object by calling ``if_distributor.System()`` will actually create a
+``if_distributor.IFD.System()`` object. If you want to create a
+``if_distributor.IFD_14_channels.System()`` object, you have to override the
+``system_type`` parameter after importing the ``if_distributor`` module and
+before calling ``if_distributor.System()``. If an unknown system type is
+provided, the ``MultiTypeSystem`` class ``__new__`` method will raise a
+``ValueError``. To check if a system type is known, the ``__new__`` method of
+the ``MultiTypeSystem`` class, will check for every ``System`` class present in
+all files of the selected system package. The ``MultiTypeSystem`` class is
+defined as follows::
+
+    class MultiTypeSystem(object):
+
+        def __new__(self, *args):
+            if cls.system_type not in cls.systems:
+                raise ValueError(...)
+
+            return cls.systems[cls.system_type].System(*args)
+
+The inherited ``System`` classes must override the ``__new__`` method as
+follows::
+
+    class System(MultiTypeSystem):
+
+        def __new__(cls, *args):
+            cls.system = systems
+            cls.system_type = system_type
+            return MultiTypeSystem.__new__(cls, *args)
+
+where ``systems`` is the list of available systems for that particular module
+(that can automatically be retrieved calling the ``utils.get_systems()``
+function) and ``system_type`` is the variable storing the desired system type
+name, this is the variable to override in order to ask for a different system
+type. If you want to see additional informations about inheriting the
+``MultiTypeSystem`` class take a look at the
+:download:`if_distributor <../simulators/if_distributor/__init__.py>` module.
 
 
 Custom commands
