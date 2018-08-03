@@ -9,7 +9,7 @@ from simulators.common import BaseSystem
 
 
 def checksum(msg):
-    """Return the checksum of a string message.
+    """Returns the checksum of a string message.
 
     >>> checksum('fooo')
     'L'
@@ -26,7 +26,7 @@ def checksum(msg):
 
 
 def binary_complement(bin_string, mask=''):
-    """Return the binary complement of bin_string, with bits masked by mask.
+    """Returns the binary complement of bin_string, with bits masked by mask.
 
     >>> binary_complement('11010110')
     '00101001'
@@ -65,7 +65,7 @@ def binary_complement(bin_string, mask=''):
 
 
 def twos_to_int(binary_string):
-    """Return the two's complement of binary_string.
+    """Returns the two's complement of binary_string.
 
     >>> twos_to_int('11111011')
     -5
@@ -92,7 +92,7 @@ def twos_to_int(binary_string):
 
 
 def int_to_twos(val, n_bytes=4):
-    """Return the two's complement of the given integer as a string of zeroes
+    """Returns the two's complement of the given integer as a string of zeroes
     and ones with len = 8*n_bytes.
 
     >>> int_to_twos(5)
@@ -126,7 +126,7 @@ def int_to_twos(val, n_bytes=4):
 
 
 def binary_to_bytes(binary_string, little_endian=True):
-    """Convert a binary string in a string of bytes.
+    """Converts a binary string in a string of bytes.
 
     >>> binary_to_bytes('0110100001100101011011000110110001101111', False)
     '\x68\x65\x6C\x6C\x6F'
@@ -141,7 +141,7 @@ def binary_to_bytes(binary_string, little_endian=True):
 
 
 def bytes_to_int(byte_string, little_endian=True):
-    """Convert a string of bytes to an integer (like C atoi function).
+    """Converts a string of bytes to an integer (like C atoi function).
 
     >>> bytes_to_int(b'hello', False)
     448378203247
@@ -158,7 +158,7 @@ def bytes_to_int(byte_string, little_endian=True):
 
 
 def bytes_to_uint(byte_string, little_endian=True):
-    """Convert a string of bytes to an unsigned integer.
+    """Converts a string of bytes to an unsigned integer.
 
     >>> bytes_to_uint(b'hi', little_endian=False)
     26729
@@ -175,7 +175,7 @@ def bytes_to_uint(byte_string, little_endian=True):
 
 
 def real_to_binary(num, precision=1):
-    """Return the binary representation of a floating-point number
+    """Returns the binary representation of a floating-point number
     (IEEE 754 standard).
     A single-precision format description can be found here:
     https://en.wikipedia.org/wiki/Single-precision_floating-point_format
@@ -209,7 +209,7 @@ def real_to_binary(num, precision=1):
 
 
 def real_to_bytes(num, precision=1, little_endian=True):
-    """Return the bytestring representation of a floating-point number
+    """Returns the bytestring representation of a floating-point number
     (IEEE 754 standard).
 
     >>> [hex(ord(x)) for x in real_to_bytes(436.56, 1, False)]
@@ -224,14 +224,14 @@ def real_to_bytes(num, precision=1, little_endian=True):
 
 
 def bytes_to_real(bytes_real, precision=1, little_endian=True):
-    """Return the floating-point representation (IEEE 754 standard)
+    """Returns the floating-point representation (IEEE 754 standard)
     of bytestring number.
 
-    >>> round(bytes_to_real('\x43\xDA\x47\xAE', 1, False), 2)
-    436.56
+    >>> round(bytes_to_real('\x44\x77\x2C\x31', 1, False), 2)
+    988.69
 
-    >>> round(bytes_to_real('\x40\x7B\x48\xF5\xC2\x8F\x5C\x29', 2, False), 2)
-    436.56
+    >>> round(bytes_to_real('\x40\x7A\x25\x7D\x2E\x68\x51\x5D', 2, False), 2)
+    418.34
     """
 
     if little_endian:
@@ -249,7 +249,7 @@ def bytes_to_real(bytes_real, precision=1, little_endian=True):
 
 
 def int_to_bytes(val, n_bytes=4, little_endian=True):
-    """Return the bytestring representation of a given signed integer.
+    """Returns the bytestring representation of a given signed integer.
 
     >>> [hex(ord(x)) for x in int_to_bytes(354, little_endian=False)]
     ['0x0', '0x0', '0x1', '0x62']
@@ -259,7 +259,7 @@ def int_to_bytes(val, n_bytes=4, little_endian=True):
 
 
 def uint_to_bytes(val, n_bytes=4, little_endian=True):
-    """Return the bytestring representation of a given unsigned integer.
+    """Returns the bytestring representation of a given unsigned integer.
 
     >>> [hex(ord(x)) for x in uint_to_bytes(657, little_endian=False)]
     ['0x0', '0x0', '0x2', '0x91']
@@ -410,7 +410,7 @@ def mjd_to_date(original_mjd_date):
 
 
 def day_microseconds(date=None):
-    """Return the microseconds elapsed since last midnight UTC."""
+    """Returns the microseconds elapsed since last midnight UTC."""
     if not date:
         date = datetime.utcnow()
     elif not isinstance(date, datetime):
@@ -427,12 +427,13 @@ def day_microseconds(date=None):
 
 
 def day_milliseconds(date=None):
+    """Returns the milliseconds elapsed since last midnight UTC."""
     microseconds = day_microseconds(date)
     return int(round(float(microseconds) / 1000))
 
 
 def day_percentage(date=None):
-    """Return the day percentage. 00:00 = 0.0, 23:59:999999 = 1.0"""
+    """Returns the day percentage. 00:00 = 0.0, 23:59:999999 = 1.0"""
     if not date:
         date = datetime.utcnow()
 
@@ -447,6 +448,10 @@ def day_percentage(date=None):
 
 
 def get_systems():
+    """Returns a list of `.py` packages containing a `System` class. The path
+    in which this method looks is the same path of the module that calls this
+    very method. It is meant to be called by a module containing a
+    `MultiTypeSystem` class."""
     module = inspect.getmodule(inspect.stack()[1][0])
     module_path = module.__file__.rsplit('/', 1)[0] + '/'
     systems = {}

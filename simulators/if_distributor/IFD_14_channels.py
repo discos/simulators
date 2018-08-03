@@ -2,6 +2,12 @@ from simulators.common import ListeningSystem
 
 
 class System(ListeningSystem):
+    """The IFDistributor, also known as Intermediate Frequency Distributor,
+    shifts the received signal wave. This system is the simulator of the SRT
+    original IFDistributor, which was never truly developed because of some
+    orders delay that rendered the whole project obsolete. This may become
+    useful in the future in case a new IFDistributor gets developed starting
+    from the old schematics."""
 
     header = b'#'
     tail = b'\n'
@@ -23,6 +29,9 @@ class System(ListeningSystem):
         self._set_default()
 
     def _set_default(self):
+        """This method sets the initial values for the system. It is a
+        separate method from the constructor because it can get called at
+        runtime when a reset command is received.."""
         self.channels = [self.max_att_multiplier] * self.max_channels
         self.switched = False
 
@@ -50,6 +59,12 @@ class System(ListeningSystem):
         return self._execute(msg)
 
     def _execute(self, msg):
+        """This method parses and executes a command the moment it is
+        completely received.
+
+        :param msg: the received command, after its header and tail got
+            stripped away.
+        """
         if b' ' in msg and b'?' not in msg:  # Setup request
             try:
                 command, channel, value = msg.split()
