@@ -33,22 +33,24 @@ class SendingSystem(BaseSystem):
     def get_message(self):
         """This method returns the message the system wants to send to
         its client(s). The message is sent periodically and the system
-        must have an attribute called 'sampling_rate'. Make sure that
+        must have an attribute called 'sampling_time'. Make sure that
         the method is implemented thread safely."""
 
 
-class ConfigurableSystem(object):
+class MultiTypeSystem(object):
 
     def __new__(cls, *args):
         """This class acts as a 'class factory', it means that given the
-        attributes `cls.system_type` and `cls.systems` (that must be
-        present in inherited classes), creating an instance of
-        `ConfigurableSystem` (or some other class that inherits from this one)
-        will actually create an object of `cls.system_type` type if it's
-        found in the `cls.systems` list. This class is useful when we have
-        more than one configuration for the same system."""
+        attributes `system_type` and `systems` (that must be set in inherited
+        classes), creating an instance of `MultiTypeSystem` (or some other
+        class that inherits from this one) will actually create an object of
+        `system_type` type if it's found in the `systems` list. This class is
+        meant to be used in systems that have multiple simulator types in order
+        for the user to be able to choose the desired type at simulator
+        startup.
+        """
 
         if cls.system_type not in cls.systems:
-            raise ValueError('Configuration %s not found.' % cls.system_type)
+            raise ValueError('System type %s not found.' % cls.system_type)
 
         return cls.systems[cls.system_type].System(*args)
