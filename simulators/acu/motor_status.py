@@ -2,6 +2,7 @@ from simulators import utils
 
 
 class MotorStatus(object):
+    """This class holds the status of a generic axis motor."""
 
     def __init__(self):
         self.actual_position = 0  # REAL32, [rot]
@@ -51,6 +52,8 @@ class MotorStatus(object):
         # bits 18:31 = 0, not used
 
     def _motor_warning_code(self):
+        """This method returns the in bit mode coded status of the warning
+        status of the motor."""
         binary_string = (
             str(self.wa_iQuad_t)
             + str(self.wa_Temp_Amplifier)
@@ -75,6 +78,10 @@ class MotorStatus(object):
         return utils.binary_to_bytes(binary_string)
 
     def get_status(self):
+        """This method composes and returns the motor status message. It is
+        meant to be called by the axis to which the motor belongs to compose,
+        along with the other motors' status messages, the whole motor status
+        message."""
         response = (
             utils.real_to_bytes(self.actual_position, 1)
             + utils.real_to_bytes(self.actual_velocity, 1)

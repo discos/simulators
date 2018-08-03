@@ -2,6 +2,9 @@ from simulators import utils
 
 
 class GeneralStatus(object):
+    """General status of the ACU. This status holds generic informations
+    about the ACU, like its firmware version, the interlock statuses and
+    human-machine interfaces status."""
 
     def __init__(self):
         # Version, UINT16, ACU software version (10 -> v1.0)
@@ -87,6 +90,8 @@ class GeneralStatus(object):
         self.diag_signal = 0
 
     def _version(self):
+        """This method returns the version of the ACU firmware by combining
+        major version and minor version in a single byte."""
         binary_version = (
             utils.int_to_twos(self.major_version, 1)
             + utils.int_to_twos(self.minor_version, 1)
@@ -94,6 +99,8 @@ class GeneralStatus(object):
         return utils.binary_to_bytes(binary_version)
 
     def _status_hmi(self):
+        """This method returns the in bit mode coded status of the human
+        machine interfaces."""
         binary_string = (
             str(self.LCP_connected)
             + str(self.remote_computer_connected)
@@ -107,6 +114,8 @@ class GeneralStatus(object):
         return utils.binary_to_bytes(binary_string)
 
     def _hardware_interlock(self):
+        """This method returns the in bit mode coded status of the hardware
+        interlock."""
         binary_string = (
             str(self.EStop_Device)
             + str(self.ES_SP)
@@ -133,6 +142,8 @@ class GeneralStatus(object):
         return utils.binary_to_bytes(binary_string)
 
     def _software_interlock(self):
+        """This method returns the in bit mode coded status of the software
+        interlock."""
         binary_string = (
             str(self.Control_System_Off)
             + str(self.Power_Control_Sys)
@@ -162,6 +173,9 @@ class GeneralStatus(object):
         return utils.binary_to_bytes(binary_string)
 
     def get_status(self):
+        """This method composes and returns the general status message. It is
+        meant to be called by the System class to compose the whole status
+        message."""
         return (self._version()
                 + utils.uint_to_bytes(self.master, 1)
                 + self._status_hmi()

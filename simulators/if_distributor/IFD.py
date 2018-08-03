@@ -2,6 +2,9 @@ from simulators.common import ListeningSystem
 
 
 class System(ListeningSystem):
+    """The IFDistributor, also known as Intermediate Frequency Distributor,
+    shifts the received signal wave by means of a local oscillator.
+    This system is the simulator of the SRT LP band IFDistributor."""
 
     tail = b'\n'
     ref_freq = 10
@@ -34,6 +37,11 @@ class System(ListeningSystem):
         self.msg = b''
 
     def _init_board(self, address, pcb_type):
+        """This method initializes the status of a given board.
+
+        :param address: the address of the board to initialize.
+        :param pcb_type: the type of the board to initialize.
+        """
         board_status = [
             address,
             address,
@@ -90,6 +98,11 @@ class System(ListeningSystem):
         return self._execute(msg)
 
     def _execute(self, msg):
+        """This method parses and executes a command the moment it is
+        completely received.
+
+        :param msg: the received command, comprehensive of its header and tail.
+        """
         if len(msg) < 3:
             raise ValueError('Message too short.')
 
@@ -127,6 +140,11 @@ class System(ListeningSystem):
         return cmd(params)
 
     def _get_status(self, params):
+        """This method retrieves the status of the given board.
+
+        :param params: one accepted parameter, which is the index of the
+            desired board.
+        """
         if len(params) != 1:
             raise ValueError('Wrong number of arguments for command `?`.')
 
@@ -139,6 +157,12 @@ class System(ListeningSystem):
         return response
 
     def _set_bandwidth(self, params):
+        """This method sets the bandwidth on type 0 and 1 boards.
+
+        :param params: two accepted parameters, the first one is the board
+            index, the second one is the desired bandwidth, 0 for a narrow
+            filter, 1 for a medium, 2 for a large and 3 for no filter at all.
+        """
         if len(params) != 2:
             raise ValueError('Wrong number of arguments for command `B`.')
         if params[1] not in range(4):
@@ -164,6 +188,14 @@ class System(ListeningSystem):
         return self.ack
 
     def _set_lo(self, params):
+        """This method handles the local oscillator on type 2 boards.
+
+        :param params: four accepted parameters, the first one is the board
+            index, the second one is the reference frequency, the third one
+            is the local oscillator frequency, the fourth one can be 0 or 1,
+            indicating whether the local oscillator should be enabled (1) or
+            disabled (0).
+        """
         if len(params) != 4:
             raise ValueError('Wrong number of arguments for command `S`.')
         if params[1] != self.ref_freq:
@@ -196,6 +228,13 @@ class System(ListeningSystem):
         return self.ack
 
     def _set_att(self, params):
+        """This method sets the attenuation to type 5 boards.
+
+        :param params: three accepted parameters, the first one is the board
+            index, the second one is the channel to which the command will sets
+            the attenuation (range 0 to 3), the third one
+            is the attenuation value (range 0 to 31.5dB)
+        """
         if len(params) != 3:
             raise ValueError('Wrong number of arguments for command `A`.')
         if params[1] not in range(4):
@@ -215,6 +254,12 @@ class System(ListeningSystem):
         return self.ack
 
     def _set_input(self, params):
+        """This method sets the input conversion on type 1 boards.
+
+        :param params: two accepted parameters, the first one is the board
+            index, the second one is a boolean indicating whether the RF input
+            signal should be converted
+        """
         if len(params) != 2:
             raise ValueError('Wrong number of arguments for command `I`.')
         if params[1] not in [0, 1]:

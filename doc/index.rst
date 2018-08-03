@@ -7,6 +7,7 @@ DISCOS Simulators
 
    developers.rst
    users.rst
+   api.rst
 
 Indices and tables
 ==================
