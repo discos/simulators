@@ -211,17 +211,28 @@ class Simulator(object):
             processes will continue to run even if the simulator object gets
             destroyed. To stop these processes, method `stop` must be called.
         """
+        processes = []
         for l_address, s_address, args in self.system_module.servers:
             system = self.system_module.System(*args)
             s = Server(system, l_address, s_address)
             p = Process(target=s.serve_forever)
             p.daemon = daemon
+            processes.append(p)
             p.start()
             if not daemon:
                 if l_address:
                     print('Server %s up and running.' % (l_address,))
                 if s_address:
                     print('Server %s up and running.' % (s_address,))
+
+        if not daemon:
+            try:
+                for p in processes:
+                    p.join()
+            except KeyboardInterrupt:
+                for p in processes:
+                    p.terminate()
+            print('\nSimulator stopped.')
 
     def stop(self):
         """This method stops a simulator by sending the custom `$system_stop!`
