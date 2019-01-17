@@ -223,7 +223,7 @@ class TestCommandLibrary(unittest.TestCase):
                 address_on_response=address_on_response
             )
             expected_cmd = self._compose(
-               '\x20\x00\x14',
+                '\x20\x00\x14',
                 address_on_response=address_on_response
             )
             self.assertEqual(cmd, expected_cmd)
@@ -252,7 +252,7 @@ class TestCommandLibrary(unittest.TestCase):
                 address_on_response=address_on_response
             )
             expected_cmd = self._compose(
-               '\x21\x27\x10',
+                '\x21\x27\x10',
                 address_on_response=address_on_response
             )
             self.assertEqual(cmd, expected_cmd)
@@ -281,7 +281,7 @@ class TestCommandLibrary(unittest.TestCase):
                 address_on_response=address_on_response
             )
             expected_cmd = self._compose(
-               '\x22\x00',
+                '\x22\x00',
                 address_on_response=address_on_response
             )
             self.assertEqual(cmd, expected_cmd)
@@ -310,7 +310,7 @@ class TestCommandLibrary(unittest.TestCase):
                 address_on_response=address_on_response
             )
             expected_cmd = self._compose(
-               '\x23\x00\x00\x00\x00',
+                '\x23\x00\x00\x00\x00',
                 address_on_response=address_on_response
             )
             self.assertEqual(cmd, expected_cmd)
@@ -349,7 +349,7 @@ class TestCommandLibrary(unittest.TestCase):
                 address_on_response=address_on_response
             )
             expected_cmd = self._compose(
-               '\x25\x00',
+                '\x25\x00',
                 address_on_response=address_on_response
             )
             self.assertEqual(cmd, expected_cmd)
@@ -384,7 +384,7 @@ class TestCommandLibrary(unittest.TestCase):
                 address_on_response=address_on_response
             )
             expected_cmd = self._compose(
-               '\x26\x00',
+                '\x26\x00',
                 address_on_response=address_on_response
             )
             self.assertEqual(cmd, expected_cmd)
@@ -419,7 +419,7 @@ class TestCommandLibrary(unittest.TestCase):
                 address_on_response=address_on_response
             )
             expected_cmd = self._compose(
-               '\x27\x00',
+                '\x27\x00',
                 address_on_response=address_on_response
             )
             self.assertEqual(cmd, expected_cmd)
@@ -448,7 +448,7 @@ class TestCommandLibrary(unittest.TestCase):
                 address_on_response=address_on_response
             )
             expected_cmd = self._compose(
-               '\x28\x00',
+                '\x28\x00',
                 address_on_response=address_on_response
             )
             self.assertEqual(cmd, expected_cmd)
@@ -483,7 +483,7 @@ class TestCommandLibrary(unittest.TestCase):
                 address_on_response=address_on_response
             )
             expected_cmd = self._compose(
-               '\x29\x00',
+                '\x29\x00',
                 address_on_response=address_on_response
             )
             self.assertEqual(cmd, expected_cmd)
@@ -512,7 +512,7 @@ class TestCommandLibrary(unittest.TestCase):
                 address_on_response=address_on_response
             )
             expected_cmd = self._compose(
-               '\x30\x00\x00\x00\x00',
+                '\x30\x00\x00\x00\x00',
                 address_on_response=address_on_response
             )
             self.assertEqual(cmd, expected_cmd)
@@ -545,7 +545,7 @@ class TestCommandLibrary(unittest.TestCase):
                 address_on_response=address_on_response
             )
             expected_cmd = self._compose(
-               '\x31\x00\x00\x00\x00',
+                '\x31\x00\x00\x00\x00',
                 address_on_response=address_on_response
             )
             self.assertEqual(cmd, expected_cmd)
@@ -578,7 +578,7 @@ class TestCommandLibrary(unittest.TestCase):
                 address_on_response=address_on_response
             )
             expected_cmd = self._compose(
-               '\x32\x01',
+                '\x32\x01',
                 address_on_response=address_on_response
             )
             self.assertEqual(cmd, expected_cmd)
@@ -607,7 +607,7 @@ class TestCommandLibrary(unittest.TestCase):
                 address_on_response=address_on_response
             )
             expected_cmd = self._compose(
-               '\x35\x00\x00\x00',
+                '\x35\x00\x00\x00',
                 address_on_response=address_on_response
             )
             self.assertEqual(cmd, expected_cmd)
@@ -642,7 +642,7 @@ class TestCommandLibrary(unittest.TestCase):
                 address_on_response=address_on_response
             )
             expected_cmd = self._compose(
-               '\x2A\x00',
+                '\x2A\x00',
                 address_on_response=address_on_response
             )
             self.assertEqual(cmd, expected_cmd)
@@ -677,7 +677,7 @@ class TestCommandLibrary(unittest.TestCase):
                 address_on_response=address_on_response
             )
             expected_cmd = self._compose(
-               '\x2B\x00',
+                '\x2B\x00',
                 address_on_response=address_on_response
             )
             self.assertEqual(cmd, expected_cmd)
@@ -712,7 +712,7 @@ class TestCommandLibrary(unittest.TestCase):
                 address_on_response=address_on_response
             )
             expected_cmd = self._compose(
-               '\x2C\x00',
+                '\x2C\x00',
                 address_on_response=address_on_response
             )
             self.assertEqual(cmd, expected_cmd)
@@ -747,7 +747,7 @@ class TestCommandLibrary(unittest.TestCase):
                 address_on_response=address_on_response
             )
             expected_cmd = self._compose(
-               '\x2D\x00\x00',
+                '\x2D\x00\x00',
                 address_on_response=address_on_response
             )
             self.assertEqual(cmd, expected_cmd)
@@ -1248,7 +1248,7 @@ class TestASParse(unittest.TestCase):
             )
             self.assertTrue(self._send_cmd(msg))
 
-    def test_set_IO_pins(self):
+    def test_set_io_pins(self):
         for byte_value in range(256):
             for i in range(len(self.system.drivers)):
                 for address_on_response in [True, False]:
@@ -1259,11 +1259,11 @@ class TestASParse(unittest.TestCase):
                     )
                     self.assertEqual(self._send_cmd(msg), byte_ack)
 
-    def test_wrong_set_IO_pins(self):
+    def test_wrong_set_io_pins(self):
         command = '\x25'
         self._test_wrong_cmd(command)
 
-    def test_broadcast_set_IO_pins(self):
+    def test_broadcast_set_io_pins(self):
         for byte_value in range(256):
             for address_on_response in [True, False]:
                 msg = command_library.set_io_pins(
@@ -1521,7 +1521,7 @@ class TestASParse(unittest.TestCase):
         command = '\x35'
         self._test_wrong_cmd(command)
 
-    def test_set_stop_IO(self):
+    def test_set_stop_io(self):
         for byte_value in range(256):
             for i in range(len(self.system.drivers)):
                 for address_on_response in [True, False]:
@@ -1532,11 +1532,11 @@ class TestASParse(unittest.TestCase):
                     )
                     self.assertEqual(self._send_cmd(msg), byte_ack)
 
-    def test_wrong_set_stop_IO(self):
+    def test_wrong_set_stop_io(self):
         command = '\x2A'
         self._test_wrong_cmd(command)
 
-    def test_broadcast_set_stop_IO(self):
+    def test_broadcast_set_stop_io(self):
         for byte_value in range(256):
             for address_on_response in [True, False]:
                 msg = command_library.set_stop_io(
@@ -1545,7 +1545,7 @@ class TestASParse(unittest.TestCase):
                 )
                 self.assertTrue(self._send_cmd(msg))
 
-    def test_set_positioning_IO(self):
+    def test_set_positioning_io(self):
         for byte_value in range(256):
             for i in range(len(self.system.drivers)):
                 for address_on_response in [True, False]:
@@ -1556,11 +1556,11 @@ class TestASParse(unittest.TestCase):
                     )
                     self.assertEqual(self._send_cmd(msg), byte_ack)
 
-    def test_wrong_set_positioning_IO(self):
+    def test_wrong_set_positioning_io(self):
         command = '\x2B'
         self._test_wrong_cmd(command)
 
-    def test_broadcast_set_positioning_IO(self):
+    def test_broadcast_set_positioning_io(self):
         for byte_value in range(256):
             for address_on_response in [True, False]:
                 msg = command_library.set_positioning_io(
@@ -1569,7 +1569,7 @@ class TestASParse(unittest.TestCase):
                 )
                 self.assertTrue(self._send_cmd(msg))
 
-    def test_set_home_IO(self):
+    def test_set_home_io(self):
         for byte_value in range(256):
             for i in range(len(self.system.drivers)):
                 for address_on_response in [True, False]:
@@ -1580,11 +1580,11 @@ class TestASParse(unittest.TestCase):
                     )
                     self.assertEqual(self._send_cmd(msg), byte_ack)
 
-    def test_wrong_set_home_IO(self):
+    def test_wrong_set_home_io(self):
         command = '\x2C'
         self._test_wrong_cmd(command)
 
-    def test_broadcast_set_home_IO(self):
+    def test_broadcast_set_home_io(self):
         for byte_value in range(256):
             for address_on_response in [True, False]:
                 msg = command_library.set_home_io(

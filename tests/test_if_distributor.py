@@ -398,7 +398,7 @@ class TestIFDistributor14Channels(unittest.TestCase):
         for byte in msg[:-1]:
             self.system.parse(byte)
         with self.assertRaisesRegexp(
-            ValueError, 'SWT command accepts only values 00 or 01'):
+                ValueError, 'SWT command accepts only values 00 or 01'):
             self.system.parse(msg[-1])
 
 

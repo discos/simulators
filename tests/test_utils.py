@@ -318,5 +318,6 @@ class TestServer(unittest.TestCase):
         with self.assertRaises(ValueError):
             utils.day_percentage('dummy')
 
+
 if __name__ == '__main__':
     unittest.main()
