@@ -157,11 +157,11 @@ def bytes_to_int(byte_string, little_endian=True):
     return twos_to_int(binary_string)
 
 
-def bytes_to_uint(byte_string, little_endian=True):
-    """Converts a string of bytes to an unsigned integer.
+def bytes_to_binary(byte_string, little_endian=True):
+    """Converts a string of bytes to a binary string.
 
-    >>> bytes_to_uint(b'hi', little_endian=False)
-    26729
+    >>> bytes_to_binary(b'hi', little_endian=False)
+    '0110100001101001'
     """
     binary_string = ''
 
@@ -171,7 +171,16 @@ def bytes_to_uint(byte_string, little_endian=True):
     for char in byte_string:
         binary_string += bin(ord(char))[2:].zfill(8)
 
-    return int(binary_string, 2)
+    return binary_string
+
+
+def bytes_to_uint(byte_string, little_endian=True):
+    """Converts a string of bytes to an unsigned integer.
+
+    >>> bytes_to_uint(b'hi', little_endian=False)
+    26729
+    """
+    return int(bytes_to_binary(byte_string, little_endian), 2)
 
 
 def real_to_binary(num, precision=1):

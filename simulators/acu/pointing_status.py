@@ -1,8 +1,6 @@
 from datetime import datetime, timedelta
 import numpy as np
 from scipy import interpolate
-from simulators.acu.command_status import (
-    ParameterCommandStatus)
 from simulators import utils
 
 
@@ -30,183 +28,61 @@ class PointingStatus(object):
         self.start_time = None
         self.end_time = None
 
-        # confVersion, REAL64, version of the configuration file
-        self.confVersion = 0
-
-        # confOk, BOOL
-        # 0: pointing not initialized and configured
-        # 1: pointing initialized and configured
-        self.confOk = 1
-
-        # posEncAz, INT32, actual position of azimuth encoder [microdeg]
-        self.posEncAz = 0
-
-        # pointOffsetAz, INT32
-        # actual pointing offset of the azimuth axis [microdeg]
-        self.pointOffsetAz = 0
-
-        # posCalibChartAz, INT32
-        # actual encoder position offset from the calibration chart [microdeg]
-        self.posCalibChartAz = 0
-
-        # posCorrTableAz_F_plst_El, INT32
-        # actual encoder position offset from
-        # the user defined correction table [microdeg]
-        self.posCorrTableAz_F_plst_El = 0
-
-        # posCorrTableAzOn, BOOL
-        # 0: correction table is not used
-        # 1: pos. of the correction table is added onto the encoder pos.
-        self.posCorrTableAzOn = 0
-
-        # encAzFault, BOOL
-        # 0: position encoder azimuth ok
-        # 1: position encoder azimuth reports an error
-        self.encAzFault = 0
-
-        # sectorSwitchAz, BOOL, 0: lower sector active, 1: upper sector active
-        self.sectorSwitchAz = 0
-
-        # posEncEl, INT32, actual position of elevation encoder [microdeg]
-        self.posEncEl = 0
-
-        # pointOffsetEl, INT32
-        # actual pointing offset of the elevation axis [microdeg]
-        self.pointOffsetEl = 0
-
-        # posCalibChartEl, INT32
-        # actual encoder position offset from the calibration chart [microdeg]
-        self.posCalibChartEl = 0
-
-        # posCorrTableEl_F_plst_Az, INT32
-        # actual encoder position offset from the
-        # user defined correction table [microdeg]
-        self.posCorrTableEl_F_plst_Az = 0
-
-        # posCorrTableElOn, BOOL
-        # 0: correction table is not used
-        # 1: pos. of the correction table is added onto the encoder pos.
-        self.posCorrTableElOn = 0
-
-        # encElFault, UINT8
-        # 0: position encoder elevation ok
-        # 1: position encoder elevation reports an error
-        self.encElFault = 0
-
-        # posEncCw, INT32
-        # actual position of azimuth cable wrap encoder [microdeg]
-        self.posEncCw = 0
-
-        # posCalibChartCw, INT32
-        # actual encoder position offset from the calibration chart
-        self.posCalibChartCw = 0
-
-        # encCwFault, UINT8
-        # 0: position encoder cable wrap ok
-        # 1: position encoder cable wrap reports an error
-        self.encCwFault = 0
-
-        # timeSource, UINT16
-        # 1: internal ACU time (computer quartz clock)
-        # 2: clock (time read-outs of GPS clock)
-        # 3: external time (Time is set by command)
-        self.timeSource = 1
-
         self.time_source_offset = timedelta(0)
-
-        # actTime, REAL64, actual time in format modified julian day
-        self.actTime = 0
-
-        # actTimeOffset, REAL64, actual time offset in fraction of day
-        self.actTimeOffset = 0
-
         self.time_offset = timedelta(0)
 
-        # clockOnLine, UINT8
-        # 0: GPS receiver doesn't send data
-        # 1: GPS receivers send data
-        self.clockOnline = 1
-
-        # clockOK, UINT8
-        # 0: GPS receiver sends error message
-        # 1: GPS receivers sends clock ok
-        self.clockOK = 1
-
-        # Actual time
-        self.year = 0  # UINT16
-        self.month = 0  # UINT16
-        self.day = 0  # UINT16
-        self.hour = 0  # UINT16
-        self.minute = 0  # UINT16
-        self.second = 0  # UINT16
-
-        # actPtPos_Azimuth, INT32
-        # calculated azimuth position of the program track [microdeg]
+        self.status = bytearray(b'\x00' * 129)
+        self.confVersion = 0
+        self.confOk = True
+        self.posEncAz = 0
+        self.pointOffsetAz = 0
+        self.posCalibChartAz = 0
+        self.posCorrTableAz_F_plst_El = 0
+        self.posCorrTableAzOn = False
+        self.encAzFault = False
+        self.sectorSwitchAz = False
+        self.posEncEl = 0
+        self.pointOffsetEl = 0
+        self.posCalibChartEl = 0
+        self.posCorrTableEl_F_plst_Az = 0
+        self.posCorrTableElOn = False
+        self.encElFault = False
+        self.posEncCw = 0
+        self.posCalibChartCw = 0
+        self.encCwFault = False
+        self.timeSource = 1
+        self.actTime = utils.mjd()
+        self.actTimeOffset = 0
+        self.clockOnline = True
+        self.clockOK = True
+        self.year = 0
+        self.month = 0
+        self.day = 0
+        self.hour = 0
+        self.minute = 0
+        self.second = 0
         self.actPtPos_Azimuth = 0
-
-        # actPtPos_Elevation, INT32
-        # calculated elevation position of the program track [microdeg]
         self.actPtPos_Elevation = 0
-
-        # ptState, UINT16, status of the program track
-        # 0: off
-        # 1: fault
-        # 2: enabled
-        # 3: running
-        # 4: completed
         self.ptState = 0
 
-        # ptError, WORD, in bit mode coded program track error
-        self.Data_Overflow = 0
-        self.Time_Distance_Fault = 0
-        self.No_Data_Available = 0
-        # bits 3:5 = 0, reserved
-        # bits 6:15 = 0, not used
+        # ptError
+        self.Data_Overflow = False
+        self.Time_Distance_Fault = False
+        self.No_Data_Available = False
 
-        # actPtTimeOffset, INT32
-        # actual time offset [milliseconds] for program track
         self.actPtTimeOffset = 0
-
-        # ptInterpolMode, UINT16, actual selected interpolation mode
-        # 0: no interpolation mode selected
-        # 4: spline
         self.ptInterpolMode = 0
-
-        # ptTrackingType, UINT16, actual type of tracking
-        # 1: program track
-        self.ptTrackingType = 1  # UINT16
-
-        # ptTrackingMode, UINT16, actual type of program track
-        # 1: program track values are azimuth/elevation
+        self.ptTrackingType = 1
         self.ptTrackingMode = 1
-
-        # ptActTableIndex, UINT32
-        # actual table entry of the program track table
         self.ptActTableIndex = 0
-
-        # ptEndTableIndex, UINT32, last table entry of the program track table
         self.ptEndTableIndex = 0
-
-        # ptTableLength, UINT32, overall length of the program track table
         self.ptTableLength = 0
-
-        # parameter_command_status, refer to ParameterCommandStatus class
-        self.pcs = ParameterCommandStatus()
+        self.parameter_command_counter = 0
+        self.parameter_command = 0
+        self.parameter_command_answer = 0
 
         # Counter relative to the load table command
         self.pt_command_id = None
-
-    def _pointing_error(self):
-        """This method returns the in bit mode coded status of the pointing
-        erroris."""
-        binary_string = (
-            str(self.Data_Overflow)
-            + str(self.Time_Distance_Fault)
-            + str(self.No_Data_Available)
-            + '0' * 3  # reserved
-            + '0' * 10  # not used
-        )
-        return utils.binary_to_bytes(binary_string)
 
     def get_status(self):
         """This method composes and returns the pointing status message. It is
@@ -214,52 +90,7 @@ class PointingStatus(object):
         message."""
         self._update_status()
 
-        response = (
-            utils.real_to_bytes(self.confVersion, 2)
-            + chr(self.confOk)
-            + utils.int_to_bytes(self.posEncAz)
-            + utils.int_to_bytes(self.pointOffsetAz)
-            + utils.int_to_bytes(self.posCalibChartAz)
-            + utils.int_to_bytes(self.posCorrTableAz_F_plst_El)
-            + chr(self.posCorrTableAzOn)
-            + chr(self.encAzFault)
-            + chr(self.sectorSwitchAz)
-            + utils.int_to_bytes(self.posEncEl)
-            + utils.int_to_bytes(self.pointOffsetEl)
-            + utils.int_to_bytes(self.posCalibChartEl)
-            + utils.int_to_bytes(self.posCorrTableEl_F_plst_Az)
-            + chr(self.posCorrTableElOn)
-            + utils.uint_to_bytes(self.encElFault, 1)
-            + utils.int_to_bytes(self.posEncCw)
-            + utils.int_to_bytes(self.posCalibChartCw)
-            + utils.uint_to_bytes(self.encCwFault, 1)
-            + utils.uint_to_bytes(self.timeSource, 2)
-            + utils.real_to_bytes(self.actTime, 2)
-            + utils.real_to_bytes(self.actTimeOffset, 2)
-            + utils.uint_to_bytes(self.clockOnline, 1)
-            + utils.uint_to_bytes(self.clockOK, 1)
-            + utils.uint_to_bytes(self.year, 2)
-            + utils.uint_to_bytes(self.month, 2)
-            + utils.uint_to_bytes(self.day, 2)
-            + utils.uint_to_bytes(self.hour, 2)
-            + utils.uint_to_bytes(self.minute, 2)
-            + utils.uint_to_bytes(self.second, 2)
-            + utils.int_to_bytes(self.actPtPos_Azimuth)
-            + utils.int_to_bytes(self.actPtPos_Elevation)
-            + utils.uint_to_bytes(self.ptState, 2)
-            + self._pointing_error()
-            + utils.int_to_bytes(self.actPtTimeOffset)
-            + utils.uint_to_bytes(self.ptInterpolMode, 2)
-            + utils.uint_to_bytes(self.ptTrackingType, 2)
-            + utils.uint_to_bytes(self.ptTrackingMode, 2)
-            + utils.uint_to_bytes(self.ptActTableIndex)
-            + utils.uint_to_bytes(self.ptEndTableIndex)
-            + utils.uint_to_bytes(self.ptTableLength)
-            + self.pcs.get_status()
-        )
-
-        self.pcs = ParameterCommandStatus()
-        return response
+        return str(self.status)
 
     def _update_status(self):
         """This method updates some attributes (I.e. the ACU time and tracking
@@ -322,7 +153,7 @@ class PointingStatus(object):
 
     # -------------------- Parameter Command --------------------
 
-    def parameter_command(self, command):
+    def _parameter_command(self, command):
         """This method parses and executes the received parameter command.
 
         :param command: the received command.
@@ -332,8 +163,8 @@ class PointingStatus(object):
         parameter_1 = utils.bytes_to_real(command[10:18], 2)
         parameter_2 = utils.bytes_to_real(command[18:26], 2)
 
-        self.pcs.counter = cmd_cnt
-        self.pcs.command = parameter_id
+        self.parameter_command_counter = cmd_cnt
+        self.parameter_command = parameter_id
 
         if parameter_id == 50:
             self._time_source(parameter_1, parameter_2)
@@ -342,7 +173,7 @@ class PointingStatus(object):
         elif parameter_id == 60:
             self._program_track_time_correction(parameter_1)
         else:
-            self.pcs.answer = 5
+            self.parameter_command_answer = 5
 
     def _time_source(self, parameter_1, parameter_2):
         """This method is called when a time source parameter command is
@@ -356,7 +187,7 @@ class PointingStatus(object):
         parameter_1 = int(parameter_1)
 
         if parameter_1 not in [1, 2, 3]:
-            self.pcs.answer = 5
+            self.parameter_command_answer = 5
             return
         elif parameter_1 == 1:
             self.time_source_offset = timedelta(0)
@@ -369,7 +200,7 @@ class PointingStatus(object):
             )
 
         self.timeSource = int(parameter_1)
-        self.pcs.answer = 1
+        self.parameter_command_answer = 1
 
     def _time_offset(self, parameter_1, parameter_2):
         """This method is called when a time offset parameter command is
@@ -382,7 +213,7 @@ class PointingStatus(object):
         parameter_1 = int(parameter_1)
 
         if not (1 <= parameter_1 <= 4) or abs(parameter_2) > 86400000:
-            self.pcs.answer = 5
+            self.parameter_command_answer = 5
             return
         if parameter_1 == 1:
             # Servo System Time + 1 second
@@ -404,7 +235,7 @@ class PointingStatus(object):
             self.time_offset += offset
             self.actTimeOffset += utils.day_percentage(offset)
 
-        self.pcs.answer = 1
+        self.parameter_command_answer = 1
 
     def _program_track_time_correction(self, time_offset):
         """This method is called when a program track time offset parameter
@@ -417,15 +248,15 @@ class PointingStatus(object):
         # time_offset = offset time [s]
 
         if abs(time_offset) > 86400000:
-            self.pcs.answer = 5
+            self.parameter_command_answer = 5
             return
 
         self.actPtTimeOffset = int(round(time_offset * 1000))
-        self.pcs.answer = 1
+        self.parameter_command_answer = 1
 
     # --------------- Program Track Parameter Command ---------------
 
-    def program_track_parameter_command(self, command):
+    def _program_track_parameter_command(self, command):
         """This method parses the received program track parameter command.
         It interpolates the received tracking points and stores the generated
         trajectories in order for the axes to use them while tracking some
@@ -436,50 +267,50 @@ class PointingStatus(object):
         cmd_cnt = utils.bytes_to_uint(command[4:8])
         parameter_id = utils.bytes_to_uint(command[8:10])
 
-        self.pcs.counter = cmd_cnt
-        self.pcs.command = parameter_id
+        self.parameter_command_counter = cmd_cnt
+        self.parameter_command = parameter_id
 
         if parameter_id != 61:
-            self.pcs.answer = 0
+            self.parameter_command_answer = 0
             return
 
         interpolation_mode = utils.bytes_to_uint(command[10:12])
 
         if interpolation_mode != 4:
-            self.pcs.answer = 5
+            self.parameter_command_answer = 5
             return
 
         tracking_mode = utils.bytes_to_uint(command[12:14])
 
         if tracking_mode != 1:
-            self.pcs.answer = 5
+            self.parameter_command_answer = 5
             return
 
         load_mode = utils.bytes_to_uint(command[14:16])
 
         if load_mode not in [1, 2]:
-            self.pcs.answer = 5
+            self.parameter_command_answer = 5
             return
 
         sequence_length = utils.bytes_to_uint(command[16:18])
 
         if sequence_length > 50:
-            self.pcs.answer = 5
+            self.parameter_command_answer = 5
             return
 
         if load_mode == 1 and sequence_length < 5:
-            self.pcs.answer = 5
+            self.parameter_command_answer = 5
             return
 
         if load_mode == 2 and not self.ptTableLength:
-            self.pcs.answer = 5
+            self.parameter_command_answer = 5
             return
 
         start_time = utils.mjd_to_date(utils.bytes_to_real(command[18:26], 2))
         start_time += self.time_source_offset
 
         if load_mode == 2 and start_time != self.start_time:
-            self.pcs.answer = 5
+            self.parameter_command_answer = 5
             return
 
         if load_mode == 1:
@@ -510,11 +341,11 @@ class PointingStatus(object):
             )
 
             if i == 0 and last_relative_time == 0 and relative_time != 0:
-                self.pcs.answer = 5
+                self.parameter_command_answer = 5
                 return
 
             if relative_time < last_relative_time:
-                self.pcs.answer = 5
+                self.parameter_command_answer = 5
                 return
 
             if not expected_delta and relative_times:
@@ -522,7 +353,7 @@ class PointingStatus(object):
 
             if expected_delta:
                 if relative_time - last_relative_time != expected_delta:
-                    self.pcs.answer = 5
+                    self.parameter_command_answer = 5
                     return
 
             relative_times.append(relative_time)
@@ -574,7 +405,7 @@ class PointingStatus(object):
             np.array(elevation_positions)
         )
 
-        self.pcs.answer = 1
+        self.parameter_command_answer = 1
 
     def get_next_position(self, subsystem):
         """This method returns the next fixed point of the generated
@@ -628,3 +459,552 @@ class PointingStatus(object):
         vel = interpolate.splev(elapsed, trajectory, der=1).item(0) * 1000000
         acc = interpolate.splev(elapsed, trajectory, der=2).item(0) * 1000000
         return self.ptState, int(round(pos)), int(round(vel)), int(round(acc))
+
+    @property
+    def confVersion(self):
+        return utils.bytes_to_real(self.status[0:8], precision=2)
+
+    @confVersion.setter
+    def confVersion(self, value):
+        # REAL64, Version of the configuration file
+        if not isinstance(value, (float, int)):
+            raise ValueError('Provide a floating point number!')
+        self.status[0:8] = utils.real_to_bytes(value, precision=2)
+
+    @property
+    def confOk(self):
+        return bool(self.status[8])
+
+    @confOk.setter
+    def confOk(self, value):
+        # BOOL
+        # False: pointing not initialized and configured
+        # True: initialization of pointing completed
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        self.status[8] = chr(int(value))
+
+    @property
+    def posEncAz(self):
+        return utils.bytes_to_int(str(self.status[9:13]))
+
+    @posEncAz.setter
+    def posEncAz(self, value):
+        # INT32, actual position of azimuth encoder [microdeg]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[9:13] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def pointOffsetAz(self):
+        return utils.bytes_to_int(str(self.status[13:17]))
+
+    @pointOffsetAz.setter
+    def pointOffsetAz(self, value):
+        # INT32, actual pointing offset of the azimuth axis [microdeg]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[13:17] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def posCalibChartAz(self):
+        return utils.bytes_to_int(str(self.status[17:21]))
+
+    @posCalibChartAz.setter
+    def posCalibChartAz(self, value):
+        # INT32, actual encoder position offset from the calibration chart
+        # [microdeg]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[17:21] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def posCorrTableAz_F_plst_El(self):
+        return utils.bytes_to_int(str(self.status[21:25]))
+
+    @posCorrTableAz_F_plst_El.setter
+    def posCorrTableAz_F_plst_El(self, value):
+        # INT32, actual encoder position offset from the user-defined
+        # correction table [microdeg]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[21:25] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def posCorrTableAzOn(self):
+        return bool(self.status[25])
+
+    @posCorrTableAzOn.setter
+    def posCorrTableAzOn(self, value):
+        # BOOL
+        # False: correction table is not used
+        # True: pos. of the correction table is added onto the encoder pos.
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        self.status[25] = chr(int(value))
+
+    @property
+    def encAzFault(self):
+        return bool(self.status[26])
+
+    @encAzFault.setter
+    def encAzFault(self, value):
+        # BOOL
+        # False: position encoder azimuth ok
+        # True: position encoder azimuth reports an error
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        self.status[26] = chr(int(value))
+
+    @property
+    def sectorSwitchAz(self):
+        return bool(self.status[27])
+
+    @sectorSwitchAz.setter
+    def sectorSwitchAz(self, value):
+        # BOOL
+        # False: lower sector active
+        # True: upper sector active
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        self.status[27] = chr(int(value))
+
+    @property
+    def posEncEl(self):
+        return utils.bytes_to_int(str(self.status[28:32]))
+
+    @posEncEl.setter
+    def posEncEl(self, value):
+        # INT32, actual position of elevation encoder [microdeg]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[28:32] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def pointOffsetEl(self):
+        return utils.bytes_to_int(str(self.status[32:36]))
+
+    @pointOffsetEl.setter
+    def pointOffsetEl(self, value):
+        # INT32, actual pointing offset of the elevation axis [microdeg]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[32:36] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def posCalibChartEl(self):
+        return utils.bytes_to_int(str(self.status[36:40]))
+
+    @posCalibChartEl.setter
+    def posCalibChartEl(self, value):
+        # INT32, actual encoder position offset from the calibration chart
+        # [microdeg]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[36:40] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def posCorrTableEl_F_plst_Az(self):
+        return utils.bytes_to_int(str(self.status[40:44]))
+
+    @posCorrTableEl_F_plst_Az.setter
+    def posCorrTableEl_F_plst_Az(self, value):
+        # INT32, actual encoder position offset from the user-defined
+        # correction table [microdeg]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[40:44] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def posCorrTableElOn(self):
+        return bool(self.status[44])
+
+    @posCorrTableElOn.setter
+    def posCorrTableElOn(self, value):
+        # BOOL
+        # False: correction table is not used
+        # True: pos. of the correction table is added onto the encoder pos.
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        self.status[44] = chr(int(value))
+
+    @property
+    def encElFault(self):
+        return bool(self.status[45])
+
+    @encElFault.setter
+    def encElFault(self, value):
+        # BOOL
+        # False: position encoder elevation ok
+        # True: position encoder elevation reports an error
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        self.status[45] = chr(int(value))
+
+    @property
+    def posEncCw(self):
+        return utils.bytes_to_int(str(self.status[46:50]))
+
+    @posEncCw.setter
+    def posEncCw(self, value):
+        # INT32, actual position of azimuth cable wrap encoder [microdeg]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[46:50] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def posCalibChartCw(self):
+        return utils.bytes_to_int(str(self.status[50:54]))
+
+    @posCalibChartCw.setter
+    def posCalibChartCw(self, value):
+        # INT32, actual encoder position offset from the calibration chart
+        # [microdeg]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[50:54] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def encCwFault(self):
+        return bool(self.status[54])
+
+    @encCwFault.setter
+    def encCwFault(self, value):
+        # BOOL
+        # False: position encoder cable wrap ok
+        # True: position encoder cable wrap reports an error
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        self.status[54] = chr(int(value))
+
+    @property
+    def timeSource(self):
+        return utils.bytes_to_uint(str(self.status[55:57]))
+
+    @timeSource.setter
+    def timeSource(self, value):
+        # UINT16
+        # 1: internal ACU time (computer quartz clock)
+        # 2: clock (time read-outs of GPS clock)
+        # 3: external time (time is set by command)
+        if not isinstance(value, int) or value not in range(1, 4):
+            raise ValueError('Provide an integer between 1 and 3!')
+        self.status[55:57] = utils.uint_to_bytes(value, n_bytes=2)
+
+    @property
+    def actTime(self):
+        return utils.bytes_to_real(self.status[57:65], precision=2)
+
+    @actTime.setter
+    def actTime(self, value):
+        # REAL64, Actial time in format modified julian day
+        if not isinstance(value, (float, int)):
+            raise ValueError('Provide a floating point number!')
+        self.status[57:65] = utils.real_to_bytes(value, precision=2)
+
+    @property
+    def actTimeOffset(self):
+        return utils.bytes_to_real(self.status[65:73], precision=2)
+
+    @actTimeOffset.setter
+    def actTimeOffset(self, value):
+        # REAL64, Actial time offset in fraction of day
+        if not isinstance(value, (float, int)):
+            raise ValueError('Provide a floating point number!')
+        self.status[65:73] = utils.real_to_bytes(value, precision=2)
+
+    @property
+    def clockOnline(self):
+        return bool(self.status[73])
+
+    @clockOnline.setter
+    def clockOnline(self, value):
+        # BOOL
+        # False: GPS receiver doesn't send data
+        # True: GPS receiver sends data
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        self.status[73] = chr(int(value))
+
+    @property
+    def clockOK(self):
+        return bool(self.status[74])
+
+    @clockOK.setter
+    def clockOK(self, value):
+        # BOOL
+        # False: GPS receiver sends error message
+        # True: GPS receiver sends clock ok
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        self.status[74] = chr(int(value))
+
+    @property
+    def year(self):
+        return utils.bytes_to_uint(str(self.status[75:77]))
+
+    @year.setter
+    def year(self, value):
+        # UINT16
+        if not isinstance(value, int) or value < 0:
+            raise ValueError('Provide an unsigned integer!')
+        self.status[75:77] = utils.uint_to_bytes(value, n_bytes=2)
+
+    @property
+    def month(self):
+        return utils.bytes_to_uint(str(self.status[77:79]))
+
+    @month.setter
+    def month(self, value):
+        # UINT16
+        if not isinstance(value, int) or value < 0:
+            raise ValueError('Provide an unsigned integer!')
+        self.status[77:79] = utils.uint_to_bytes(value, n_bytes=2)
+
+    @property
+    def day(self):
+        return utils.bytes_to_uint(str(self.status[79:81]))
+
+    @day.setter
+    def day(self, value):
+        # UINT16
+        if not isinstance(value, int) or value < 0:
+            raise ValueError('Provide an unsigned integer!')
+        self.status[79:81] = utils.uint_to_bytes(value, n_bytes=2)
+
+    @property
+    def hour(self):
+        return utils.bytes_to_uint(str(self.status[81:83]))
+
+    @hour.setter
+    def hour(self, value):
+        # UINT16
+        if not isinstance(value, int) or value < 0:
+            raise ValueError('Provide an unsigned integer!')
+        self.status[81:83] = utils.uint_to_bytes(value, n_bytes=2)
+
+    @property
+    def minute(self):
+        return utils.bytes_to_uint(str(self.status[83:85]))
+
+    @minute.setter
+    def minute(self, value):
+        # UINT16
+        if not isinstance(value, int) or value < 0:
+            raise ValueError('Provide an unsigned integer!')
+        self.status[83:85] = utils.uint_to_bytes(value, n_bytes=2)
+
+    @property
+    def second(self):
+        return utils.bytes_to_uint(str(self.status[85:87]))
+
+    @second.setter
+    def second(self, value):
+        # UINT16
+        if not isinstance(value, int) or value < 0:
+            raise ValueError('Provide an unsigned integer!')
+        self.status[85:87] = utils.uint_to_bytes(value, n_bytes=2)
+
+    @property
+    def actPtPos_Azimuth(self):
+        return utils.bytes_to_int(str(self.status[87:91]))
+
+    @actPtPos_Azimuth.setter
+    def actPtPos_Azimuth(self, value):
+        # INT32, calculated azimuth position of the program track [microdeg]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[87:91] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def actPtPos_Elevation(self):
+        return utils.bytes_to_int(str(self.status[91:95]))
+
+    @actPtPos_Elevation.setter
+    def actPtPos_Elevation(self, value):
+        # INT32, calculated elevation position of the program track [microdeg]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[91:95] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def ptState(self):
+        return utils.bytes_to_uint(str(self.status[95:97]))
+
+    @ptState.setter
+    def ptState(self, value):
+        # UINT16, status of the program track
+        # 0: off
+        # 1: fault
+        # 2: enabled
+        # 3: running
+        # 4: completed
+        if not isinstance(value, int) or value not in range(5):
+            raise ValueError('Provide an integer between 0 and 4!')
+        self.status[95:97] = utils.uint_to_bytes(value, n_bytes=2)
+
+    @property
+    def ptError(self):
+        return utils.bytes_to_binary(str(self.status[97:99]))[::-1]
+
+    @property
+    def Data_Overflow(self):
+        return bool(int(str(self.ptError)[0]))
+
+    @Data_Overflow.setter
+    def Data_Overflow(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        ptError = bytearray(self.ptError)
+        ptError[0] = str(int(value))
+        self.status[97:99] = utils.binary_to_bytes(str(ptError)[::-1])
+
+    @property
+    def Time_Distance_Fault(self):
+        return bool(int(str(self.ptError)[1]))
+
+    @Time_Distance_Fault.setter
+    def Time_Distance_Fault(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        ptError = bytearray(self.ptError)
+        ptError[1] = str(int(value))
+        self.status[97:99] = utils.binary_to_bytes(str(ptError)[::-1])
+
+    @property
+    def No_Data_Available(self):
+        return bool(int(str(self.ptError)[2]))
+
+    @No_Data_Available.setter
+    def No_Data_Available(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        ptError = bytearray(self.ptError)
+        ptError[2] = str(int(value))
+        self.status[97:99] = utils.binary_to_bytes(str(ptError)[::-1])
+
+    @property
+    def actPtTimeOffset(self):
+        return utils.bytes_to_int(str(self.status[99:103]))
+
+    @actPtTimeOffset.setter
+    def actPtTimeOffset(self, value):
+        # INT32, actual time offset for program tracks [milliseconds]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[99:103] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def ptInterpolMode(self):
+        return utils.bytes_to_uint(str(self.status[103:105]))
+
+    @ptInterpolMode.setter
+    def ptInterpolMode(self, value):
+        # UINT16, actual selected interpolation mode
+        # 0: no interpolation mode selected
+        # 4: spline
+        if not isinstance(value, int) or value not in [0, 4]:
+            raise ValueError(
+                'You can provide only an integer equal to 0 or 4!'
+            )
+        self.status[103:105] = utils.uint_to_bytes(value, n_bytes=2)
+
+    @property
+    def ptTrackingType(self):
+        return utils.bytes_to_uint(str(self.status[105:107]))
+
+    @ptTrackingType.setter
+    def ptTrackingType(self, value):
+        # UINT16, actual type of tracking
+        # 1: program track
+        if not isinstance(value, int) or value != 1:
+            raise ValueError('You can provide only an integer equal to 1!')
+        self.status[105:107] = utils.uint_to_bytes(value, n_bytes=2)
+
+    @property
+    def ptTrackingMode(self):
+        return utils.bytes_to_uint(str(self.status[107:109]))
+
+    @ptTrackingMode.setter
+    def ptTrackingMode(self, value):
+        # UINT16, actual type of program track
+        # 1: program track values are azimuth/elevation
+        if not isinstance(value, int) or value != 1:
+            raise ValueError('You can provide only an integer equal to 1!')
+        self.status[107:109] = utils.uint_to_bytes(value, n_bytes=2)
+
+    @property
+    def ptActTableIndex(self):
+        return utils.bytes_to_uint(str(self.status[109:113]))
+
+    @ptActTableIndex.setter
+    def ptActTableIndex(self, value):
+        # UINT32, actual table entry of the program track table
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[109:113] = utils.uint_to_bytes(value, n_bytes=4)
+
+    @property
+    def ptEndTableIndex(self):
+        return utils.bytes_to_uint(str(self.status[113:117]))
+
+    @ptEndTableIndex.setter
+    def ptEndTableIndex(self, value):
+        # UINT32, last table entry of the program track table
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[113:117] = utils.uint_to_bytes(value, n_bytes=4)
+
+    @property
+    def ptTableLength(self):
+        return utils.bytes_to_uint(str(self.status[117:121]))
+
+    @ptTableLength.setter
+    def ptTableLength(self, value):
+        # UINT32, overall length of the program track table
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[117:121] = utils.uint_to_bytes(value, n_bytes=4)
+
+    @property
+    def parameter_command_status(self):
+        return self.status[121:129]
+
+    @property
+    def parameter_command_counter(self):
+        return utils.bytes_to_uint(str(self.parameter_command_status[0:4]))
+
+    @parameter_command_counter.setter
+    def parameter_command_counter(self, value):
+        # UINT32, command serial number
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        parameter_command_status = bytearray(self.parameter_command_status)
+        parameter_command_status[0:4] = utils.uint_to_bytes(value, n_bytes=4)
+        self.status[121:129] = parameter_command_status
+
+    @property
+    def parameter_command(self):
+        return utils.bytes_to_uint(str(self.parameter_command_status[4:6]))
+
+    @parameter_command.setter
+    def parameter_command(self, value):
+        # UINT16, parameter command
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        parameter_command_status = bytearray(self.parameter_command_status)
+        parameter_command_status[4:6] = utils.uint_to_bytes(value, n_bytes=2)
+        self.status[121:129] = parameter_command_status
+
+    @property
+    def parameter_command_answer(self):
+        return utils.bytes_to_uint(str(self.parameter_command_status[6:8]))
+
+    @parameter_command_answer.setter
+    def parameter_command_answer(self, value):
+        # UINT16, parameter command answer
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        parameter_command_status = bytearray(self.parameter_command_status)
+        parameter_command_status[6:8] = utils.uint_to_bytes(value, n_bytes=2)
+        self.status[121:129] = parameter_command_status

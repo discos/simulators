@@ -15,166 +15,111 @@ class SimpleAxisStatus(object):
     def __init__(self, n_motors=1):
         self.motor_status = []
 
-        for _ in range(n_motors):
+        for __ in range(n_motors):
             self.motor_status.append(MotorStatus())
 
-        self.simulation = 0  # BOOL, 0: axis simulation off, 1: on
-        self.axis_ready = 1  # BOOL, 0: axis not ready for activating, 1: ready
-        self.conf_ok = 1  # BOOL, 0: conf. file read error, 1: read successful
-        self.init_ok = 1  # BOOL, 0: faulty conf. data, 1: init. completed
-        self.override = 0  # BOOL, 0: override mode not active, 1: active
-        self.low_power = 0  # BOOL, 0: low power mode not active, 1: active
+        self.status = bytearray(b'\x00' * 92)
+
+        self.simulation = False
+        self.axis_ready = True
+        self.confOk = True
+        self.initOk = True
+        self.override = False
+        self.low_power_mode = False
 
         # Warnings, DWORD, in bit mode coded warning indication
-        self.Param_Fault = 0
-        self.Rate_Mode = 0
-        self.Safety_Chain = 0
-        self.Wrong_Sys_State = 0
-        self.Temp_Enc = 0
+        self.Param_Fault = False
+        self.Rate_Mode = False
+        self.Safety_Chain = False
+        self.Wrong_Sys_State = False
+        self.Temp_Enc = False
         # bit 5 = 0, not used
-        self.Power_Brakes = 0
-        self.Power_Servo = 0
-        self.Fan_Fault = 0
-        self.Servo_DC_Off = 0
-        self.Motor_Temp_Warn = 0
-        self.Servo_DC_Warn = 0
-        self.M_Max_Exceeded = 0
-        self.Pos_Enc_Fault = 0
+        self.Power_Brakes = False
+        self.Power_Servo = False
+        self.Fan_Fault = False
+        self.Servo_DC_Off = False
+        self.Motor_Temp_Warn = False
+        self.Servo_DC_Warn = False
+        self.M_Max_Exceeded = False
+        self.Pos_Enc_Fault = False
         # bit 14 = 0, not used
-        self.Em_Limit_Dn = 0
-        self.Em_Limit_Up = 0
-        self.Degraded_Mode = 0
-        self.Override_Act = 0
-        self.Pre_Limit_Up = 0
-        self.Pre_Limit_Dn = 0
-        self.Fin_Limit_Up = 0
-        self.Fin_Limit_Dn = 0
-        self.Rate_Limit = 0
-        self.Stow_Fault = 0
-        self.Stowpins_Extracted = 0
-        self.Low_Power_Act = 0
+        self.Em_Limit_Dn = False
+        self.Em_Limit_Up = False
+        self.Degraded_Mode = False
+        self.Override_Act = False
+        self.Pre_Limit_Up = False
+        self.Pre_Limit_Dn = False
+        self.Fin_Limit_Up = False
+        self.Fin_Limit_Dn = False
+        self.Rate_Limit = False
+        self.Stow_Fault = False
+        self.Stowpins_Extracted = False
+        self.Low_Power_Act = False
         # bits 27:28 = 0, not used
-        self.LimDn_inconsist = 0
-        self.LimUp_inconsist = 0
+        self.LimDn_inconsist = False
+        self.LimUp_inconsist = False
         # bit 31 = 0, not used
 
         # Errors, DWORD, in bit mode coded error indication
-        self.Error_Active = 0
-        self.System_fault = 0
-        self.Em_Stop = 0
-        self.Em_Limit_Dn_Act = 0
-        self.Em_Limit_Up_Act = 0
+        self.Error_Active = False
+        self.System_fault = False
+        self.Em_Stop = False
+        self.Em_Limit_Dn_Act = False
+        self.Em_Limit_Up_Act = False
         # bit 5 = 0, not used
-        self.Brake_Error = 0
-        self.Power_Error = 0
-        self.Servo_Error = 0
-        self.Servo_Timeout = 0
+        self.Brake_Error = False
+        self.Power_Error = False
+        self.Servo_Error = False
+        self.Servo_Timeout = False
         # bit 10 = 0, not used
-        self.v_Motor_Exceed = 0
-        self.Servo_Overload = 0
-        self.Pos_Enc_Error = 0
-        self.Pos_Enc_Step = 0
-        self.p_Range_Exceed = 0
-        self.p_Dev_Exceed = 0
-        self.Servo_DC_Error = 0
-        self.Override_Error = 0
-        self.Cmd_Timeout = 0
+        self.v_Motor_Exceed = False
+        self.Servo_Overload = False
+        self.Pos_Enc_Error = False
+        self.Pos_Enc_Step = False
+        self.p_Range_Exceed = False
+        self.p_Dev_Exceed = False
+        self.Servo_DC_Error = False
+        self.Override_Error = False
+        self.Cmd_Timeout = False
         # bits 20:21 = 0, not used
-        self.Rate_Loop_Err = 0
-        self.v_Dev_Exceed = 0
-        self.Stow_Error = 0
-        self.Stow_Timeout = 0
-        self.Extern_Error = 0
-        self.Safety_Dev_Error = 0
+        self.Rate_Loop_Err = False
+        self.v_Dev_Exceed = False
+        self.Stow_Error = False
+        self.Stow_Timeout = False
+        self.Extern_Error = False
+        self.Safety_Dev_Error = False
         # bit 28 = 0, not used
-        self.Com_Error = 0
-        self.Pre_Limit_Err = 0
-        self.Fin_Limit_Err = 0
+        self.Com_Error = False
+        self.Pre_Limit_Err = False
+        self.Fin_Limit_Err = False
 
-        # axis_state, UINT16
-        # 0: inactive
-        # 1: deactivating
-        # 2: activating
-        # 3: active
         self.axis_state = 0
-
-        # axis_trajectory_state, UINT16
-        # 0: off
-        # 1: holding
-        # 2: emergency stop
-        # 3: stop
-        # 4: slewing velocity
-        # 5: N/D
-        # 6: position
-        # 7: tracking
         self.axis_trajectory_state = 0
-
-        # p_Soll, INT32, desired position [microdeg]
         self.p_Soll = 0
-
-        # p_Bahn, INT32, output pos. of the trajectory generator [microdeg]
         self.p_Bahn = 0
-
-        # p_Ist, INT32, actual pos. [microdeg]
         self.p_Ist = 0
-
-        # p_AbwFil, INT32, filtered pos. deviation [microdeg]
         self.p_AbwFil = 0
-
-        # v_Soll, INT32, desired vel. [microdeg/s]
         self.v_Soll = 0
-
-        # v_Bahn, INT32, output vel. of the trajectory generator [microdeg/s]
         self.v_Bahn = 0
-
-        # v_Ist, INT32, actual vel. [microdeg/s]
         self.v_Ist = 0
-
-        # a_Bahn, INT32, output accel. of the trajectory generator
-        # [microdeg/s^2]
         self.a_Bahn = 0
-
-        # p_Offset, INT32, pos. offset for tracking mode [microdeg]
         self.p_Offset = 0
 
-        # motor_selection, WORD
-        # in bit mode coded indicator for the selected motors
-        # 0: motor not selected, 1: motor selected
         # SRT range: 0:8 for Azimuth, 0:4 for Elevation, 0:1 for Cable Wrap
-        self.motor_selection = '0' * (16 - n_motors) + '1' * n_motors
+        motor_selection = [False for __ in range(16)]
+        for index in range(n_motors):
+            motor_selection[index] = True
+        self.motor_selection = motor_selection
 
-        # brakes_open, WORD
-        # in bit mode coded indicator for the brakes that are open
-        # 0: brake not open, 1: brake open
         # SRT range: same as motor_selection
-        self.brakes_open = '0' * 16
+        self.brakes_open = [False for __ in range(16)]
 
-        # power_module_ok, WORD
-        # in bit mode coded indicator for the
-        # power module concerning each motor
         self.power_module_ok = self.motor_selection
-
-        self.stowed = 0  # BOOL, 0: axis not stowed, 1: axis stowed
-
-        self.stow_pos_ok = 0  # BOOL, 0: is no stow pos., 1: is stow pos.
-
-        # stow_pin_selection, WORD
-        # in bit mode coded indicator for the number of stow pins
-        # 0: stow pin not selected, 1: stow pin selected
-        self.stow_pin_selection = '0' * 16
-
-        # stow_pin_in, WORD
-        # in bit mode coded indicator if the stow pins are in
-        # 0: stow pin not in, 1: stow pin in
-        self.stow_pin_in = self.stow_pin_selection
-
-        # stow_pin_out, WORD
-        # in bit mode coded indicator if the stow pins are out
-        # 0: stow pin not out, 1: stow pin out
-        self.stow_pin_out = utils.binary_complement(
-            self.stow_pin_in,
-            self.stow_pin_selection
-        )
+        self.stowed = False
+        self.stowPosOk = False
+        self.stow_pin_in = [False for __ in range(16)]
+        self.stow_pin_out = [False for __ in range(16)]
+        self.stow_pin_selection = [False for __ in range(16)]
 
         # mode_command_status, refer to ModeCommandStatus class
         self.mcs = ModeCommandStatus()
@@ -182,117 +127,1088 @@ class SimpleAxisStatus(object):
         # parameter_command_status, refer to ParameterCommandStatus class
         self.pcs = ParameterCommandStatus()
 
-    def _warnings(self):
-        binary_string = (
-            str(self.Param_Fault)
-            + str(self.Rate_Mode)
-            + str(self.Safety_Chain)
-            + str(self.Wrong_Sys_State)
-            + str(self.Temp_Enc)
-            + '0'
-            + str(self.Power_Brakes)
-            + str(self.Power_Servo)
-            + str(self.Fan_Fault)
-            + str(self.Servo_DC_Off)
-            + str(self.Motor_Temp_Warn)
-            + str(self.Servo_DC_Warn)
-            + str(self.M_Max_Exceeded)
-            + str(self.Pos_Enc_Fault)
-            + '0'
-            + str(self.Em_Limit_Dn)
-            + str(self.Em_Limit_Up)
-            + str(self.Degraded_Mode)
-            + str(self.Override_Act)
-            + str(self.Pre_Limit_Up)
-            + str(self.Pre_Limit_Dn)
-            + str(self.Fin_Limit_Up)
-            + str(self.Fin_Limit_Dn)
-            + str(self.Rate_Limit)
-            + str(self.Stow_Fault)
-            + str(self.Stowpins_Extracted)
-            + str(self.Low_Power_Act)
-            + '0' * 2
-            + str(self.LimDn_inconsist)
-            + str(self.LimUp_inconsist)
-            + '0'
-        )
-        return utils.binary_to_bytes(binary_string)
-
-    def _errors(self):
-        binary_string = (
-            str(self.Error_Active)
-            + str(self.System_fault)
-            + str(self.Em_Stop)
-            + str(self.Em_Limit_Dn_Act)
-            + str(self.Em_Limit_Up_Act)
-            + '0'
-            + str(self.Brake_Error)
-            + str(self.Power_Error)
-            + str(self.Servo_Error)
-            + str(self.Servo_Timeout)
-            + '0'
-            + str(self.v_Motor_Exceed)
-            + str(self.Servo_Overload)
-            + str(self.Pos_Enc_Error)
-            + str(self.Pos_Enc_Step)
-            + str(self.p_Range_Exceed)
-            + str(self.p_Dev_Exceed)
-            + str(self.Servo_DC_Error)
-            + str(self.Override_Error)
-            + str(self.Cmd_Timeout)
-            + '0' * 2
-            + str(self.Rate_Loop_Err)
-            + str(self.v_Dev_Exceed)
-            + str(self.Stow_Error)
-            + str(self.Stow_Timeout)
-            + str(self.Extern_Error)
-            + str(self.Safety_Dev_Error)
-            + '0'
-            + str(self.Com_Error)
-            + str(self.Pre_Limit_Err)
-            + str(self.Fin_Limit_Err)
-        )
-        return utils.binary_to_bytes(binary_string)
-
     def get_axis_status(self):
-        response = (
-            chr(self.simulation)
-            + chr(self.axis_ready)
-            + chr(self.conf_ok)
-            + chr(self.init_ok)
-            + chr(self.override)
-            + chr(self.low_power)
-            + self._warnings()
-            + self._errors()
-            + utils.uint_to_bytes(self.axis_state, 2)
-            + utils.uint_to_bytes(self.axis_trajectory_state, 2)
-            + utils.int_to_bytes(self.p_Soll)
-            + utils.int_to_bytes(self.p_Bahn)
-            + utils.int_to_bytes(self.p_Ist)
-            + utils.int_to_bytes(self.p_AbwFil)
-            + utils.int_to_bytes(self.v_Soll)
-            + utils.int_to_bytes(self.v_Bahn)
-            + utils.int_to_bytes(self.v_Ist)
-            + utils.int_to_bytes(self.a_Bahn)
-            + utils.int_to_bytes(self.p_Offset)
-            + utils.binary_to_bytes(self.motor_selection)
-            + utils.binary_to_bytes(self.brakes_open)
-            + utils.binary_to_bytes(self.power_module_ok)
-            + chr(self.stowed)
-            + chr(self.stow_pos_ok)
-            + utils.binary_to_bytes(self.stow_pin_in)
-            + utils.binary_to_bytes(self.stow_pin_out)
-            + utils.binary_to_bytes(self.stow_pin_selection)
-            + self.mcs.get_status()
-            + self.pcs.get_status()
-        )
-        return response
+        self.mode_command_status = self.mcs.get_status()
+        self.parameter_command_status = self.pcs.get_status()
+        return str(self.status)
 
     def get_motor_status(self):
         response = ''
         for motor_status in self.motor_status:
             response += motor_status.get_status()
         return response
+
+    @property
+    def simulation(self):
+        return bool(self.status[0])
+
+    @simulation.setter
+    def simulation(self, value):
+        # BOOL
+        # False: axis simulation off
+        # True: axis in simulation mode
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        self.status[0] = chr(int(value))
+
+    @property
+    def axis_ready(self):
+        return bool(self.status[1])
+
+    @axis_ready.setter
+    def axis_ready(self, value):
+        # BOOL
+        # False: axis not ready for activating
+        # True: axis ready for activating
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        self.status[1] = chr(int(value))
+
+    @property
+    def confOk(self):
+        return bool(self.status[2])
+
+    @confOk.setter
+    def confOk(self, value):
+        # BOOL
+        # False: configuration file read error
+        # True: configuration file is read successfully
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        self.status[2] = chr(int(value))
+
+    @property
+    def initOk(self):
+        return bool(self.status[3])
+
+    @initOk.setter
+    def initOk(self, value):
+        # BOOL
+        # False: configuration data are faulty
+        # True: initialization of axis completed
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        self.status[3] = chr(int(value))
+
+    @property
+    def override(self):
+        return bool(self.status[4])
+
+    @override.setter
+    def override(self, value):
+        # BOOL
+        # False: override mode not active
+        # True: axis is in override mode
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        self.status[4] = chr(int(value))
+
+    @property
+    def low_power_mode(self):
+        return bool(self.status[5])
+
+    @low_power_mode.setter
+    def low_power_mode(self, value):
+        # BOOL
+        # False: low power mode is not active
+        # True: low power mode is active
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        self.status[5] = chr(int(value))
+
+    @property
+    def warnings(self):
+        return utils.bytes_to_binary(str(self.status[6:10]))[::-1]
+
+    @property
+    def Param_Fault(self):
+        return bool(int(self.warnings[0]))
+
+    @Param_Fault.setter
+    def Param_Fault(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[0] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Rate_Mode(self):
+        return bool(int(self.warnings[1]))
+
+    @Rate_Mode.setter
+    def Rate_Mode(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[1] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Safety_Chain(self):
+        return bool(int(self.warnings[2]))
+
+    @Safety_Chain.setter
+    def Safety_Chain(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[2] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Wrong_Sys_State(self):
+        return bool(int(self.warnings[3]))
+
+    @Wrong_Sys_State.setter
+    def Wrong_Sys_State(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[3] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Temp_Enc(self):
+        return bool(int(self.warnings[4]))
+
+    @Temp_Enc.setter
+    def Temp_Enc(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[4] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Power_Brakes(self):
+        return bool(int(self.warnings[6]))
+
+    @Power_Brakes.setter
+    def Power_Brakes(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[6] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Power_Servo(self):
+        return bool(int(self.warnings[7]))
+
+    @Power_Servo.setter
+    def Power_Servo(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[7] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Fan_Fault(self):
+        return bool(int(self.warnings[8]))
+
+    @Fan_Fault.setter
+    def Fan_Fault(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[8] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Servo_DC_Off(self):
+        return bool(int(self.warnings[9]))
+
+    @Servo_DC_Off.setter
+    def Servo_DC_Off(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[9] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Motor_Temp_Warn(self):
+        return bool(int(self.warnings[10]))
+
+    @Motor_Temp_Warn.setter
+    def Motor_Temp_Warn(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[10] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Servo_DC_Warn(self):
+        return bool(int(self.warnings[11]))
+
+    @Servo_DC_Warn.setter
+    def Servo_DC_Warn(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[11] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def M_Max_Exceeded(self):
+        return bool(int(self.warnings[12]))
+
+    @M_Max_Exceeded.setter
+    def M_Max_Exceeded(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[12] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Pos_Enc_Fault(self):
+        return bool(int(self.warnings[13]))
+
+    @Pos_Enc_Fault.setter
+    def Pos_Enc_Fault(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[13] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Em_Limit_Dn(self):
+        return bool(int(self.warnings[15]))
+
+    @Em_Limit_Dn.setter
+    def Em_Limit_Dn(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[15] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Em_Limit_Up(self):
+        return bool(int(self.warnings[16]))
+
+    @Em_Limit_Up.setter
+    def Em_Limit_Up(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[16] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Degraded_Mode(self):
+        return bool(int(self.warnings[17]))
+
+    @Degraded_Mode.setter
+    def Degraded_Mode(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[17] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Override_Act(self):
+        return bool(int(self.warnings[18]))
+
+    @Override_Act.setter
+    def Override_Act(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[18] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Pre_Limit_Up(self):
+        return bool(int(self.warnings[19]))
+
+    @Pre_Limit_Up.setter
+    def Pre_Limit_Up(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[19] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Pre_Limit_Dn(self):
+        return bool(int(self.warnings[20]))
+
+    @Pre_Limit_Dn.setter
+    def Pre_Limit_Dn(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[20] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Fin_Limit_Up(self):
+        return bool(int(self.warnings[21]))
+
+    @Fin_Limit_Up.setter
+    def Fin_Limit_Up(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[21] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Fin_Limit_Dn(self):
+        return bool(int(self.warnings[22]))
+
+    @Fin_Limit_Dn.setter
+    def Fin_Limit_Dn(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[22] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Rate_Limit(self):
+        return bool(int(self.warnings[23]))
+
+    @Rate_Limit.setter
+    def Rate_Limit(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[23] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Stow_Fault(self):
+        return bool(int(self.warnings[24]))
+
+    @Stow_Fault.setter
+    def Stow_Fault(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[24] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Stowpins_Extracted(self):
+        return bool(int(self.warnings[25]))
+
+    @Stowpins_Extracted.setter
+    def Stowpins_Extracted(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[25] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def Low_Power_Act(self):
+        return bool(int(self.warnings[26]))
+
+    @Low_Power_Act.setter
+    def Low_Power_Act(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[26] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def LimDn_inconsist(self):
+        return bool(int(self.warnings[29]))
+
+    @LimDn_inconsist.setter
+    def LimDn_inconsist(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[29] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def LimUp_inconsist(self):
+        return bool(int(self.warnings[30]))
+
+    @LimUp_inconsist.setter
+    def LimUp_inconsist(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        warnings = bytearray(self.warnings)
+        warnings[30] = str(int(value))
+        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+
+    @property
+    def errors(self):
+        return utils.bytes_to_binary(str(self.status[10:14]))[::-1]
+
+    @property
+    def Error_Active(self):
+        return bool(int(self.errors[0]))
+
+    @Error_Active.setter
+    def Error_Active(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[0] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def System_fault(self):
+        return bool(int(self.errors[1]))
+
+    @System_fault.setter
+    def System_fault(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[1] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def Em_Stop(self):
+        return bool(int(self.errors[2]))
+
+    @Em_Stop.setter
+    def Em_Stop(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[2] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def Em_Limit_Dn_Act(self):
+        return bool(int(self.errors[3]))
+
+    @Em_Limit_Dn_Act.setter
+    def Em_Limit_Dn_Act(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[3] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def Em_Limit_Up_Act(self):
+        return bool(int(self.errors[4]))
+
+    @Em_Limit_Up_Act.setter
+    def Em_Limit_Up_Act(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[4] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def Brake_Error(self):
+        return bool(int(self.errors[6]))
+
+    @Brake_Error.setter
+    def Brake_Error(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[6] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def Power_Error(self):
+        return bool(int(self.errors[7]))
+
+    @Power_Error.setter
+    def Power_Error(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[7] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def Servo_Error(self):
+        return bool(int(self.errors[8]))
+
+    @Servo_Error.setter
+    def Servo_Error(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[8] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def Servo_Timeout(self):
+        return bool(int(self.errors[9]))
+
+    @Servo_Timeout.setter
+    def Servo_Timeout(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[9] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def v_Motor_Exceed(self):
+        return bool(int(self.errors[11]))
+
+    @v_Motor_Exceed.setter
+    def v_Motor_Exceed(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[11] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def Servo_Overload(self):
+        return bool(int(self.errors[12]))
+
+    @Servo_Overload.setter
+    def Servo_Overload(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[12] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def Pos_Enc_Error(self):
+        return bool(int(self.errors[13]))
+
+    @Pos_Enc_Error.setter
+    def Pos_Enc_Error(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[13] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def Pos_Enc_Step(self):
+        return bool(int(self.errors[14]))
+
+    @Pos_Enc_Step.setter
+    def Pos_Enc_Step(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[14] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def p_Range_Exceed(self):
+        return bool(int(self.errors[15]))
+
+    @p_Range_Exceed.setter
+    def p_Range_Exceed(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[15] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def p_Dev_Exceed(self):
+        return bool(int(self.errors[16]))
+
+    @p_Dev_Exceed.setter
+    def p_Dev_Exceed(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[16] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def Servo_DC_Error(self):
+        return bool(int(self.errors[17]))
+
+    @Servo_DC_Error.setter
+    def Servo_DC_Error(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[17] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def Override_Error(self):
+        return bool(int(self.errors[18]))
+
+    @Override_Error.setter
+    def Override_Error(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[18] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def Cmd_Timeout(self):
+        return bool(int(self.errors[19]))
+
+    @Cmd_Timeout.setter
+    def Cmd_Timeout(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[19] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def Rate_Loop_Err(self):
+        return bool(int(self.errors[22]))
+
+    @Rate_Loop_Err.setter
+    def Rate_Loop_Err(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[22] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def v_Dev_Exceed(self):
+        return bool(int(self.errors[23]))
+
+    @v_Dev_Exceed.setter
+    def v_Dev_Exceed(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[23] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def Stow_Error(self):
+        return bool(int(self.errors[24]))
+
+    @Stow_Error.setter
+    def Stow_Error(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[24] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def Stow_Timeout(self):
+        return bool(int(self.errors[25]))
+
+    @Stow_Timeout.setter
+    def Stow_Timeout(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[25] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def Extern_Error(self):
+        return bool(int(self.errors[26]))
+
+    @Extern_Error.setter
+    def Extern_Error(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[26] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def Safety_Dev_Error(self):
+        return bool(int(self.errors[27]))
+
+    @Safety_Dev_Error.setter
+    def Safety_Dev_Error(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[27] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def Com_Error(self):
+        return bool(int(self.errors[29]))
+
+    @Com_Error.setter
+    def Com_Error(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[29] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def Pre_Limit_Err(self):
+        return bool(int(self.errors[30]))
+
+    @Pre_Limit_Err.setter
+    def Pre_Limit_Err(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[30] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def Fin_Limit_Err(self):
+        return bool(int(self.errors[31]))
+
+    @Fin_Limit_Err.setter
+    def Fin_Limit_Err(self, value):
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        errors = bytearray(self.errors)
+        errors[31] = str(int(value))
+        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+
+    @property
+    def axis_state(self):
+        return utils.bytes_to_uint(str(self.status[14:16]))
+
+    @axis_state.setter
+    def axis_state(self, value):
+        # UINT16
+        # 0: inactive
+        # 1: deactivating
+        # 2: activating
+        # 3: active
+        if not isinstance(value, int) or value not in range(4):
+            raise ValueError('Provide an integer beween 0 and 3!')
+        self.status[14:16] = utils.uint_to_bytes(value, n_bytes=2)
+
+    @property
+    def axis_trajectory_state(self):
+        return utils.bytes_to_uint(str(self.status[16:18]))
+
+    @axis_trajectory_state.setter
+    def axis_trajectory_state(self, value):
+        # UINT16
+        # 0: off
+        # 1: holding
+        # 2: emergency stop
+        # 3: stop
+        # 4: slewing velocity
+        # 6: position
+        # 7: tracking
+        if not isinstance(value, int) or value not in range(5) + [6, 7]:
+            raise ValueError(
+                'Provide an integer beween [0, 1, 2, 3, 4, 6, 7]!'
+            )
+        self.status[16:18] = utils.uint_to_bytes(value, n_bytes=2)
+
+    @property
+    def p_Soll(self):
+        return utils.bytes_to_int(str(self.status[18:22]))
+
+    @p_Soll.setter
+    def p_Soll(self, value):
+        # INT32, Desired position [microdeg]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[18:22] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def p_Bahn(self):
+        return utils.bytes_to_int(str(self.status[22:26]))
+
+    @p_Bahn.setter
+    def p_Bahn(self, value):
+        # INT32, Output position of the trajectory generator [microdeg]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[22:26] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def p_Ist(self):
+        return utils.bytes_to_int(str(self.status[26:30]))
+
+    @p_Ist.setter
+    def p_Ist(self, value):
+        # INT32, Actual position [microdeg]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[26:30] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def p_AbwFil(self):
+        return utils.bytes_to_int(str(self.status[30:34]))
+
+    @p_AbwFil.setter
+    def p_AbwFil(self, value):
+        # INT32, Filtered position deviation [microdeg]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[30:34] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def v_Soll(self):
+        return utils.bytes_to_int(str(self.status[34:38]))
+
+    @v_Soll.setter
+    def v_Soll(self, value):
+        # INT32, Desired velocity [microdeg/s]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[34:38] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def v_Bahn(self):
+        return utils.bytes_to_int(str(self.status[38:42]))
+
+    @v_Bahn.setter
+    def v_Bahn(self, value):
+        # INT32, Output velocity of the trajectory generator [microdeg/s]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[38:42] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def v_Ist(self):
+        return utils.bytes_to_int(str(self.status[42:46]))
+
+    @v_Ist.setter
+    def v_Ist(self, value):
+        # INT32, Actual velocity [microdeg/s]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[42:46] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def a_Bahn(self):
+        return utils.bytes_to_int(str(self.status[46:50]))
+
+    @a_Bahn.setter
+    def a_Bahn(self, value):
+        # INT32, Output accel. of the trajectory generator [microdeg/s^2]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[46:50] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def p_Offset(self):
+        return utils.bytes_to_int(str(self.status[50:54]))
+
+    @p_Offset.setter
+    def p_Offset(self, value):
+        # INT32, Position offset for tracking mode [microdeg]
+        if not isinstance(value, int):
+            raise ValueError('Provide an integer number!')
+        self.status[50:54] = utils.int_to_bytes(value, n_bytes=4)
+
+    @property
+    def motor_selection(self):
+        motor_selection = []
+        for motor in utils.bytes_to_binary(str(self.status[54:56]))[::-1]:
+            motor_selection.append(bool(int(motor)))
+        return motor_selection
+
+    @motor_selection.setter
+    def motor_selection(self, value):
+        # WORD: In bit mode coded indicator for the selected motors
+        try:
+            if not isinstance(value, (list, tuple)) or len(value) != 16:
+                raise ValueError
+            else:
+                for motor in value:
+                    if not isinstance(motor, bool):
+                        raise ValueError
+        except ValueError:
+            raise ValueError(
+                'Provide a list/tuple of booleans of length = 16!'
+            )
+        motor_selection = ''
+        for motor in value:
+            motor_selection += str(int(motor))
+        self.status[54:56] = utils.binary_to_bytes(motor_selection[::-1])
+
+    @property
+    def brakes_open(self):
+        brakes_open = []
+        for brake in utils.bytes_to_binary(str(self.status[56:58]))[::-1]:
+            brakes_open.append(bool(int(brake)))
+        return brakes_open
+
+    @brakes_open.setter
+    def brakes_open(self, value):
+        # WORD: In bit mode coded indicator for the brakes that are open
+        try:
+            if not isinstance(value, (list, tuple)) or len(value) != 16:
+                raise ValueError
+            else:
+                for motor in value:
+                    if not isinstance(motor, bool):
+                        raise ValueError
+        except ValueError:
+            raise ValueError(
+                'Provide a list/tuple of booleans of length = 16!'
+            )
+        brakes_open = ''
+        for brake in value:
+            brakes_open += str(int(brake))
+        self.status[56:58] = utils.binary_to_bytes(brakes_open[::-1])
+
+    @property
+    def power_module_ok(self):
+        power_module_ok = []
+        power_modules = utils.bytes_to_binary(str(self.status[58:60]))[::-1]
+        for power_module in power_modules:
+            power_module_ok.append(bool(int(power_module)))
+        return power_module_ok
+
+    @power_module_ok.setter
+    def power_module_ok(self, value):
+        # WORD: In bit mode coded indicator for
+        # the power module concerning each motor
+        try:
+            if not isinstance(value, (list, tuple)) or len(value) != 16:
+                raise ValueError
+            else:
+                for motor in value:
+                    if not isinstance(motor, bool):
+                        raise ValueError
+        except ValueError:
+            raise ValueError(
+                'Provide a list/tuple of booleans of length = 16!'
+            )
+        power_module_ok = ''
+        for power_module in value:
+            power_module_ok += str(int(power_module))
+        self.status[58:60] = utils.binary_to_bytes(power_module_ok[::-1])
+
+    @property
+    def stowed(self):
+        return bool(self.status[60])
+
+    @stowed.setter
+    def stowed(self, value):
+        # BOOL
+        # False: axis not stowed
+        # True: axis stowed
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        self.status[60] = chr(int(value))
+
+    @property
+    def stowPosOk(self):
+        return bool(self.status[61])
+
+    @stowPosOk.setter
+    def stowPosOk(self, value):
+        # BOOL
+        # False: actual position is no stow position
+        # True: actual position is stow position
+        if not isinstance(value, bool):
+            raise ValueError('Provide a boolean!')
+        self.status[61] = chr(int(value))
+
+    @property
+    def stow_pin_in(self):
+        stow_pin_in = []
+        for stow_pin in utils.bytes_to_binary(str(self.status[62:64]))[::-1]:
+            stow_pin_in.append(bool(int(stow_pin)))
+        return stow_pin_in
+
+    @stow_pin_in.setter
+    def stow_pin_in(self, value):
+        # WORD: In bit mode coded indicator if the stow pins are in
+        try:
+            if not isinstance(value, (list, tuple)) or len(value) != 16:
+                raise ValueError
+            else:
+                for motor in value:
+                    if not isinstance(motor, bool):
+                        raise ValueError
+        except ValueError:
+            raise ValueError(
+                'Provide a list/tuple of booleans of length = 16!'
+            )
+        stow_pin_in = ''
+        for stow_pin in value:
+            stow_pin_in += str(int(stow_pin))
+        self.status[62:64] = utils.binary_to_bytes(stow_pin_in[::-1])
+
+    @property
+    def stow_pin_out(self):
+        stow_pin_out = []
+        for stow_pin in utils.bytes_to_binary(str(self.status[64:66]))[::-1]:
+            stow_pin_out.append(bool(int(stow_pin)))
+        return stow_pin_out
+
+    @stow_pin_out.setter
+    def stow_pin_out(self, value):
+        # WORD: In bit mode coded indicator if the stow pins are out
+        try:
+            if not isinstance(value, (list, tuple)) or len(value) != 16:
+                raise ValueError
+            else:
+                for motor in value:
+                    if not isinstance(motor, bool):
+                        raise ValueError
+        except ValueError:
+            raise ValueError(
+                'Provide a list/tuple of booleans of length = 16!'
+            )
+        stow_pin_out = ''
+        for stow_pin in value:
+            stow_pin_out += str(int(stow_pin))
+        self.status[64:66] = utils.binary_to_bytes(stow_pin_out[::-1])
+
+    @property
+    def stow_pin_selection(self):
+        stow_pin_selection = []
+        for stow_pin in utils.bytes_to_binary(str(self.status[66:68]))[::-1]:
+            stow_pin_selection.append(bool(int(stow_pin)))
+        return stow_pin_selection
+
+    @stow_pin_selection.setter
+    def stow_pin_selection(self, value):
+        # WORD: In bit mode coded indicator for the number of stow pins
+        try:
+            if not isinstance(value, (list, tuple)) or len(value) != 16:
+                raise ValueError
+            else:
+                for motor in value:
+                    if not isinstance(motor, bool):
+                        raise ValueError
+        except ValueError:
+            raise ValueError(
+                'Provide a list/tuple of booleans of length = 16!'
+            )
+        stow_pin_selection = ''
+        for stow_pin in value:
+            stow_pin_selection += str(int(stow_pin))
+        self.status[66:68] = utils.binary_to_bytes(stow_pin_selection[::-1])
+
+    @property
+    def mode_command_status(self):
+        return str(self.status[68:84])[::-1]
+
+    @mode_command_status.setter
+    def mode_command_status(self, value):
+        if not isinstance(value, (str, bytearray)) or len(value) != 16:
+            raise ValueError('Provide a string/bytearray of length = 16!')
+        self.status[68:84] = value
+
+    @property
+    def parameter_command_status(self):
+        return str(self.status[84:92])[::-1]
+
+    @parameter_command_status.setter
+    def parameter_command_status(self, value):
+        if not isinstance(value, (str, bytearray)) or len(value) != 8:
+            raise ValueError('Provide a string/bytearray of length = 8!')
+        self.status[84:92] = value
 
 
 class MasterAxisStatus(SimpleAxisStatus):
@@ -343,20 +1259,24 @@ class MasterAxisStatus(SimpleAxisStatus):
         self.p_Bahn = self.p_Ist
 
         if self.stow_pos:
-            self.stow_pin_selection = (
-                '0' * (16 - len(self.stow_pos))
-                + '1' * len(self.stow_pos)
-            )
+            stow_pin_selection = []
+            stow_pin_selection += [
+                True for __ in range(len(self.stow_pos))
+            ]
+            stow_pin_selection += [
+                False for __ in range(16 - len(self.stow_pos))
+            ]
+            self.stow_pin_selection = stow_pin_selection
 
             if float(self.p_Ist) / 1000000 in self.stow_pos:
-                self.stowed = 1
-                self.stow_pos_ok = 1
+                self.stowed = True
+                self.stowPosOk = True
 
-        if self.stowed == 1:
+        if self.stowed:
             self.stow_pin_out = self.stow_pin_selection
-            self.stow_pin_in = '0' * 16
+            self.stow_pin_in = [False for __ in range(16)]
         else:
-            self.stow_pin_out = '0' * 16
+            self.stow_pin_out = [False for __ in range(16)]
             self.stow_pin_in = self.stow_pin_selection
 
     def _calc_position(self, delta_time, desired_pos, desired_rate):
@@ -439,10 +1359,7 @@ class MasterAxisStatus(SimpleAxisStatus):
         """This method is called to update some of the values before comparison
         or sending."""
         if self.stow_pos:
-            if float(self.p_Ist) / 1000000 in self.stow_pos:
-                self.stow_pos_ok = 1
-            else:
-                self.stow_pos_ok = 0
+            self.stowPosOk = float(self.p_Ist) / 1000000 in self.stow_pos
 
         if (self.mcs.executed.counter == self.curr_mode_counter
                 and self.mcs.executed.answer == 1):
@@ -471,7 +1388,7 @@ class MasterAxisStatus(SimpleAxisStatus):
 
     # -------------------- Mode Command --------------------
 
-    def mode_command(self, cmd):
+    def _mode_command(self, cmd):
         """This method parses and executes the received mode command.
         Before launching the command execution, this method calls the
         `_validate_mode_command` method and retrieves its return value.
@@ -531,7 +1448,7 @@ class MasterAxisStatus(SimpleAxisStatus):
         elif mode_id == 15 and axis_state not in [0, 1]:
             received_command_answer = 4
         elif mode_id == 50:
-            if not self.stow_pos_ok:
+            if not self.stowPosOk:
                 received_command_answer = 4
 
         if mode_id == 3:
@@ -584,7 +1501,7 @@ class MasterAxisStatus(SimpleAxisStatus):
         :param counter: the current command counter.
         """
         self.axis_state = 0
-        self.brakes_open = '0' * 16
+        self.brakes_open = [False for __ in range(16)]
         self._executed_mode_command(counter, 1, 1)
 
     # mode_id == 2
@@ -594,10 +1511,16 @@ class MasterAxisStatus(SimpleAxisStatus):
         :param counter: same as the `_inactive` method.
         """
         self.axis_state = 3
-        self.brakes_open = (
-            '0' * (16 - len(self.motor_status))
-            + '1' * len(self.motor_status)
-        )
+
+        brakes_open = []
+        brakes_open += [
+            True for __ in range(len(self.motor_status))
+        ]
+        brakes_open += [
+            False for __ in range(16 - len(self.motor_status))
+        ]
+        self.brakes_open = brakes_open
+
         self._executed_mode_command(counter, 2, 1)
 
     # mode_id == 3
@@ -738,33 +1661,33 @@ class MasterAxisStatus(SimpleAxisStatus):
 
         :param counter: same as the `_inactive` method.
         """
-        self.Error_Active = 0
-        self.System_fault = 0
-        self.Em_Stop = 0
-        self.Em_Limit_Dn_Act = 0
-        self.Em_Limit_Up_Act = 0
-        self.Brake_Error = 0
-        self.Power_Error = 0
-        self.Servo_Error = 0
-        self.Servo_Timeout = 0
-        self.v_Motor_Exceed = 0
-        self.Servo_Overload = 0
-        self.Pos_Enc_Error = 0
-        self.Pos_Enc_Step = 0
-        self.p_Range_Exceed = 0
-        self.p_Dev_Exceed = 0
-        self.Servo_DC_Error = 0
-        self.Override_Error = 0
-        self.Cmd_Timeout = 0
-        self.Rate_Loop_Err = 0
-        self.v_Dev_Exceed = 0
-        self.Stow_Error = 0
-        self.Stow_Timeout = 0
-        self.Extern_Error = 0
-        self.Safety_Dev_Error = 0
-        self.Com_Error = 0
-        self.Pre_Limit_Err = 0
-        self.Fin_Limit_Err = 0
+        self.Error_Active = False
+        self.System_fault = False
+        self.Em_Stop = False
+        self.Em_Limit_Dn_Act = False
+        self.Em_Limit_Up_Act = False
+        self.Brake_Error = False
+        self.Power_Error = False
+        self.Servo_Error = False
+        self.Servo_Timeout = False
+        self.v_Motor_Exceed = False
+        self.Servo_Overload = False
+        self.Pos_Enc_Error = False
+        self.Pos_Enc_Step = False
+        self.p_Range_Exceed = False
+        self.p_Dev_Exceed = False
+        self.Servo_DC_Error = False
+        self.Override_Error = False
+        self.Cmd_Timeout = False
+        self.Rate_Loop_Err = False
+        self.v_Dev_Exceed = False
+        self.Stow_Error = False
+        self.Stow_Timeout = False
+        self.Extern_Error = False
+        self.Safety_Dev_Error = False
+        self.Com_Error = False
+        self.Pre_Limit_Err = False
+        self.Fin_Limit_Err = False
         self._executed_mode_command(counter, 15, 1)
 
     # mode_id == 50
@@ -775,8 +1698,8 @@ class MasterAxisStatus(SimpleAxisStatus):
         """
         if self.stow_pos:
             self.stow_pin_out = self.stow_pin_selection
-            self.stow_pin_in = '0' * 16
-            self.stowed = 1
+            self.stow_pin_in = [False for __ in range(16)]
+            self.stowed = True
         self._executed_mode_command(counter, 50, 1)
 
     # mode_id == 51
@@ -786,9 +1709,9 @@ class MasterAxisStatus(SimpleAxisStatus):
         :param counter: same as the `_inactive` method.
         """
         if self.stow_pos:
-            self.stow_pin_out = '0' * 16
+            self.stow_pin_out = [False for __ in range(16)]
             self.stow_pin_in = self.stow_pin_selection
-            self.stowed = 0
+            self.stowed = False
         self._executed_mode_command(counter, 51, 1)
 
     # mode_id == 52
@@ -808,13 +1731,13 @@ class MasterAxisStatus(SimpleAxisStatus):
             if not self._move(counter, desired_pos, desired_rate):
                 return
             self.stow_pin_out = self.stow_pin_selection
-            self.stow_pin_in = '0' * 16
-            self.stowed = 1
+            self.stow_pin_in = [False for __ in range(16)]
+            self.stowed = True
         self._executed_mode_command(counter, 52, 1)
 
     # -------------------- Parameter Command --------------------
 
-    def parameter_command(self, cmd):
+    def _parameter_command(self, cmd):
         """This method parses and executes the received parameter command.
 
         :param cmd: the received command.
@@ -873,11 +1796,16 @@ class SlaveAxisStatus(SimpleAxisStatus):
         self.v_Ist = self.master.v_Ist
 
         if self.master.axis_state == 3:
-            self.brakes_open = (
-                '0' * (16 - len(self.motor_status))
-                + '1' * len(self.motor_status)
-            )
+            brakes_open = []
+
+            brakes_open += [
+                True for __ in range(len(self.motor_status))
+            ]
+            brakes_open += [
+                False for __ in range(16 - len(self.motor_status))
+            ]
+            self.brakes_open = brakes_open
         else:
-            self.brakes_open = '0' * 16
+            self.brakes_open = [False for __ in range(16)]
 
         return SimpleAxisStatus.get_axis_status(self)
