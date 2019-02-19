@@ -12,7 +12,44 @@ from simulators.acu.acu_utils import (
 )
 
 
-class TestACU(unittest.TestCase):
+class TestACUUtils(unittest.TestCase):
+
+    def test_utils_program_track_command_wrong_entry(self):
+        command = ProgramTrackCommand(1, 0, (0, 0))
+
+        with self.assertRaises(ValueError):
+            command.append_entry('dummy')
+
+    def test_utils_program_track_get_empty_table(self):
+        command = ProgramTrackCommand(1, 0, (0, 0))
+
+        with self.assertRaises(ValueError):
+            command.get(0)  # 0: a fake command counter
+
+    def test_utils_macro_command_wrong_type_init(self):
+        with self.assertRaises(ValueError):
+            Command('dummy')
+
+    def test_utils_macro_command_append(self):
+        command = Command()
+        command.append(ModeCommand(1, 1))
+
+        with self.assertRaises(ValueError):
+            command.append('dummy')
+
+    def test_utils_get_command_counter(self):
+        command = Command(ModeCommand(1, 1))
+        command.get()
+        command.get_counter()
+
+        with self.assertRaises(ValueError):
+            command.get_counter(5)
+
+        with self.assertRaises(ValueError):
+            command.get_counter(-5)
+
+
+class TestACUCommands(unittest.TestCase):
 
     def setUp(self):
         self.system = acu.System()
@@ -21,7 +58,7 @@ class TestACU(unittest.TestCase):
         for byte in message:
             self.assertTrue(self.system.parse(byte))
         # Wait for command to start its execution
-        time.sleep(0.01)
+        time.sleep(0.020)
 
     def test_status_message_length(self):
         status = self.system.get_message()
@@ -996,10 +1033,12 @@ class TestACU(unittest.TestCase):
 
         self._send(acu_time.get())
 
-        pcs = self.system.PS.pcs
-        self.assertEqual(pcs.counter, acu_time.get_counter(0))
-        self.assertEqual(pcs.command, 50)
-        self.assertEqual(pcs.answer, 1)
+        ps = self.system.PS
+        self.assertEqual(
+            ps.parameter_command_counter, acu_time.get_counter(0)
+        )
+        self.assertEqual(ps.parameter_command, 50)
+        self.assertEqual(ps.parameter_command_answer, 1)
 
         self.assertEqual(self.system.PS.timeSource, acu_time_mode)
 
@@ -1018,10 +1057,12 @@ class TestACU(unittest.TestCase):
 
         self._send(clock_time.get())
 
-        pcs = self.system.PS.pcs
-        self.assertEqual(pcs.counter, clock_time.get_counter(0))
-        self.assertEqual(pcs.command, 50)
-        self.assertEqual(pcs.answer, 1)
+        ps = self.system.PS
+        self.assertEqual(
+            ps.parameter_command_counter, clock_time.get_counter(0)
+        )
+        self.assertEqual(ps.parameter_command, 50)
+        self.assertEqual(ps.parameter_command_answer, 1)
 
         self.assertEqual(self.system.PS.timeSource, clock_time_mode)
 
@@ -1036,10 +1077,12 @@ class TestACU(unittest.TestCase):
 
         self._send(external_time.get())
 
-        pcs = self.system.PS.pcs
-        self.assertEqual(pcs.counter, external_time.get_counter(0))
-        self.assertEqual(pcs.command, 50)
-        self.assertEqual(pcs.answer, 1)
+        ps = self.system.PS
+        self.assertEqual(
+            ps.parameter_command_counter, external_time.get_counter(0)
+        )
+        self.assertEqual(ps.parameter_command, 50)
+        self.assertEqual(ps.parameter_command_answer, 1)
 
         self.assertEqual(self.system.PS.timeSource, external_time_mode)
 
@@ -1059,20 +1102,25 @@ class TestACU(unittest.TestCase):
 
         self._send(unknown_time_source.get())
 
-        pcs = self.system.PS.pcs
-        self.assertEqual(pcs.counter, unknown_time_source.get_counter(0))
-        self.assertEqual(pcs.command, 50)
-        self.assertEqual(pcs.answer, 5)  # 5: command has invalid parameters
+        ps = self.system.PS
+        self.assertEqual(
+            ps.parameter_command_counter, unknown_time_source.get_counter(0)
+        )
+        self.assertEqual(ps.parameter_command, 50)
+        self.assertEqual(ps.parameter_command_answer, 5)
+        # 5: command has invalid parameters
 
     def test_parameter_command_time_offset_add_second(self):
         add_second = Command(ParameterCommand(5, 51, 1))
 
         self._send(add_second.get())
 
-        pcs = self.system.PS.pcs
-        self.assertEqual(pcs.counter, add_second.get_counter(0))
-        self.assertEqual(pcs.command, 51)
-        self.assertEqual(pcs.answer, 1)
+        ps = self.system.PS
+        self.assertEqual(
+            ps.parameter_command_counter, add_second.get_counter(0)
+        )
+        self.assertEqual(ps.parameter_command, 51)
+        self.assertEqual(ps.parameter_command_answer, 1)
 
         self.assertEqual(self.system.PS.actTimeOffset, 1.1574074074074073e-05)
 
@@ -1081,10 +1129,12 @@ class TestACU(unittest.TestCase):
 
         self._send(subtract_second.get())
 
-        pcs = self.system.PS.pcs
-        self.assertEqual(pcs.counter, subtract_second.get_counter(0))
-        self.assertEqual(pcs.command, 51)
-        self.assertEqual(pcs.answer, 1)
+        ps = self.system.PS
+        self.assertEqual(
+            ps.parameter_command_counter, subtract_second.get_counter(0)
+        )
+        self.assertEqual(ps.parameter_command, 51)
+        self.assertEqual(ps.parameter_command_answer, 1)
 
         self.assertEqual(self.system.PS.actTimeOffset, -1.1574074074074073e-05)
 
@@ -1095,10 +1145,12 @@ class TestACU(unittest.TestCase):
 
         self._send(absolute_offset.get())
 
-        pcs = self.system.PS.pcs
-        self.assertEqual(pcs.counter, absolute_offset.get_counter(0))
-        self.assertEqual(pcs.command, 51)
-        self.assertEqual(pcs.answer, 1)
+        ps = self.system.PS
+        self.assertEqual(
+            ps.parameter_command_counter, absolute_offset.get_counter(0)
+        )
+        self.assertEqual(ps.parameter_command, 51)
+        self.assertEqual(ps.parameter_command_answer, 1)
 
     def test_parameter_command_time_offset_relative(self):
         self.test_parameter_command_time_offset_absolute()
@@ -1109,10 +1161,12 @@ class TestACU(unittest.TestCase):
 
         self._send(relative_offset.get())
 
-        pcs = self.system.PS.pcs
-        self.assertEqual(pcs.counter, relative_offset.get_counter(0))
-        self.assertEqual(pcs.command, 51)
-        self.assertEqual(pcs.answer, 1)
+        ps = self.system.PS
+        self.assertEqual(
+            ps.parameter_command_counter, relative_offset.get_counter(0)
+        )
+        self.assertEqual(ps.parameter_command, 51)
+        self.assertEqual(ps.parameter_command_answer, 1)
 
     def test_parameter_command_time_offset_out_of_range(self):
         out_of_range_offset = Command(
@@ -1121,10 +1175,13 @@ class TestACU(unittest.TestCase):
 
         self._send(out_of_range_offset.get())
 
-        pcs = self.system.PS.pcs
-        self.assertEqual(pcs.counter, out_of_range_offset.get_counter(0))
-        self.assertEqual(pcs.command, 51)
-        self.assertEqual(pcs.answer, 5)  # 5: command has invalid parameters
+        ps = self.system.PS
+        self.assertEqual(
+            ps.parameter_command_counter, out_of_range_offset.get_counter(0)
+        )
+        self.assertEqual(ps.parameter_command, 51)
+        self.assertEqual(ps.parameter_command_answer, 5)
+        # 5: command has invalid parameters
 
     def test_parameter_command_time_offset_unknown(self):
         unknown_time_offset = Command(
@@ -1133,10 +1190,13 @@ class TestACU(unittest.TestCase):
 
         self._send(unknown_time_offset.get())
 
-        pcs = self.system.PS.pcs
-        self.assertEqual(pcs.counter, unknown_time_offset.get_counter(0))
-        self.assertEqual(pcs.command, 50)
-        self.assertEqual(pcs.answer, 5)  # 5: command has invalid parameters
+        ps = self.system.PS
+        self.assertEqual(
+            ps.parameter_command_counter, unknown_time_offset.get_counter(0)
+        )
+        self.assertEqual(ps.parameter_command, 50)
+        self.assertEqual(ps.parameter_command_answer, 5)
+        # 5: command has invalid parameters
 
     def test_parameter_command_pt_time_correction(self):
         # Load a new program track table
@@ -1148,10 +1208,12 @@ class TestACU(unittest.TestCase):
 
         self._send(time_correction.get())
 
-        pcs = self.system.PS.pcs
-        self.assertEqual(pcs.counter, time_correction.get_counter(0))
-        self.assertEqual(pcs.command, 60)
-        self.assertEqual(pcs.answer, 1)
+        ps = self.system.PS
+        self.assertEqual(
+            ps.parameter_command_counter, time_correction.get_counter(0)
+        )
+        self.assertEqual(ps.parameter_command, 60)
+        self.assertEqual(ps.parameter_command_answer, 1)
 
         self.assertEqual(self.system.PS.actPtTimeOffset, seconds * 1000)
 
@@ -1164,20 +1226,26 @@ class TestACU(unittest.TestCase):
 
         self._send(time_correction.get())
 
-        pcs = self.system.PS.pcs
-        self.assertEqual(pcs.counter, time_correction.get_counter(0))
-        self.assertEqual(pcs.command, 60)
-        self.assertEqual(pcs.answer, 5)  # 5: command has invalid parameters
+        ps = self.system.PS
+        self.assertEqual(
+            ps.parameter_command_counter, time_correction.get_counter(0)
+        )
+        self.assertEqual(ps.parameter_command, 60)
+        self.assertEqual(ps.parameter_command_answer, 5)
+        # 5: command has invalid parameters
 
     def test_parameter_command_pointing_unknown_parameter_id(self):
         unknown_par_id = Command(ParameterCommand(5, 100))  # 100: unknown id
 
         self._send(unknown_par_id.get())
 
-        pcs = self.system.PS.pcs
-        self.assertEqual(pcs.counter, unknown_par_id.get_counter(0))
-        self.assertEqual(pcs.command, 100)
-        self.assertEqual(pcs.answer, 5)  # 5: command has invalid parameters
+        ps = self.system.PS
+        self.assertEqual(
+            ps.parameter_command_counter, unknown_par_id.get_counter(0)
+        )
+        self.assertEqual(ps.parameter_command, 100)
+        self.assertEqual(ps.parameter_command_answer, 5)
+        # 5: command has invalid parameters
 
     def test_parameter_command_unknown_subsystem(self):
         with self.assertRaises(ValueError):
@@ -1206,12 +1274,12 @@ class TestACU(unittest.TestCase):
         self._send(command.get())
 
         command_counter = command.get_counter(0)
-        pcs = self.system.PS.pcs
+        ps = self.system.PS
 
         # Check if the command has been correctly received
-        self.assertEqual(pcs.counter, command_counter)
-        self.assertEqual(pcs.command, 61)
-        self.assertEqual(pcs.answer, 1)
+        self.assertEqual(ps.parameter_command_counter, command_counter)
+        self.assertEqual(ps.parameter_command, 61)
+        self.assertEqual(ps.parameter_command_answer, 1)
 
     def test_program_track_command_add_entries(self):
         start_time = datetime.utcnow() + timedelta(seconds=1)
@@ -1234,12 +1302,12 @@ class TestACU(unittest.TestCase):
         self._send(command.get())
 
         command_counter = command.get_counter(0)
-        pcs = self.system.PS.pcs
+        ps = self.system.PS
 
         # Check if the command has been correctly received and executed
-        self.assertEqual(pcs.counter, command_counter)
-        self.assertEqual(pcs.command, 61)
-        self.assertEqual(pcs.answer, 1)
+        self.assertEqual(ps.parameter_command_counter, command_counter)
+        self.assertEqual(ps.parameter_command, 61)
+        self.assertEqual(ps.parameter_command_answer, 1)
 
     def test_program_track_command_add_entries_during_execution(self):
         start_time = datetime.utcnow() + timedelta(seconds=1)
@@ -1279,12 +1347,12 @@ class TestACU(unittest.TestCase):
         self._send(command.get())
 
         command_counter = command.get_counter(0)
-        pcs = self.system.PS.pcs
+        ps = self.system.PS
 
         # Check if the command has been correctly received and executed
-        self.assertEqual(pcs.counter, command_counter)
-        self.assertEqual(pcs.command, 61)
-        self.assertEqual(pcs.answer, 1)
+        self.assertEqual(ps.parameter_command_counter, command_counter)
+        self.assertEqual(ps.parameter_command, 61)
+        self.assertEqual(ps.parameter_command_answer, 1)
 
         # Wait for execution to complete
         time.sleep(10)
@@ -1313,12 +1381,12 @@ class TestACU(unittest.TestCase):
         self._send(command.get())
 
         command_counter = command.get_counter(0)
-        pcs = self.system.PS.pcs
+        ps = self.system.PS
 
         # Check if the command has been received and not executed
-        self.assertEqual(pcs.counter, command_counter)
-        self.assertEqual(pcs.command, 61)
-        self.assertEqual(pcs.answer, 5)
+        self.assertEqual(ps.parameter_command_counter, command_counter)
+        self.assertEqual(ps.parameter_command, 61)
+        self.assertEqual(ps.parameter_command_answer, 5)
 
     def test_program_track_command_add_entries_empty_table(self):
         pt_command = ProgramTrackCommand(2, 0, (1, 1))
@@ -1372,12 +1440,12 @@ class TestACU(unittest.TestCase):
         self._send(command.get())
 
         command_counter = command.get_counter(0)
-        pcs = self.system.PS.pcs
+        ps = self.system.PS
 
         # Make sure that command has been received but not executed
-        self.assertEqual(pcs.counter, command_counter)
-        self.assertEqual(pcs.command, 0)
-        self.assertEqual(pcs.answer, 0)
+        self.assertEqual(ps.parameter_command_counter, command_counter)
+        self.assertEqual(ps.parameter_command, 0)
+        self.assertEqual(ps.parameter_command_answer, 0)
 
     def test_program_track_wrong_interpolation_mode(self):
         pt_command = ProgramTrackCommand(
@@ -1401,12 +1469,12 @@ class TestACU(unittest.TestCase):
         self._send(command.get())
 
         command_counter = command.get_counter(0)
-        pcs = self.system.PS.pcs
+        ps = self.system.PS
 
         # Make sure that command has been received but not executed
-        self.assertEqual(pcs.counter, command_counter)
-        self.assertEqual(pcs.command, 61)
-        self.assertEqual(pcs.answer, 5)
+        self.assertEqual(ps.parameter_command_counter, command_counter)
+        self.assertEqual(ps.parameter_command, 61)
+        self.assertEqual(ps.parameter_command_answer, 5)
 
     def test_program_track_wrong_tracking_mode(self):
         pt_command = ProgramTrackCommand(
@@ -1430,12 +1498,12 @@ class TestACU(unittest.TestCase):
         self._send(command.get())
 
         command_counter = command.get_counter(0)
-        pcs = self.system.PS.pcs
+        ps = self.system.PS
 
         # Make sure that command has been received but not executed
-        self.assertEqual(pcs.counter, command_counter)
-        self.assertEqual(pcs.command, 61)
-        self.assertEqual(pcs.answer, 5)
+        self.assertEqual(ps.parameter_command_counter, command_counter)
+        self.assertEqual(ps.parameter_command, 61)
+        self.assertEqual(ps.parameter_command_answer, 5)
 
     def test_program_track_wrong_load_mode(self):
         pt_command = ProgramTrackCommand(
@@ -1458,12 +1526,12 @@ class TestACU(unittest.TestCase):
         self._send(command.get())
 
         command_counter = command.get_counter(0)
-        pcs = self.system.PS.pcs
+        ps = self.system.PS
 
         # Make sure that command has been received but not executed
-        self.assertEqual(pcs.counter, command_counter)
-        self.assertEqual(pcs.command, 61)
-        self.assertEqual(pcs.answer, 5)
+        self.assertEqual(ps.parameter_command_counter, command_counter)
+        self.assertEqual(ps.parameter_command, 61)
+        self.assertEqual(ps.parameter_command_answer, 5)
 
     def test_program_track_too_short_sequence(self):
         pt_command = ProgramTrackCommand(
@@ -1481,12 +1549,12 @@ class TestACU(unittest.TestCase):
         self._send(command.get())
 
         command_counter = command.get_counter(0)
-        pcs = self.system.PS.pcs
+        ps = self.system.PS
 
         # Make sure that command has been received but not executed
-        self.assertEqual(pcs.counter, command_counter)
-        self.assertEqual(pcs.command, 61)
-        self.assertEqual(pcs.answer, 5)
+        self.assertEqual(ps.parameter_command_counter, command_counter)
+        self.assertEqual(ps.parameter_command, 61)
+        self.assertEqual(ps.parameter_command_answer, 5)
 
     def test_program_track_too_long_sequence(self):
         pt_command = ProgramTrackCommand(
@@ -1506,12 +1574,12 @@ class TestACU(unittest.TestCase):
         self._send(command.get())
 
         command_counter = command.get_counter(0)
-        pcs = self.system.PS.pcs
+        ps = self.system.PS
 
         # Make sure that command has been received but not executed
-        self.assertEqual(pcs.counter, command_counter)
-        self.assertEqual(pcs.command, 61)
-        self.assertEqual(pcs.answer, 5)
+        self.assertEqual(ps.parameter_command_counter, command_counter)
+        self.assertEqual(ps.parameter_command, 61)
+        self.assertEqual(ps.parameter_command_answer, 5)
 
     def test_program_track_wrong_first_relative_time(self):
         pt_command = ProgramTrackCommand(
@@ -1533,12 +1601,12 @@ class TestACU(unittest.TestCase):
         self._send(command.get())
 
         command_counter = command.get_counter(0)
-        pcs = self.system.PS.pcs
+        ps = self.system.PS
 
         # Make sure that command has been received but not executed
-        self.assertEqual(pcs.counter, command_counter)
-        self.assertEqual(pcs.command, 61)
-        self.assertEqual(pcs.answer, 5)
+        self.assertEqual(ps.parameter_command_counter, command_counter)
+        self.assertEqual(ps.parameter_command, 61)
+        self.assertEqual(ps.parameter_command_answer, 5)
 
     def test_program_track_wrong_subsequent_relative_time(self):
         pt_command = ProgramTrackCommand(
@@ -1560,12 +1628,12 @@ class TestACU(unittest.TestCase):
         self._send(command.get())
 
         command_counter = command.get_counter(0)
-        pcs = self.system.PS.pcs
+        ps = self.system.PS
 
         # Make sure that command has been received but not executed
-        self.assertEqual(pcs.counter, command_counter)
-        self.assertEqual(pcs.command, 61)
-        self.assertEqual(pcs.answer, 5)
+        self.assertEqual(ps.parameter_command_counter, command_counter)
+        self.assertEqual(ps.parameter_command, 61)
+        self.assertEqual(ps.parameter_command_answer, 5)
 
     def test_program_track_wrong_delta_time(self):
         pt_command = ProgramTrackCommand(
@@ -1587,12 +1655,12 @@ class TestACU(unittest.TestCase):
         self._send(command.get())
 
         command_counter = command.get_counter(0)
-        pcs = self.system.PS.pcs
+        ps = self.system.PS
 
         # Make sure that command has been received but not executed
-        self.assertEqual(pcs.counter, command_counter)
-        self.assertEqual(pcs.command, 61)
-        self.assertEqual(pcs.answer, 5)
+        self.assertEqual(ps.parameter_command_counter, command_counter)
+        self.assertEqual(ps.parameter_command, 61)
+        self.assertEqual(ps.parameter_command_answer, 5)
 
     def test_program_track_wrong_sequence_length_short(self):
         pt_command = ProgramTrackCommand(
@@ -1959,39 +2027,698 @@ class TestACU(unittest.TestCase):
         with self.assertRaises(ValueError):
             self._send(command_string)
 
-    def test_utils_program_track_command_wrong_entry(self):
-        command = ProgramTrackCommand(1, 0, (0, 0))
+
+class TestACUValues(unittest.TestCase):
+
+    def setUp(self):
+        system = acu.System()
+        self.GS = system.GS
+        self.AS = system.AZ
+        self.MS = system.AZ.motor_status[0]
+        self.PS = system.PS
+        self.FS = system.FS
+
+    def test_gs_values(self):
+        self.assertIsInstance(self.GS.version, tuple)
+        self.assertIsInstance(self.GS.master, int)
+        self.assertIsInstance(self.GS.status_HMI, list)
+        self.assertIsInstance(self.GS.software_IO, bool)
+        self.assertIsInstance(self.GS.simulation, bool)
+        self.assertIsInstance(self.GS.control_system_on, bool)
+        self.assertIsInstance(self.GS.service, bool)
+
+        self.assertIsInstance(self.GS.HW_interlock, str)
+        self.assertIsInstance(self.GS.EStop_Device, bool)
+        self.assertIsInstance(self.GS.ES_SP, bool)
+        self.assertIsInstance(self.GS.ES_Drive_AZ1_2, bool)
+        self.assertIsInstance(self.GS.ES_Drive_AZ3_4, bool)
+        self.assertIsInstance(self.GS.ES_Drive_AZ5_6, bool)
+        self.assertIsInstance(self.GS.ES_Drive_AZ7_8, bool)
+        self.assertIsInstance(self.GS.ES_Drive_EL1_2, bool)
+        self.assertIsInstance(self.GS.ES_Drive_EL3_4, bool)
+        self.assertIsInstance(self.GS.ES_LCP, bool)
+        self.assertIsInstance(self.GS.ES_Cablewrap, bool)
+        self.assertIsInstance(self.GS.ES_AER1, bool)
+        self.assertIsInstance(self.GS.ES_AER2, bool)
+        self.assertIsInstance(self.GS.ES_HHP, bool)
+        self.assertIsInstance(self.GS.ES_PCP, bool)
+        self.assertIsInstance(self.GS.ES_EER, bool)
+        self.assertIsInstance(self.GS.ES_EER_Key, bool)
+        self.assertIsInstance(self.GS.ES_EER_Door, bool)
+        self.assertIsInstance(self.GS.ES_BOX_10, bool)
+        self.assertIsInstance(self.GS.ES_SFR_1, bool)
+        self.assertIsInstance(self.GS.ES_SFR_2, bool)
+
+        self.assertIsInstance(self.GS.SW_interlock, str)
+        self.assertIsInstance(self.GS.Control_System_Off, bool)
+        self.assertIsInstance(self.GS.Power_Control_Sys, bool)
+        self.assertIsInstance(self.GS.Power_Drive_Cab, bool)
+        self.assertIsInstance(self.GS.Power_Supply_DC, bool)
+        self.assertIsInstance(self.GS.Fieldbus_Error, bool)
+        self.assertIsInstance(self.GS.Interlock_Cmd, bool)
+        self.assertIsInstance(self.GS.SaDev_ES_FbErr, bool)
+        self.assertIsInstance(self.GS.SaDev_ES_CommErr, bool)
+        self.assertIsInstance(self.GS.SaDev_ES_OutErr, bool)
+        self.assertIsInstance(self.GS.SaDev_MD_FbErr, bool)
+        self.assertIsInstance(self.GS.SaDev_MD_CommErr, bool)
+        self.assertIsInstance(self.GS.SaDev_MD_OutErr, bool)
+        self.assertIsInstance(self.GS.Emergency_Stop, bool)
+        self.assertIsInstance(self.GS.Power_UPS, bool)
+        self.assertIsInstance(self.GS.Power_UPS_Alarm, bool)
+        self.assertIsInstance(self.GS.ACU_DI_Power, bool)
+        self.assertIsInstance(self.GS.ECU_DI_Power, bool)
+        self.assertIsInstance(self.GS.Power_DO_Int, bool)
+        self.assertIsInstance(self.GS.Main_Power, bool)
+        self.assertIsInstance(self.GS.Overvoltage_Prot, bool)
+        self.assertIsInstance(self.GS.Temp_Error_Rack, bool)
+
+        self.assertIsInstance(self.GS.diag_signal, float)
+
+    def test_gs_wrong_values(self):
+        with self.assertRaises(ValueError):
+            self.GS.version = None
+        with self.assertRaises(ValueError):
+            self.GS.master = None
+        with self.assertRaises(ValueError):
+            self.GS.status_HMI = None
+        with self.assertRaises(ValueError):
+            self.GS.status_HMI = ['0' for _ in range(6)]
+        with self.assertRaises(ValueError):
+            self.GS.software_IO = None
+        with self.assertRaises(ValueError):
+            self.GS.simulation = None
+        with self.assertRaises(ValueError):
+            self.GS.control_system_on = None
+        with self.assertRaises(ValueError):
+            self.GS.service = None
+
+        with self.assertRaises(AttributeError):
+            self.GS.HW_interlock = None
+        with self.assertRaises(ValueError):
+            self.GS.EStop_Device = None
+        with self.assertRaises(ValueError):
+            self.GS.ES_SP = None
+        with self.assertRaises(ValueError):
+            self.GS.ES_Drive_AZ1_2 = None
+        with self.assertRaises(ValueError):
+            self.GS.ES_Drive_AZ3_4 = None
+        with self.assertRaises(ValueError):
+            self.GS.ES_Drive_AZ5_6 = None
+        with self.assertRaises(ValueError):
+            self.GS.ES_Drive_AZ7_8 = None
+        with self.assertRaises(ValueError):
+            self.GS.ES_Drive_EL1_2 = None
+        with self.assertRaises(ValueError):
+            self.GS.ES_Drive_EL3_4 = None
+        with self.assertRaises(ValueError):
+            self.GS.ES_LCP = None
+        with self.assertRaises(ValueError):
+            self.GS.ES_Cablewrap = None
+        with self.assertRaises(ValueError):
+            self.GS.ES_AER1 = None
+        with self.assertRaises(ValueError):
+            self.GS.ES_AER2 = None
+        with self.assertRaises(ValueError):
+            self.GS.ES_HHP = None
+        with self.assertRaises(ValueError):
+            self.GS.ES_PCP = None
+        with self.assertRaises(ValueError):
+            self.GS.ES_EER = None
+        with self.assertRaises(ValueError):
+            self.GS.ES_EER_Key = None
+        with self.assertRaises(ValueError):
+            self.GS.ES_EER_Door = None
+        with self.assertRaises(ValueError):
+            self.GS.ES_BOX_10 = None
+        with self.assertRaises(ValueError):
+            self.GS.ES_SFR_1 = None
+        with self.assertRaises(ValueError):
+            self.GS.ES_SFR_2 = None
+
+        with self.assertRaises(AttributeError):
+            self.GS.SW_interlock = None
+        with self.assertRaises(ValueError):
+            self.GS.Control_System_Off = None
+        with self.assertRaises(ValueError):
+            self.GS.Power_Control_Sys = None
+        with self.assertRaises(ValueError):
+            self.GS.Power_Drive_Cab = None
+        with self.assertRaises(ValueError):
+            self.GS.Power_Supply_DC = None
+        with self.assertRaises(ValueError):
+            self.GS.Fieldbus_Error = None
+        with self.assertRaises(ValueError):
+            self.GS.Interlock_Cmd = None
+        with self.assertRaises(ValueError):
+            self.GS.SaDev_ES_FbErr = None
+        with self.assertRaises(ValueError):
+            self.GS.SaDev_ES_CommErr = None
+        with self.assertRaises(ValueError):
+            self.GS.SaDev_ES_OutErr = None
+        with self.assertRaises(ValueError):
+            self.GS.SaDev_MD_FbErr = None
+        with self.assertRaises(ValueError):
+            self.GS.SaDev_MD_CommErr = None
+        with self.assertRaises(ValueError):
+            self.GS.SaDev_MD_OutErr = None
+        with self.assertRaises(ValueError):
+            self.GS.Emergency_Stop = None
+        with self.assertRaises(ValueError):
+            self.GS.Power_UPS = None
+        with self.assertRaises(ValueError):
+            self.GS.Power_UPS_Alarm = None
+        with self.assertRaises(ValueError):
+            self.GS.ACU_DI_Power = None
+        with self.assertRaises(ValueError):
+            self.GS.ECU_DI_Power = None
+        with self.assertRaises(ValueError):
+            self.GS.Power_DO_Int = None
+        with self.assertRaises(ValueError):
+            self.GS.Main_Power = None
+        with self.assertRaises(ValueError):
+            self.GS.Overvoltage_Prot = None
+        with self.assertRaises(ValueError):
+            self.GS.Temp_Error_Rack = None
 
         with self.assertRaises(ValueError):
-            command.append_entry('dummy')
+            self.GS.diag_signal = None
 
-    def test_utils_program_track_get_empty_table(self):
-        command = ProgramTrackCommand(1, 0, (0, 0))
+    def test_as_values(self):
+        self.assertIsInstance(self.AS.simulation, bool)
+        self.assertIsInstance(self.AS.axis_ready, bool)
+        self.assertIsInstance(self.AS.confOk, bool)
+        self.assertIsInstance(self.AS.initOk, bool)
+        self.assertIsInstance(self.AS.override, bool)
+        self.assertIsInstance(self.AS.low_power_mode, bool)
+
+        self.assertIsInstance(self.AS.warnings, str)
+        self.assertIsInstance(self.AS.Param_Fault, bool)
+        self.assertIsInstance(self.AS.Rate_Mode, bool)
+        self.assertIsInstance(self.AS.Safety_Chain, bool)
+        self.assertIsInstance(self.AS.Wrong_Sys_State, bool)
+        self.assertIsInstance(self.AS.Temp_Enc, bool)
+        self.assertIsInstance(self.AS.Power_Brakes, bool)
+        self.assertIsInstance(self.AS.Power_Servo, bool)
+        self.assertIsInstance(self.AS.Fan_Fault, bool)
+        self.assertIsInstance(self.AS.Servo_DC_Off, bool)
+        self.assertIsInstance(self.AS.Motor_Temp_Warn, bool)
+        self.assertIsInstance(self.AS.Servo_DC_Warn, bool)
+        self.assertIsInstance(self.AS.M_Max_Exceeded, bool)
+        self.assertIsInstance(self.AS.Pos_Enc_Fault, bool)
+        self.assertIsInstance(self.AS.Em_Limit_Dn, bool)
+        self.assertIsInstance(self.AS.Em_Limit_Up, bool)
+        self.assertIsInstance(self.AS.Degraded_Mode, bool)
+        self.assertIsInstance(self.AS.Override_Act, bool)
+        self.assertIsInstance(self.AS.Pre_Limit_Up, bool)
+        self.assertIsInstance(self.AS.Pre_Limit_Dn, bool)
+        self.assertIsInstance(self.AS.Fin_Limit_Up, bool)
+        self.assertIsInstance(self.AS.Fin_Limit_Dn, bool)
+        self.assertIsInstance(self.AS.Rate_Limit, bool)
+        self.assertIsInstance(self.AS.Stow_Fault, bool)
+        self.assertIsInstance(self.AS.Stowpins_Extracted, bool)
+        self.assertIsInstance(self.AS.Low_Power_Act, bool)
+        self.assertIsInstance(self.AS.LimDn_inconsist, bool)
+        self.assertIsInstance(self.AS.LimUp_inconsist, bool)
+
+        self.assertIsInstance(self.AS.errors, str)
+        self.assertIsInstance(self.AS.Error_Active, bool)
+        self.assertIsInstance(self.AS.System_fault, bool)
+        self.assertIsInstance(self.AS.Em_Stop, bool)
+        self.assertIsInstance(self.AS.Em_Limit_Dn_Act, bool)
+        self.assertIsInstance(self.AS.Em_Limit_Up_Act, bool)
+        self.assertIsInstance(self.AS.Brake_Error, bool)
+        self.assertIsInstance(self.AS.Power_Error, bool)
+        self.assertIsInstance(self.AS.Servo_Error, bool)
+        self.assertIsInstance(self.AS.Servo_Timeout, bool)
+        self.assertIsInstance(self.AS.v_Motor_Exceed, bool)
+        self.assertIsInstance(self.AS.Servo_Overload, bool)
+        self.assertIsInstance(self.AS.Pos_Enc_Error, bool)
+        self.assertIsInstance(self.AS.Pos_Enc_Step, bool)
+        self.assertIsInstance(self.AS.p_Range_Exceed, bool)
+        self.assertIsInstance(self.AS.p_Dev_Exceed, bool)
+        self.assertIsInstance(self.AS.Servo_DC_Error, bool)
+        self.assertIsInstance(self.AS.Override_Error, bool)
+        self.assertIsInstance(self.AS.Cmd_Timeout, bool)
+        self.assertIsInstance(self.AS.Rate_Loop_Err, bool)
+        self.assertIsInstance(self.AS.v_Dev_Exceed, bool)
+        self.assertIsInstance(self.AS.Stow_Error, bool)
+        self.assertIsInstance(self.AS.Stow_Timeout, bool)
+        self.assertIsInstance(self.AS.Extern_Error, bool)
+        self.assertIsInstance(self.AS.Safety_Dev_Error, bool)
+        self.assertIsInstance(self.AS.Com_Error, bool)
+        self.assertIsInstance(self.AS.Pre_Limit_Err, bool)
+        self.assertIsInstance(self.AS.Fin_Limit_Err, bool)
+
+        self.assertIsInstance(self.AS.axis_state, int)
+        self.assertIsInstance(self.AS.axis_trajectory_state, int)
+        self.assertIsInstance(self.AS.p_Soll, int)
+        self.assertIsInstance(self.AS.p_Bahn, int)
+        self.assertIsInstance(self.AS.p_Ist, int)
+        self.assertIsInstance(self.AS.p_AbwFil, int)
+        self.assertIsInstance(self.AS.v_Soll, int)
+        self.assertIsInstance(self.AS.v_Bahn, int)
+        self.assertIsInstance(self.AS.v_Ist, int)
+        self.assertIsInstance(self.AS.a_Bahn, int)
+        self.assertIsInstance(self.AS.p_Offset, int)
+        self.assertIsInstance(self.AS.motor_selection, list)
+        self.assertIsInstance(self.AS.brakes_open, list)
+        self.assertIsInstance(self.AS.power_module_ok, list)
+        self.assertIsInstance(self.AS.stowed, bool)
+        self.assertIsInstance(self.AS.stowPosOk, bool)
+        self.assertIsInstance(self.AS.stow_pin_selection, list)
+        self.assertIsInstance(self.AS.stow_pin_in, list)
+        self.assertIsInstance(self.AS.stow_pin_out, list)
+        self.assertIsInstance(self.AS.mode_command_status, str)
+        self.assertIsInstance(self.AS.parameter_command_status, str)
+
+    def test_as_wrong_values(self):
+        with self.assertRaises(ValueError):
+            self.AS.simulation = None
+        with self.assertRaises(ValueError):
+            self.AS.axis_ready = None
+        with self.assertRaises(ValueError):
+            self.AS.confOk = None
+        with self.assertRaises(ValueError):
+            self.AS.initOk = None
+        with self.assertRaises(ValueError):
+            self.AS.override = None
+        with self.assertRaises(ValueError):
+            self.AS.low_power_mode = None
+
+        with self.assertRaises(AttributeError):
+            self.AS.warnings = None
+        with self.assertRaises(ValueError):
+            self.AS.Param_Fault = None
+        with self.assertRaises(ValueError):
+            self.AS.Rate_Mode = None
+        with self.assertRaises(ValueError):
+            self.AS.Safety_Chain = None
+        with self.assertRaises(ValueError):
+            self.AS.Wrong_Sys_State = None
+        with self.assertRaises(ValueError):
+            self.AS.Temp_Enc = None
+        with self.assertRaises(ValueError):
+            self.AS.Power_Brakes = None
+        with self.assertRaises(ValueError):
+            self.AS.Power_Servo = None
+        with self.assertRaises(ValueError):
+            self.AS.Fan_Fault = None
+        with self.assertRaises(ValueError):
+            self.AS.Servo_DC_Off = None
+        with self.assertRaises(ValueError):
+            self.AS.Motor_Temp_Warn = None
+        with self.assertRaises(ValueError):
+            self.AS.Servo_DC_Warn = None
+        with self.assertRaises(ValueError):
+            self.AS.M_Max_Exceeded = None
+        with self.assertRaises(ValueError):
+            self.AS.Pos_Enc_Fault = None
+        with self.assertRaises(ValueError):
+            self.AS.Em_Limit_Dn = None
+        with self.assertRaises(ValueError):
+            self.AS.Em_Limit_Up = None
+        with self.assertRaises(ValueError):
+            self.AS.Degraded_Mode = None
+        with self.assertRaises(ValueError):
+            self.AS.Override_Act = None
+        with self.assertRaises(ValueError):
+            self.AS.Pre_Limit_Up = None
+        with self.assertRaises(ValueError):
+            self.AS.Pre_Limit_Dn = None
+        with self.assertRaises(ValueError):
+            self.AS.Fin_Limit_Up = None
+        with self.assertRaises(ValueError):
+            self.AS.Fin_Limit_Dn = None
+        with self.assertRaises(ValueError):
+            self.AS.Rate_Limit = None
+        with self.assertRaises(ValueError):
+            self.AS.Stow_Fault = None
+        with self.assertRaises(ValueError):
+            self.AS.Stowpins_Extracted = None
+        with self.assertRaises(ValueError):
+            self.AS.Low_Power_Act = None
+        with self.assertRaises(ValueError):
+            self.AS.LimDn_inconsist = None
+        with self.assertRaises(ValueError):
+            self.AS.LimUp_inconsist = None
+
+        with self.assertRaises(AttributeError):
+            self.AS.errors = None
+        with self.assertRaises(ValueError):
+            self.AS.Error_Active = None
+        with self.assertRaises(ValueError):
+            self.AS.System_fault = None
+        with self.assertRaises(ValueError):
+            self.AS.Em_Stop = None
+        with self.assertRaises(ValueError):
+            self.AS.Em_Limit_Dn_Act = None
+        with self.assertRaises(ValueError):
+            self.AS.Em_Limit_Up_Act = None
+        with self.assertRaises(ValueError):
+            self.AS.Brake_Error = None
+        with self.assertRaises(ValueError):
+            self.AS.Power_Error = None
+        with self.assertRaises(ValueError):
+            self.AS.Servo_Error = None
+        with self.assertRaises(ValueError):
+            self.AS.Servo_Timeout = None
+        with self.assertRaises(ValueError):
+            self.AS.v_Motor_Exceed = None
+        with self.assertRaises(ValueError):
+            self.AS.Servo_Overload = None
+        with self.assertRaises(ValueError):
+            self.AS.Pos_Enc_Error = None
+        with self.assertRaises(ValueError):
+            self.AS.Pos_Enc_Step = None
+        with self.assertRaises(ValueError):
+            self.AS.p_Range_Exceed = None
+        with self.assertRaises(ValueError):
+            self.AS.p_Dev_Exceed = None
+        with self.assertRaises(ValueError):
+            self.AS.Servo_DC_Error = None
+        with self.assertRaises(ValueError):
+            self.AS.Override_Error = None
+        with self.assertRaises(ValueError):
+            self.AS.Cmd_Timeout = None
+        with self.assertRaises(ValueError):
+            self.AS.Rate_Loop_Err = None
+        with self.assertRaises(ValueError):
+            self.AS.v_Dev_Exceed = None
+        with self.assertRaises(ValueError):
+            self.AS.Stow_Error = None
+        with self.assertRaises(ValueError):
+            self.AS.Stow_Timeout = None
+        with self.assertRaises(ValueError):
+            self.AS.Extern_Error = None
+        with self.assertRaises(ValueError):
+            self.AS.Safety_Dev_Error = None
+        with self.assertRaises(ValueError):
+            self.AS.Com_Error = None
+        with self.assertRaises(ValueError):
+            self.AS.Pre_Limit_Err = None
+        with self.assertRaises(ValueError):
+            self.AS.Fin_Limit_Err = None
 
         with self.assertRaises(ValueError):
-            command.get(0)  # 0: a fake command counter
-
-    def test_utils_macro_command_wrong_type_init(self):
+            self.AS.axis_state = None
         with self.assertRaises(ValueError):
-            Command('dummy')
-
-    def test_utils_macro_command_append(self):
-        command = Command()
-        command.append(ModeCommand(1, 1))
-
+            self.AS.axis_trajectory_state = None
         with self.assertRaises(ValueError):
-            command.append('dummy')
-
-    def test_utils_get_command_counter(self):
-        command = Command(ModeCommand(1, 1))
-        command.get()
-        command.get_counter()
-
+            self.AS.p_Soll = None
         with self.assertRaises(ValueError):
-            command.get_counter(5)
-
+            self.AS.p_Bahn = None
         with self.assertRaises(ValueError):
-            command.get_counter(-5)
+            self.AS.p_Ist = None
+        with self.assertRaises(ValueError):
+            self.AS.p_AbwFil = None
+        with self.assertRaises(ValueError):
+            self.AS.v_Soll = None
+        with self.assertRaises(ValueError):
+            self.AS.v_Bahn = None
+        with self.assertRaises(ValueError):
+            self.AS.v_Ist = None
+        with self.assertRaises(ValueError):
+            self.AS.a_Bahn = None
+        with self.assertRaises(ValueError):
+            self.AS.p_Offset = None
+        with self.assertRaises(ValueError):
+            self.AS.motor_selection = None
+        with self.assertRaises(ValueError):
+            self.AS.motor_selection = ['0' for _ in range(16)]
+        with self.assertRaises(ValueError):
+            self.AS.brakes_open = None
+        with self.assertRaises(ValueError):
+            self.AS.brakes_open = ['0' for _ in range(16)]
+        with self.assertRaises(ValueError):
+            self.AS.power_module_ok = None
+        with self.assertRaises(ValueError):
+            self.AS.power_module_ok = ['0' for _ in range(16)]
+        with self.assertRaises(ValueError):
+            self.AS.stowed = None
+        with self.assertRaises(ValueError):
+            self.AS.stowPosOk = None
+        with self.assertRaises(ValueError):
+            self.AS.stow_pin_selection = None
+        with self.assertRaises(ValueError):
+            self.AS.stow_pin_selection = ['0' for _ in range(16)]
+        with self.assertRaises(ValueError):
+            self.AS.stow_pin_in = None
+        with self.assertRaises(ValueError):
+            self.AS.stow_pin_in = ['0' for _ in range(16)]
+        with self.assertRaises(ValueError):
+            self.AS.stow_pin_out = None
+        with self.assertRaises(ValueError):
+            self.AS.stow_pin_out = ['0' for _ in range(16)]
+        with self.assertRaises(ValueError):
+            self.AS.mode_command_status = None
+        with self.assertRaises(ValueError):
+            self.AS.parameter_command_status = None
+
+    def test_ms_values(self):
+        self.assertIsInstance(self.MS.actual_position, float)
+        self.assertIsInstance(self.MS.actual_velocity, float)
+        self.assertIsInstance(self.MS.actual_torque, float)
+        self.assertIsInstance(self.MS.rate_of_utilization, float)
+        self.assertIsInstance(self.MS.active, int)
+        self.assertIsInstance(self.MS.speed_of_rotation, int)
+        self.assertIsInstance(self.MS.speed_of_rotation_OK, int)
+        self.assertIsInstance(self.MS.position, int)
+        self.assertIsInstance(self.MS.bus, int)
+        self.assertIsInstance(self.MS.servo, int)
+        self.assertIsInstance(self.MS.sensor, int)
+        self.assertIsInstance(self.MS.motWarnCode, str)
+        self.assertIsInstance(self.MS.wa_iQuad_t, bool)
+        self.assertIsInstance(self.MS.wa_Temp_Amplifier, bool)
+        self.assertIsInstance(self.MS.wa_Temp_Mot, bool)
+        self.assertIsInstance(self.MS.wa_v_Max_Exceeded, bool)
+        self.assertIsInstance(self.MS.wa_M_Max_Exceeded, bool)
+        self.assertIsInstance(self.MS.wa_Mot_Overload, bool)
+        self.assertIsInstance(self.MS.wa_Temp_Cooling, bool)
+        self.assertIsInstance(self.MS.wa_Temp_Extern, bool)
+        self.assertIsInstance(self.MS.wa_Temp_Pow_Supply, bool)
+        self.assertIsInstance(self.MS.wa_Temp_ERM_Module, bool)
+        self.assertIsInstance(self.MS.wa_U_Max, bool)
+        self.assertIsInstance(self.MS.wa_U_Min, bool)
+        self.assertIsInstance(self.MS.wa_Intermed_Circ_Voltage, bool)
+        self.assertIsInstance(self.MS.wa_Wrong_Mode, bool)
+        self.assertIsInstance(self.MS.wa_err_cmd_M, bool)
+        self.assertIsInstance(self.MS.wa_err_sts_SBM, bool)
+        self.assertIsInstance(self.MS.wa_err_sts_EF, bool)
+        self.assertIsInstance(self.MS.wa_err_sts_RF, bool)
+
+    def test_ms_wrong_values(self):
+        with self.assertRaises(ValueError):
+            self.MS.actual_position = None
+        with self.assertRaises(ValueError):
+            self.MS.actual_velocity = None
+        with self.assertRaises(ValueError):
+            self.MS.actual_torque = None
+        with self.assertRaises(ValueError):
+            self.MS.rate_of_utilization = None
+        with self.assertRaises(ValueError):
+            self.MS.active = None
+        with self.assertRaises(ValueError):
+            self.MS.speed_of_rotation = None
+        with self.assertRaises(ValueError):
+            self.MS.speed_of_rotation_OK = None
+        with self.assertRaises(ValueError):
+            self.MS.position = None
+        with self.assertRaises(ValueError):
+            self.MS.bus = None
+        with self.assertRaises(ValueError):
+            self.MS.servo = None
+        with self.assertRaises(ValueError):
+            self.MS.sensor = None
+        with self.assertRaises(AttributeError):
+            self.MS.motWarnCode = None
+        with self.assertRaises(ValueError):
+            self.MS.wa_iQuad_t = None
+        with self.assertRaises(ValueError):
+            self.MS.wa_Temp_Amplifier = None
+        with self.assertRaises(ValueError):
+            self.MS.wa_Temp_Mot = None
+        with self.assertRaises(ValueError):
+            self.MS.wa_v_Max_Exceeded = None
+        with self.assertRaises(ValueError):
+            self.MS.wa_M_Max_Exceeded = None
+        with self.assertRaises(ValueError):
+            self.MS.wa_Mot_Overload = None
+        with self.assertRaises(ValueError):
+            self.MS.wa_Temp_Cooling = None
+        with self.assertRaises(ValueError):
+            self.MS.wa_Temp_Extern = None
+        with self.assertRaises(ValueError):
+            self.MS.wa_Temp_Pow_Supply = None
+        with self.assertRaises(ValueError):
+            self.MS.wa_Temp_ERM_Module = None
+        with self.assertRaises(ValueError):
+            self.MS.wa_U_Max = None
+        with self.assertRaises(ValueError):
+            self.MS.wa_U_Min = None
+        with self.assertRaises(ValueError):
+            self.MS.wa_Intermed_Circ_Voltage = None
+        with self.assertRaises(ValueError):
+            self.MS.wa_Wrong_Mode = None
+        with self.assertRaises(ValueError):
+            self.MS.wa_err_cmd_M = None
+        with self.assertRaises(ValueError):
+            self.MS.wa_err_sts_SBM = None
+        with self.assertRaises(ValueError):
+            self.MS.wa_err_sts_EF = None
+        with self.assertRaises(ValueError):
+            self.MS.wa_err_sts_RF = None
+
+    def test_ps_values(self):
+        self.assertIsInstance(self.PS.confVersion, float)
+        self.assertIsInstance(self.PS.confOk, bool)
+        self.assertIsInstance(self.PS.posEncAz, int)
+        self.assertIsInstance(self.PS.pointOffsetAz, int)
+        self.assertIsInstance(self.PS.posCalibChartAz, int)
+        self.assertIsInstance(self.PS.posCorrTableAz_F_plst_El, int)
+        self.assertIsInstance(self.PS.posCorrTableAzOn, bool)
+        self.assertIsInstance(self.PS.encAzFault, bool)
+        self.assertIsInstance(self.PS.sectorSwitchAz, bool)
+        self.assertIsInstance(self.PS.posEncEl, int)
+        self.assertIsInstance(self.PS.pointOffsetEl, int)
+        self.assertIsInstance(self.PS.posCalibChartEl, int)
+        self.assertIsInstance(self.PS.posCorrTableEl_F_plst_Az, int)
+        self.assertIsInstance(self.PS.posCorrTableElOn, bool)
+        self.assertIsInstance(self.PS.encElFault, int)
+        self.assertIsInstance(self.PS.posEncCw, int)
+        self.assertIsInstance(self.PS.posCalibChartCw, int)
+        self.assertIsInstance(self.PS.encCwFault, int)
+        self.assertIsInstance(self.PS.timeSource, int)
+        self.assertIsInstance(self.PS.actTime, float)
+        self.assertIsInstance(self.PS.actTimeOffset, float)
+        self.assertIsInstance(self.PS.clockOnline, int)
+        self.assertIsInstance(self.PS.clockOK, int)
+        self.assertIsInstance(self.PS.year, int)
+        self.assertIsInstance(self.PS.month, int)
+        self.assertIsInstance(self.PS.day, int)
+        self.assertIsInstance(self.PS.hour, int)
+        self.assertIsInstance(self.PS.minute, int)
+        self.assertIsInstance(self.PS.second, int)
+        self.assertIsInstance(self.PS.actPtPos_Azimuth, int)
+        self.assertIsInstance(self.PS.actPtPos_Elevation, int)
+        self.assertIsInstance(self.PS.ptState, int)
+        self.assertIsInstance(self.PS.ptError, str)
+        self.assertIsInstance(self.PS.Data_Overflow, bool)
+        self.assertIsInstance(self.PS.Time_Distance_Fault, bool)
+        self.assertIsInstance(self.PS.No_Data_Available, bool)
+        self.assertIsInstance(self.PS.actPtTimeOffset, int)
+        self.assertIsInstance(self.PS.ptInterpolMode, int)
+        self.assertIsInstance(self.PS.ptTrackingType, int)
+        self.assertIsInstance(self.PS.ptTrackingMode, int)
+        self.assertIsInstance(self.PS.ptActTableIndex, int)
+        self.assertIsInstance(self.PS.ptEndTableIndex, int)
+        self.assertIsInstance(self.PS.ptTableLength, int)
+        self.assertIsInstance(self.PS.parameter_command_counter, int)
+        self.assertIsInstance(self.PS.parameter_command, int)
+        self.assertIsInstance(self.PS.parameter_command_answer, int)
+
+    def test_ps_wrong_values(self):
+        with self.assertRaises(ValueError):
+            self.PS.confVersion = None
+        with self.assertRaises(ValueError):
+            self.PS.confOk = None
+        with self.assertRaises(ValueError):
+            self.PS.posEncAz = None
+        with self.assertRaises(ValueError):
+            self.PS.pointOffsetAz = None
+        with self.assertRaises(ValueError):
+            self.PS.posCalibChartAz = None
+        with self.assertRaises(ValueError):
+            self.PS.posCorrTableAz_F_plst_El = None
+        with self.assertRaises(ValueError):
+            self.PS.posCorrTableAzOn = None
+        with self.assertRaises(ValueError):
+            self.PS.encAzFault = None
+        with self.assertRaises(ValueError):
+            self.PS.sectorSwitchAz = None
+        with self.assertRaises(ValueError):
+            self.PS.posEncEl = None
+        with self.assertRaises(ValueError):
+            self.PS.pointOffsetEl = None
+        with self.assertRaises(ValueError):
+            self.PS.posCalibChartEl = None
+        with self.assertRaises(ValueError):
+            self.PS.posCorrTableEl_F_plst_Az = None
+        with self.assertRaises(ValueError):
+            self.PS.posCorrTableElOn = None
+        with self.assertRaises(ValueError):
+            self.PS.encElFault = None
+        with self.assertRaises(ValueError):
+            self.PS.posEncCw = None
+        with self.assertRaises(ValueError):
+            self.PS.posCalibChartCw = None
+        with self.assertRaises(ValueError):
+            self.PS.encCwFault = None
+        with self.assertRaises(ValueError):
+            self.PS.timeSource = None
+        with self.assertRaises(ValueError):
+            self.PS.actTime = None
+        with self.assertRaises(ValueError):
+            self.PS.actTimeOffset = None
+        with self.assertRaises(ValueError):
+            self.PS.clockOnline = None
+        with self.assertRaises(ValueError):
+            self.PS.clockOK = None
+        with self.assertRaises(ValueError):
+            self.PS.year = None
+        with self.assertRaises(ValueError):
+            self.PS.month = None
+        with self.assertRaises(ValueError):
+            self.PS.day = None
+        with self.assertRaises(ValueError):
+            self.PS.hour = None
+        with self.assertRaises(ValueError):
+            self.PS.minute = None
+        with self.assertRaises(ValueError):
+            self.PS.second = None
+        with self.assertRaises(ValueError):
+            self.PS.actPtPos_Azimuth = None
+        with self.assertRaises(ValueError):
+            self.PS.actPtPos_Elevation = None
+        with self.assertRaises(ValueError):
+            self.PS.ptState = None
+        with self.assertRaises(AttributeError):
+            self.PS.ptError = None
+        with self.assertRaises(ValueError):
+            self.PS.Data_Overflow = None
+        with self.assertRaises(ValueError):
+            self.PS.Time_Distance_Fault = None
+        with self.assertRaises(ValueError):
+            self.PS.No_Data_Available = None
+        with self.assertRaises(ValueError):
+            self.PS.actPtTimeOffset = None
+        with self.assertRaises(ValueError):
+            self.PS.ptInterpolMode = None
+        with self.assertRaises(ValueError):
+            self.PS.ptTrackingType = None
+        with self.assertRaises(ValueError):
+            self.PS.ptTrackingMode = None
+        with self.assertRaises(ValueError):
+            self.PS.ptActTableIndex = None
+        with self.assertRaises(ValueError):
+            self.PS.ptEndTableIndex = None
+        with self.assertRaises(ValueError):
+            self.PS.ptTableLength = None
+        with self.assertRaises(ValueError):
+            self.PS.parameter_command_counter = None
+        with self.assertRaises(ValueError):
+            self.PS.parameter_command = None
+        with self.assertRaises(ValueError):
+            self.PS.parameter_command_answer = None
+
+    def test_fs_values(self):
+        self.assertIsInstance(self.FS.voltagePhToPh, float)
+        self.assertIsInstance(self.FS.currentPhToPh, float)
+
+    def test_fs_wrong_values(self):
+        with self.assertRaises(ValueError):
+            self.FS.voltagePhToPh = None
+        with self.assertRaises(ValueError):
+            self.FS.currentPhToPh = None
 
 
 if __name__ == '__main__':

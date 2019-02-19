@@ -37,9 +37,9 @@ class System(ListeningSystem, SendingSystem):
     }
 
     commands = {
-        1: 'mode_command',
-        2: 'parameter_command',
-        4: 'program_track_parameter_command',
+        1: '_mode_command',
+        2: '_parameter_command',
+        4: '_program_track_parameter_command',
     }
 
     def __init__(self, sampling_time=0.2):
