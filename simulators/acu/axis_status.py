@@ -1264,7 +1264,7 @@ class MasterAxisStatus(SimpleAxisStatus):
                 True for __ in range(len(self.stow_pos))
             ]
             stow_pin_selection += [
-                False for __ in range(16-len(self.stow_pos))
+                False for __ in range(16 - len(self.stow_pos))
             ]
             self.stow_pin_selection = stow_pin_selection
 
@@ -1517,7 +1517,7 @@ class MasterAxisStatus(SimpleAxisStatus):
             True for __ in range(len(self.motor_status))
         ]
         brakes_open += [
-            False for __ in range(16-len(self.motor_status))
+            False for __ in range(16 - len(self.motor_status))
         ]
         self.brakes_open = brakes_open
 
@@ -1802,7 +1802,7 @@ class SlaveAxisStatus(SimpleAxisStatus):
                 True for __ in range(len(self.motor_status))
             ]
             brakes_open += [
-                False for __ in range(16-len(self.motor_status))
+                False for __ in range(16 - len(self.motor_status))
             ]
             self.brakes_open = brakes_open
         else:
