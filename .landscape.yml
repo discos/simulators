@@ -30,6 +30,8 @@ pep8:
   disable:
     - W503
     - E128
+    - N802
+    - N806
 
 mccabe:
   disable:
