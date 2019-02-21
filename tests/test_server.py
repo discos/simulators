@@ -16,8 +16,11 @@ class TestListeningServer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.address = ('127.0.0.1', 10000)
-        cls.system = ListeningTestSystem()
-        cls.server = Server(cls.system, l_address=cls.address)
+        cls.server = Server(
+            ListeningTestSystem,
+            args=(),
+            l_address=cls.address
+        )
         cls.server.start()
 
     @classmethod
@@ -58,8 +61,11 @@ class TestSendingServer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.address = ('127.0.0.1', 10001)
-        cls.system = SendingTestSystem()
-        cls.server = Server(cls.system, s_address=cls.address)
+        cls.server = Server(
+            SendingTestSystem,
+            args=(),
+            s_address=cls.address
+        )
         cls.server.start()
 
     @classmethod
@@ -77,8 +83,12 @@ class TestDuplexServer(unittest.TestCase):
     def setUpClass(cls):
         cls.l_address = ('127.0.0.1', 10002)
         cls.s_address = ('127.0.0.1', 10003)
-        cls.system = DuplexTestSystem()
-        cls.server = Server(cls.system, cls.l_address, cls.s_address)
+        cls.server = Server(
+            DuplexTestSystem,
+            args=(),
+            l_address=cls.l_address,
+            s_address=cls.s_address
+        )
         cls.server.start()
 
     @classmethod
