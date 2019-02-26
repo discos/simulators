@@ -45,9 +45,9 @@ class BaseHandler(BaseRequestHandler):
             method = getattr(self.system, name)
             response = method(*params)
             if isinstance(response, str):
+                self.request.sendall(response)
                 if response == '$server_shutdown!':
                     self.server.stop()
-                self.request.sendall(response)
         except AttributeError:
             logging.debug('command %s not supported', name)
         except Exception, ex:
@@ -151,6 +151,7 @@ class Server(ThreadingMixIn, ThreadingTCPServer):
     def __init__(self, system, args, l_address=None, s_address=None):
         self.system = system
         self.system_args = args
+        self.is_alive = False
 
         self.child_server = None
         if l_address:
@@ -179,12 +180,13 @@ class Server(ThreadingMixIn, ThreadingTCPServer):
         if not self.RequestHandlerClass.system:
             self.RequestHandlerClass.system = self.system
         if self.child_server:
-            self.child_server.RequestHandlerClass.system = self.system
+            self.child_server.system = self.system
             self.child_server.start()
         try:
+            self.is_alive = True
             ThreadingTCPServer.serve_forever(self, poll_interval)
         except KeyboardInterrupt:
-            pass
+            self.stop()
 
     def start(self):
         """This method starts a daemon thread which calls the `serve_forever`
@@ -198,6 +200,7 @@ class Server(ThreadingMixIn, ThreadingTCPServer):
         if self.child_server:
             self.child_server.shutdown()
         self.shutdown()
+        self.is_alive = False
 
 
 class Simulator(object):
@@ -245,8 +248,7 @@ class Simulator(object):
                 for p in processes:
                     p.join()
             except KeyboardInterrupt:
-                for p in processes:
-                    p.join()
+                self.stop()
             print('\nSimulator stopped.')
 
     def stop(self):
@@ -256,8 +258,8 @@ class Simulator(object):
             for address in entry[:-1]:
                 if not address:
                     continue
+                sockobj = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 try:
-                    sockobj = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     sockobj.settimeout(1)
                     sockobj.connect(address)
                     sockobj.sendall('$system_stop!')
