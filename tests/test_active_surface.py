@@ -765,6 +765,9 @@ class TestASParse(unittest.TestCase):
         for driver in self.system.drivers:
             driver.delay_multiplier = 0
 
+    def tearDown(self):
+        del self.system
+
     def _send_cmd(self, cmd):
         """This method is useful to send the whole command without repeating
         the `for` loop every test. If an exception is expected this method can
@@ -830,14 +833,14 @@ class TestASParse(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.system.parse('\x0F')
 
-    def test_wrong_message_lenght(self):
+    def test_wrong_message_length(self):
         # Declaring a lenght of 2 but sending 3 bytes
         msg = b'\xFA\x40\x01\x02\x03'
         msg += utils.checksum(msg)
         with self.assertRaises(ValueError):
             self._send_cmd(msg)
 
-    def test_wrong_message_broadcast_lenght(self):
+    def test_wrong_message_broadcast_length(self):
         # Declaring a lenght of 2 but sending 3 bytes
         msg = b'\xFA\x00\x02\x01\x02\x03'
         msg += utils.checksum(msg)

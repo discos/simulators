@@ -94,7 +94,7 @@ class USD(object):
         elapsed_time = time.time() - t0
         time.sleep(max(self.driver_reset_delay - elapsed_time, 0))
 
-    def soft_trigger(self):
+    def soft_trigger(self, stop):
         if self.ready is True:
             if self.move_to_thread:
                 self.running = False
@@ -105,7 +105,7 @@ class USD(object):
             self.running = True
             self.move_to_thread = Thread(
                 target=self._move_to,
-                args=(next_position,)
+                args=(next_position, stop)
             )
             self.move_to_thread.daemon = True
             self.move_to_thread.start()
@@ -221,37 +221,37 @@ class USD(object):
         # Empty the position queue
         self.position_queue = Queue()
 
-    def set_absolute_position(self, position):
+    def set_absolute_position(self, position, stop):
         cmd_position = self.reference_position + position
         if self.delayed_execution is True:
             self.position_queue.put(cmd_position)
             self.ready = True
         else:
-            t = Thread(target=self._position, args=(cmd_position,))
+            t = Thread(target=self._position, args=(cmd_position, stop))
             t.daemon = True
             t.start()
 
-    def set_relative_position(self, position):
+    def set_relative_position(self, position, stop):
         cmd_position = self.current_position + position
         if self.delayed_execution is True:
             self.position_queue.put(cmd_position)
             self.ready = True
         else:
-            t = Thread(target=self._position, args=(cmd_position,))
+            t = Thread(target=self._position, args=(cmd_position, stop))
             t.daemon = True
             t.start()
 
-    def rotate(self, sign):
+    def rotate(self, sign, stop):
         if self.running:
             # Failed command, return False so the parser can return a byte_nak
             return False
         else:
-            t = Thread(target=self._rotate, args=(sign,))
+            t = Thread(target=self._rotate, args=(sign, stop))
             t.daemon = True
             t.start()
             return True
 
-    def _rotate(self, sign):
+    def _rotate(self, sign, stop):
         self.running = True
         if not self.stop:
             self._accel_ramp(sign)
@@ -259,17 +259,17 @@ class USD(object):
             cmd_position = 2147483647
             if sign < 0:
                 cmd_position += 1
-            self._move_to(sign * cmd_position)
+            self._move_to(sign * cmd_position, stop)
         self.running = False
 
-    def set_velocity(self, velocity):
+    def set_velocity(self, velocity, stop):
         # Start rotating with given velocity without an acceleration ramp
         self.velocity = velocity
 
         if velocity != 0:
             self.running = True
             if not self.move_thread:
-                self.move_thread = Thread(target=self._move)
+                self.move_thread = Thread(target=self._move, args=(stop,))
                 self.move_thread.daemon = True
                 self.move_thread.start()
         else:
@@ -362,22 +362,22 @@ class USD(object):
         #     self.current_position += delta * sign
         pass
 
-    def _position(self, cmd_position):
+    def _position(self, cmd_position, stop):
         self.running = True
         sign = -1 if cmd_position < self.current_position else +1
 
         if not self.stop:
             self._accel_ramp(sign)
         if not self.stop:
-            self._move_to(cmd_position)
+            self._move_to(cmd_position, stop)
         if not self.stop:
             self._go_standby()
         self.running = False
 
-    def _move_to(self, cmd_position):
+    def _move_to(self, cmd_position, stop):
         sign0 = -1 if cmd_position < self.current_position else +1
         t0 = time.time()
-        while not self.stop and self.running:
+        while not self.stop and self.running and not stop.value:
             t1 = time.time()
             elapsed = t1 - t0
             t0 = t1
@@ -393,9 +393,9 @@ class USD(object):
                 self.current_position = new_position
             time.sleep(0.005)
 
-    def _move(self):
+    def _move(self, stop):
         t0 = time.time()
-        while not self.stop and self.running:
+        while not self.stop and self.running and not stop.value:
             t1 = time.time()
             elapsed = t1 - t0
             t0 = t1
