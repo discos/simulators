@@ -1,15 +1,14 @@
+from multiprocessing import Array
+from ctypes import c_char
 from simulators import utils
 
 
 class FacilityStatus(object):
 
     def __init__(self):
-        self.status = bytearray(b'\x00' * 16)
+        self.status = Array(c_char, 16)
         self.voltagePhToPh = 0
         self.currentPhToPh = 0
-
-    def get_status(self):
-        return str(self.status)
 
     @property
     def voltagePhToPh(self):

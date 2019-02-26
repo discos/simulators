@@ -1,4 +1,8 @@
+import time
+from multiprocessing import Value, Array
+from ctypes import c_bool, c_char
 from threading import Thread
+from Queue import Queue, Empty
 from simulators import utils
 from simulators.common import ListeningSystem, SendingSystem
 from simulators.acu.general_status import GeneralStatus
@@ -14,7 +18,8 @@ from simulators.acu.facility_status import FacilityStatus
 # is the tuple that defines the optional sending node that exposes the
 # get_message method, while args is a tuple of optional extra arguments.
 servers = []
-servers.append((('127.0.0.1', 13000), ('127.0.0.1', 13001), ()))
+servers.append((('0.0.0.0', 13000), ('0.0.0.0', 13001), ()))
+#servers.append((('127.0.0.1', 13000), ('127.0.0.1', 13001), ()))
 
 start_flag = b'\x1A\xCF\xFC\x1D'
 end_flag = b'\xD1\xCF\xFC\xA1'
@@ -61,9 +66,75 @@ class System(ListeningSystem, SendingSystem):
             start_pos=90,
             stow_pos=[90],
         )
+        self.AZ.name = 'azimuth'
+        self.EL.name = 'elevation'
         self.CW = SlaveAxisStatus(n_motors=1, master=self.AZ)
         self.PS = PointingStatus(self.AZ, self.EL, self.CW)
         self.FS = FacilityStatus()
+
+        self.stop = Value(c_bool, False)
+
+        self.command_threads = Queue()
+
+        self.status = Array(c_char, 813)
+        self.status[0:4] = start_flag
+        self.status[4:8] = utils.uint_to_bytes(813)
+        self.status[-4:] = end_flag
+
+        subsystems = []
+        subsystems.append(self.PS.update_status)
+        subsystems.append(self.AZ.update_status)
+        subsystems.append(self.EL.update_status)
+        subsystems.append(self.CW.update_status)
+        self._update_subsystems(subsystems)
+
+        statuses = []
+        statuses.append(self.GS.status)
+        statuses.append(self.AZ.status)
+        statuses.append(self.EL.status)
+        statuses.append(self.CW.status)
+        for motor in self.AZ.motor_status:
+            statuses.append(motor.status)
+        for motor in self.EL.motor_status:
+            statuses.append(motor.status)
+        for motor in self.CW.motor_status:
+            statuses.append(motor.status)
+        statuses.append(self.PS.status)
+        statuses.append(self.FS.status)
+        self._update_status(self.status, statuses)
+
+        args = (
+            self.stop,
+            self.sampling_time,
+            self.status,
+            subsystems,
+            statuses,
+            self.command_threads,
+            self._update_subsystems,
+            self._update_status
+        )
+
+        self.update_thread = Thread(
+            target=self._update_loop,
+            args=args
+        )
+        self.update_thread.daemon = True
+        self.update_thread.start()
+
+    def __del__(self):
+        self.system_stop()
+
+    def system_stop(self):
+        self.stop.value = True
+        self.update_thread.join()
+        while True:
+            try:
+                command_thread = self.command_threads.get_nowait()
+                if command_thread.is_alive():
+                    command_thread.join()
+            except Empty:
+                break
+        return '$server_shutdown!'
 
     def _set_default(self):
         """This method resets the received command string to its default value.
@@ -111,29 +182,54 @@ class System(ListeningSystem, SendingSystem):
 
         return True
 
+    @staticmethod
+    def _update_subsystems(update_functions):
+        for update_function in update_functions:
+            update_function()
+
+    @staticmethod
+    def _update_status(status, statuses):
+        payload = ''
+        for subsystem_status in statuses:
+            payload += subsystem_status.raw
+        status[8:12] = utils.uint_to_bytes(utils.day_milliseconds())
+        status[12:-4] = payload
+
+    @staticmethod
+    def _update_loop(stop, samp_time, status, subsystems, statuses,
+                     cmd_queue, update_subsystems, update_status):
+        t_status = time.time()
+        to_update = True
+        command_threads = []
+        while not stop.value:
+            t0 = time.time()
+            try:
+                command_threads.append(cmd_queue.get_nowait())
+            except Empty:
+                pass
+            for command_thread in command_threads:
+                if not command_thread.is_alive():
+                    command_threads.remove(command_thread)
+
+            update_subsystems(subsystems)
+
+            if to_update:
+                t_status = time.time()
+                update_status(status, statuses)
+                to_update = False
+
+            t1 = time.time()
+            elapsed = t1 - t0
+            time_to_sleep = max(0, 0.01 - elapsed)
+            if t1 - t_status + time_to_sleep > samp_time:
+                time_to_sleep = max(0, samp_time - (t1 - t_status))
+                to_update = True
+            time.sleep(time_to_sleep)
+        for command_thread in command_threads:
+            cmd_queue.put(command_thread)
+
     def get_message(self):
-        status = (
-            self.GS.get_status()
-            + self.AZ.get_axis_status()
-            + self.EL.get_axis_status()
-            + self.CW.get_axis_status()
-            + self.AZ.get_motor_status()
-            + self.EL.get_motor_status()
-            + self.CW.get_motor_status()
-            + self.PS.get_status()
-            + self.FS.get_status()
-        )
-
-        msg_length = utils.uint_to_bytes(len(status) + 16)
-        msg_counter = utils.uint_to_bytes(utils.day_milliseconds())
-
-        status_message = start_flag
-        status_message += msg_length
-        status_message += msg_counter
-        status_message += status
-        status_message += end_flag
-
-        return status_message
+        return self.status.raw
 
     def _parse_commands(self, msg):
         cmds_number = utils.bytes_to_int(msg[12:16])
@@ -177,9 +273,10 @@ class System(ListeningSystem, SendingSystem):
             if not method:
                 raise ValueError('Command has invalid parameters.')
 
-            t = Thread(target=method, args=(command,))
+            t = Thread(target=method, args=(command, self.stop))
             t.daemon = True
             t.start()
+            self.command_threads.put(t)
 
     def _get_method(self, command):
         command_id = utils.bytes_to_uint(command[:2])

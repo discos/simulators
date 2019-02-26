@@ -1,11 +1,8 @@
 import time
+from multiprocessing import Array
+from ctypes import c_char
 from simulators import utils
 from simulators.acu.motor_status import MotorStatus
-from simulators.acu.command_status import (
-    CommandStatus,
-    ModeCommandStatus,
-    ParameterCommandStatus
-)
 
 
 class SimpleAxisStatus(object):
@@ -18,7 +15,7 @@ class SimpleAxisStatus(object):
         for __ in range(n_motors):
             self.motor_status.append(MotorStatus())
 
-        self.status = bytearray(b'\x00' * 92)
+        self.status = Array(c_char, 92)
 
         self.simulation = False
         self.axis_ready = True
@@ -121,26 +118,11 @@ class SimpleAxisStatus(object):
         self.stow_pin_out = [False for __ in range(16)]
         self.stow_pin_selection = [False for __ in range(16)]
 
-        # mode_command_status, refer to ModeCommandStatus class
-        self.mcs = ModeCommandStatus()
-
-        # parameter_command_status, refer to ParameterCommandStatus class
-        self.pcs = ParameterCommandStatus()
-
-    def get_axis_status(self):
-        self.mode_command_status = self.mcs.get_status()
-        self.parameter_command_status = self.pcs.get_status()
-        return str(self.status)
-
-    def get_motor_status(self):
-        response = ''
-        for motor_status in self.motor_status:
-            response += motor_status.get_status()
-        return response
+        self.ptState = 0
 
     @property
     def simulation(self):
-        return bool(self.status[0])
+        return bool(utils.bytes_to_uint(self.status[0]))
 
     @simulation.setter
     def simulation(self, value):
@@ -153,7 +135,7 @@ class SimpleAxisStatus(object):
 
     @property
     def axis_ready(self):
-        return bool(self.status[1])
+        return bool(utils.bytes_to_uint(self.status[1]))
 
     @axis_ready.setter
     def axis_ready(self, value):
@@ -166,7 +148,7 @@ class SimpleAxisStatus(object):
 
     @property
     def confOk(self):
-        return bool(self.status[2])
+        return bool(utils.bytes_to_uint(self.status[2]))
 
     @confOk.setter
     def confOk(self, value):
@@ -179,7 +161,7 @@ class SimpleAxisStatus(object):
 
     @property
     def initOk(self):
-        return bool(self.status[3])
+        return bool(utils.bytes_to_uint(self.status[3]))
 
     @initOk.setter
     def initOk(self, value):
@@ -192,7 +174,7 @@ class SimpleAxisStatus(object):
 
     @property
     def override(self):
-        return bool(self.status[4])
+        return bool(utils.bytes_to_uint(self.status[4]))
 
     @override.setter
     def override(self, value):
@@ -205,7 +187,7 @@ class SimpleAxisStatus(object):
 
     @property
     def low_power_mode(self):
-        return bool(self.status[5])
+        return bool(utils.bytes_to_uint(self.status[5]))
 
     @low_power_mode.setter
     def low_power_mode(self, value):
@@ -1088,7 +1070,7 @@ class SimpleAxisStatus(object):
 
     @property
     def stowed(self):
-        return bool(self.status[60])
+        return bool(utils.bytes_to_uint(self.status[60]))
 
     @stowed.setter
     def stowed(self, value):
@@ -1101,7 +1083,7 @@ class SimpleAxisStatus(object):
 
     @property
     def stowPosOk(self):
-        return bool(self.status[61])
+        return bool(utils.bytes_to_uint(self.status[61]))
 
     @stowPosOk.setter
     def stowPosOk(self, value):
@@ -1192,23 +1174,166 @@ class SimpleAxisStatus(object):
 
     @property
     def mode_command_status(self):
-        return str(self.status[68:84])[::-1]
+        return str(self.status[68:84])
 
-    @mode_command_status.setter
-    def mode_command_status(self, value):
-        if not isinstance(value, (str, bytearray)) or len(value) != 16:
-            raise ValueError('Provide a string/bytearray of length = 16!')
-        self.status[68:84] = value
+    @property
+    def received_mode_command_status(self):
+        return str(self.status[68:76])
+
+    @property
+    def received_mode_command_counter(self):
+        return utils.bytes_to_uint(str(self.status[68:72]))
+
+    @received_mode_command_counter.setter
+    def received_mode_command_counter(self, value):
+        # UINT32
+        if not isinstance(value, int):
+            raise ValueError('Provide an unsigned integer!')
+        self.status[68:72] = utils.uint_to_bytes(value, n_bytes=4)
+
+    @property
+    def received_mode_command(self):
+        return utils.bytes_to_uint(str(self.status[72:74]))
+
+    @received_mode_command.setter
+    def received_mode_command(self, value):
+        # UINT16
+        # 0: ignore
+        # 1: inactive
+        # 2: active
+        # 3: preset_absolute
+        # 4: preset_relative
+        # 5: slew
+        # 7: stop
+        # 8: program_track
+        # 14: interlock
+        # 15: reset
+        # 50: stow
+        # 51: unstow
+        # 52: drive_to_stow
+        if not isinstance(value, int):
+            raise ValueError('Provide an unsigned integer!')
+        self.status[72:74] = utils.uint_to_bytes(value, n_bytes=2)
+
+    @property
+    def received_mode_command_answer(self):
+        return utils.bytes_to_uint(str(self.status[74:76]))
+
+    @received_mode_command_answer.setter
+    def received_mode_command_answer(self, value):
+        # UINT16
+        # 0: no command
+        # 4: command received in wrong mode
+        # 5: command has invalid parameters
+        # 9: command accepted
+        accepted = [0, 4, 5, 9]
+        if not isinstance(value, int) or value not in accepted:
+            raise ValueError('Provide an accepted integer!')
+        self.status[74:76] = utils.uint_to_bytes(value, n_bytes=2)
+
+    @property
+    def executed_mode_command_status(self):
+        return str(self.status[76:84])
+
+    @property
+    def executed_mode_command_counter(self):
+        return utils.bytes_to_uint(str(self.status[76:80]))
+
+    @executed_mode_command_counter.setter
+    def executed_mode_command_counter(self, value):
+        # UINT32
+        if not isinstance(value, int):
+            raise ValueError('Provide an unsigned integer!')
+        self.status[76:80] = utils.uint_to_bytes(value, n_bytes=4)
+
+    @property
+    def executed_mode_command(self):
+        return utils.bytes_to_uint(str(self.status[80:82]))
+
+    @executed_mode_command.setter
+    def executed_mode_command(self, value):
+        # UINT16
+        # 0: ignore
+        # 1: inactive
+        # 2: active
+        # 3: preset_absolute
+        # 4: preset_relative
+        # 5: slew
+        # 7: stop
+        # 8: program_track
+        # 14: interlock
+        # 15: reset
+        # 50: stow
+        # 51: unstow
+        # 52: drive_to_stow
+        if not isinstance(value, int):
+            raise ValueError('Provide an unsigned integer!')
+        self.status[80:82] = utils.uint_to_bytes(value, n_bytes=2)
+
+    @property
+    def executed_mode_command_answer(self):
+        return utils.bytes_to_uint(str(self.status[82:84]))
+
+    @executed_mode_command_answer.setter
+    def executed_mode_command_answer(self, value):
+        # UINT16
+        # 0: no command
+        # 1: command executed
+        # 2: command active
+        # 3: command error during execution
+        accepted = [0, 1, 2, 3]
+        if not isinstance(value, int) or value not in accepted:
+            raise ValueError('Provide an accepted integer!')
+        self.status[82:84] = utils.uint_to_bytes(value, n_bytes=2)
 
     @property
     def parameter_command_status(self):
-        return str(self.status[84:92])[::-1]
+        return str(self.status[84:92])
 
-    @parameter_command_status.setter
-    def parameter_command_status(self, value):
-        if not isinstance(value, (str, bytearray)) or len(value) != 8:
-            raise ValueError('Provide a string/bytearray of length = 8!')
-        self.status[84:92] = value
+    @property
+    def parameter_command_counter(self):
+        return utils.bytes_to_uint(str(self.status[84:88]))
+
+    @parameter_command_counter.setter
+    def parameter_command_counter(self, value):
+        # UINT32
+        if not isinstance(value, int):
+            raise ValueError('Provide an unsigned integer!')
+        self.status[84:88] = utils.uint_to_bytes(value, n_bytes=4)
+
+    @property
+    def parameter_command(self):
+        return utils.bytes_to_uint(str(self.status[88:90]))
+
+    @parameter_command.setter
+    def parameter_command(self, value):
+        # UINT16
+        # 0: ignore
+        # 11: absolute position offset
+        # 12: relative position offset
+        # 50: time source
+        # 51: time offset
+        # 60: program track time correction
+        # 61: load program track table
+        if not isinstance(value, int):
+            raise ValueError('Provide an accepted integer!')
+        self.status[88:90] = utils.uint_to_bytes(value, n_bytes=2)
+
+    @property
+    def parameter_command_answer(self):
+        return utils.bytes_to_uint(str(self.status[90:92]))
+
+    @parameter_command_answer.setter
+    def parameter_command_answer(self, value):
+        # UINT16
+        # 0: no command
+        # 1: command executed
+        # 4: command received in wrong mode
+        # 5: command has invalid parameters
+        accepted = [0, 1, 4, 5]
+        if not isinstance(value, int) or value not in accepted:
+            raise ValueError('Provide an accepted integer!')
+        self.status[90:92] = utils.uint_to_bytes(value, n_bytes=2)
 
 
 class MasterAxisStatus(SimpleAxisStatus):
@@ -1251,7 +1376,8 @@ class MasterAxisStatus(SimpleAxisStatus):
         self.min_pos, self.max_pos = op_range
         self.stow_pos = stow_pos
 
-        self.pointing = None  # PointingStatus will update this attribute
+        self.next_pos = None
+
         self.curr_mode_counter = None  # Current ModeCommand counter
 
         self.p_Ist = int(round(start_pos * 1000000))
@@ -1298,7 +1424,7 @@ class MasterAxisStatus(SimpleAxisStatus):
         current_pos = max(current_pos, int(round(self.min_pos * 1000000)))
         return current_pos
 
-    def _move(self, counter, desired_pos, desired_rate, pt_counter=None):
+    def _move(self, counter, desired_pos, desired_rate, stop):
         """This method performs a positioning loop by calling the method
         `_calc_position` every iteration.
 
@@ -1307,23 +1433,12 @@ class MasterAxisStatus(SimpleAxisStatus):
             command is received.
         :param desired_pos: the commanded (final) position.
         :param desired_rate: the speed rate of the rotation.
-        :param pt_counter: the command counter of the eventual program track
-            command. Similarly to the `counter` param, it is used to
-            eventually stop the movement of the axis when a different
-            program track command is received.
         """
         self.p_Soll = desired_pos
         self.v_Soll = desired_rate
 
-        if pt_counter:
-            self.p_Soll += self.p_Offset
-
         t0 = time.time()
-
-        # Additional check to time module, when the father thread exits, the
-        # time module becomes 'None' and an exception is raised (it happens on
-        # exit so this should not be an issue).
-        while time is not None:
+        while not stop.value:
             t1 = time.time()
             delta_time = t1 - t0
             t0 = t1
@@ -1333,15 +1448,8 @@ class MasterAxisStatus(SimpleAxisStatus):
                 desired_pos,
                 desired_rate
             )
-            if pt_counter:
-                if pt_counter != self.pointing.pt_command_id:
-                    # Program track related, if a new table is received we
-                    # need to stop the movement of the axis, we set the
-                    # `counter` variable to -1 since no counter can be
-                    # negative
-                    counter = -1
             if counter == self.curr_mode_counter:
-                if self.axis_state == 3 and self.stowed == 0:
+                if self.axis_state == 3 and not self.stowed:
                     self.v_Ist = desired_rate
                     self.p_Ist = current_pos
                 else:
@@ -1355,40 +1463,15 @@ class MasterAxisStatus(SimpleAxisStatus):
                 return False
             time.sleep(0.01)
 
-    def _update_status(self):
+    def update_status(self):
         """This method is called to update some of the values before comparison
         or sending."""
         if self.stow_pos:
             self.stowPosOk = float(self.p_Ist) / 1000000 in self.stow_pos
 
-        if (self.mcs.executed.counter == self.curr_mode_counter
-                and self.mcs.executed.answer == 1):
-            self.curr_mode_counter = None
-
-        self._update_trajectory_values()
-
-    def _update_trajectory_values(self):
-        """This method retrieves the trajectory status and values from the
-        pointing module of the ACU simulator."""
-        data = self.pointing.get_trajectory_values(self)
-        pt_status, pos, vel, acc = data
-        self.p_Bahn = pos if pos is not None else self.p_Bahn
-        self.v_Bahn = vel if vel is not None else self.v_Bahn
-        self.a_Bahn = acc if acc is not None else self.a_Bahn
-        return pt_status
-
-    def get_axis_status(self):
-        """This method overrides the one from `SimpleAxisStatus` class, from
-        which the `MasterAxisStatus` class is inherited. Before calling the
-        base `get_axis_status` method, it calls the `_update_status` method
-        to update the necessary values to be sent to the caller."""
-        self._update_status()
-
-        return SimpleAxisStatus.get_axis_status(self)
-
     # -------------------- Mode Command --------------------
 
-    def _mode_command(self, cmd):
+    def _mode_command(self, cmd, stop):
         """This method parses and executes the received mode command.
         Before launching the command execution, this method calls the
         `_validate_mode_command` method and retrieves its return value.
@@ -1402,30 +1485,31 @@ class MasterAxisStatus(SimpleAxisStatus):
         par_1 = utils.bytes_to_real(cmd[10:18], 2)
         par_2 = utils.bytes_to_real(cmd[18:26], 2)
 
-        received_command_status = CommandStatus()
-        received_command_status.counter = cmd_cnt
-
         command = self.mode_commands.get(mode_id)
 
         if command is None or command == '_ignore':
-            self.mcs.received = received_command_status
+            self.received_mode_command_counter = cmd_cnt
+            self.received_mode_command = 0
+            self.received_mode_command_answer = 0
             return
-        else:
-            received_command_status.command = mode_id
 
-        received_command_status.answer = self._validate_mode_command(
+        received_command_answer = self._validate_mode_command(
             mode_id,
             par_1,
             par_2
         )
 
-        self.mcs.received = received_command_status
+        self.received_mode_command_counter = cmd_cnt
+        self.received_mode_command = mode_id
+        self.received_mode_command_answer = received_command_answer
 
-        if received_command_status.answer == 9:
+        if received_command_answer == 9:
             method = getattr(self, command)
 
-            self._executed_mode_command(cmd_cnt, mode_id, 2)
-            method(cmd_cnt, par_1, par_2)
+            self.executed_mode_command_counter = cmd_cnt
+            self.executed_mode_command = mode_id
+            self.executed_mode_command_answer = 2
+            method(cmd_cnt, par_1, par_2, stop)
 
     def _validate_mode_command(self, mode_id, parameter_1, parameter_2):
         """This method performs a validation check on the received
@@ -1438,7 +1522,6 @@ class MasterAxisStatus(SimpleAxisStatus):
         """
         received_command_answer = 9  # Command accepted
 
-        self._update_status()
         axis_state = self.axis_state
 
         if mode_id == 2 and axis_state != 0:
@@ -1480,20 +1563,6 @@ class MasterAxisStatus(SimpleAxisStatus):
 
         return received_command_answer
 
-    def _executed_mode_command(self, counter, command, answer):
-        """This method updates the last executed mode command
-        (`mcs.executed`).
-
-        :param counter: the last executed command counter.
-        :param command: the last executed mode id.
-        :param answer: the last executed command answer.
-        """
-        executed = CommandStatus()
-        executed.counter = counter
-        executed.command = command
-        executed.answer = answer
-        self.mcs.executed = executed
-
     # mode_id == 1
     def _inactive(self, counter, *_):
         """This method de-activate the axis and engage the motors brakes.
@@ -1502,7 +1571,9 @@ class MasterAxisStatus(SimpleAxisStatus):
         """
         self.axis_state = 0
         self.brakes_open = [False for __ in range(16)]
-        self._executed_mode_command(counter, 1, 1)
+        self.executed_mode_command_counter = counter
+        self.executed_mode_command = 1
+        self.executed_mode_command_answer = 1
 
     # mode_id == 2
     def _active(self, counter, *_):
@@ -1521,10 +1592,12 @@ class MasterAxisStatus(SimpleAxisStatus):
         ]
         self.brakes_open = brakes_open
 
-        self._executed_mode_command(counter, 2, 1)
+        self.executed_mode_command_counter = counter
+        self.executed_mode_command = 2
+        self.executed_mode_command_answer = 1
 
     # mode_id == 3
-    def _preset_absolute(self, counter, angle, rate):
+    def _preset_absolute(self, counter, angle, rate, stop):
         """This method moves the axis to a given position,
         moving at a given rate.
 
@@ -1536,11 +1609,13 @@ class MasterAxisStatus(SimpleAxisStatus):
         self.axis_trajectory_state = 6
         desired_pos = int(round(angle * 1000000))
         desired_rate = int(round(rate * 1000000))
-        if self._move(counter, desired_pos, desired_rate):
-            self._executed_mode_command(counter, 3, 1)
+        if self._move(counter, desired_pos, desired_rate, stop):
+            self.executed_mode_command_counter = counter
+            self.executed_mode_command = 3
+            self.executed_mode_command_answer = 1
 
     # mode_id == 4
-    def _preset_relative(self, counter, angle, rate):
+    def _preset_relative(self, counter, angle, rate, stop):
         """This method moves the axis by a given offset,
         moving at a given rate.
 
@@ -1553,11 +1628,13 @@ class MasterAxisStatus(SimpleAxisStatus):
         self.axis_trajectory_state = 6
         desired_pos = self.p_Soll + int(round(angle * 1000000))
         desired_rate = int(round(rate * 1000000))
-        if self._move(counter, desired_pos, desired_rate):
-            self._executed_mode_command(counter, 4, 1)
+        if self._move(counter, desired_pos, desired_rate, stop):
+            self.executed_mode_command_counter = counter
+            self.executed_mode_command = 4
+            self.executed_mode_command_answer = 1
 
     # mode_id == 5
-    def _slew(self, counter, percentage, rate):
+    def _slew(self, counter, percentage, rate, stop):
         """This method moves the axis at a given rate, multiplied by
         a given percentage.
 
@@ -1574,8 +1651,10 @@ class MasterAxisStatus(SimpleAxisStatus):
             desired_pos = int(round(self.min_pos * 1000000))
         else:
             desired_pos = self.p_Ist
-        if self._move(counter, desired_pos, desired_rate):
-            self._executed_mode_command(counter, 5, 1)
+        if self._move(counter, desired_pos, desired_rate, stop):
+            self.executed_mode_command_counter = counter
+            self.executed_mode_command = 5
+            self.executed_mode_command_answer = 1
 
     # mode_id == 7
     def _stop(self, counter, *_):
@@ -1586,10 +1665,13 @@ class MasterAxisStatus(SimpleAxisStatus):
         """
         self.curr_mode_counter = counter
         self.axis_trajectory_state = 3
-        self._executed_mode_command(counter, 7, 1)
+
+        self.executed_mode_command_counter = counter
+        self.executed_mode_command = 7
+        self.executed_mode_command_answer = 1
 
     # mode_id == 8
-    def _program_track(self, counter, _, rate):
+    def _program_track(self, counter, _, rate, stop):
         """This method starts the tracking with a pre-loaded trajectory.
         The trajectory is loaded sending a 'program_track_parameter_command'
         to the pointing subsystem of the ACU. Refer to the `PointingStatus`
@@ -1599,38 +1681,56 @@ class MasterAxisStatus(SimpleAxisStatus):
         :param rate: the maximum rotation rate while tracking.
         """
         self.curr_mode_counter = counter
-        self._executed_mode_command(counter, 8, 1)
+        self.executed_mode_command_counter = counter
+        self.executed_mode_command = 8
+        self.executed_mode_command_answer = 1
 
         self.axis_trajectory_state = 7  # 7: tracking
 
         t0 = time.time()
         next_pos = None
-        while self.axis_trajectory_state == 7:
+        while (not stop.value
+                and self.axis_trajectory_state == 7
+                and counter == self.curr_mode_counter):
             t1 = time.time()
             delta_time = t1 - t0
             t0 = t1
 
-            program_track_state = self._update_trajectory_values()
-            next_p = self.pointing.get_next_position(self)
-            if next_p:
-                next_pos = next_p
+            next_pos = self.next_pos
 
-            if next_pos:
-                if program_track_state == 2:
-                    if self.p_Ist != next_pos + self.p_Offset:
-                        self._move(
-                            counter,
-                            next_pos,
-                            int(round(rate * 1000000)),
-                            self.pointing.pt_command_id
+            p_Ist = self.p_Ist
+            v_Ist = self.v_Ist
+
+            if next_pos and self.axis_state == 3 and not self.stowed:
+
+                if self.ptState == 2:
+                    desired_pos = self.next_pos + self.p_Offset
+                    self.p_Soll = desired_pos
+                    self.v_Soll = int(round(rate * 1000000))
+
+                    if p_Ist != desired_pos:
+                        current_pos = self._calc_position(
+                            delta_time,
+                            desired_pos,
+                            self.v_Soll
                         )
 
-                if program_track_state == 4:
-                    if self.p_Ist != next_pos + self.p_Offset:
-                        self.p_Bahn = next_pos
-                        program_track_state = 3
+                        v_Ist = self.v_Soll
+                        p_Ist = current_pos
 
-                if program_track_state == 3:
+                        if p_Ist == self.p_Soll:
+                            v_Ist = 0
+
+                go_on = False
+                if self.ptState == 4:
+                    desired_pos = next_pos + self.p_Offset
+                    if self.p_Ist != desired_pos:
+                        p_Ist = self.p_Ist
+                        go_on = True
+                    else:
+                        break
+
+                if self.ptState == 3 or go_on:
                     desired_pos = self.p_Bahn + self.p_Offset
 
                     calc_position = self._calc_position(
@@ -1639,13 +1739,20 @@ class MasterAxisStatus(SimpleAxisStatus):
                         int(round(self.max_velocity * 1000000)),
                     )
 
-                    self.v_Ist = int(round(
-                        (calc_position - self.p_Ist) / delta_time
+                    v_Ist = int(round(
+                        (calc_position - p_Ist) / delta_time
                     ))
+                    p_Ist = calc_position
 
-                    self.p_Ist = calc_position
+            else:
+                v_Ist = 0
+
+            self.p_Ist = p_Ist
+            self.v_Ist = v_Ist
 
             time.sleep(0.01)
+
+        self.v_Ist = 0
 
     # mode_id == 14
     def _interlock(self, counter, *_):
@@ -1653,7 +1760,9 @@ class MasterAxisStatus(SimpleAxisStatus):
 
         :param counter: same as the `_inactive` method.
         """
-        self._executed_mode_command(counter, 14, 1)
+        self.executed_mode_command_counter = counter
+        self.executed_mode_command = 14
+        self.executed_mode_command_answer = 1
 
     # mode_id == 15
     def _reset(self, counter, *_):
@@ -1688,7 +1797,10 @@ class MasterAxisStatus(SimpleAxisStatus):
         self.Com_Error = False
         self.Pre_Limit_Err = False
         self.Fin_Limit_Err = False
-        self._executed_mode_command(counter, 15, 1)
+
+        self.executed_mode_command_counter = counter
+        self.executed_mode_command = 15
+        self.executed_mode_command_answer = 1
 
     # mode_id == 50
     def _stow(self, counter, *_):
@@ -1700,7 +1812,10 @@ class MasterAxisStatus(SimpleAxisStatus):
             self.stow_pin_out = self.stow_pin_selection
             self.stow_pin_in = [False for __ in range(16)]
             self.stowed = True
-        self._executed_mode_command(counter, 50, 1)
+
+        self.executed_mode_command_counter = counter
+        self.executed_mode_command = 50
+        self.executed_mode_command_answer = 1
 
     # mode_id == 51
     def _unstow(self, counter, *_):
@@ -1712,10 +1827,13 @@ class MasterAxisStatus(SimpleAxisStatus):
             self.stow_pin_out = [False for __ in range(16)]
             self.stow_pin_in = self.stow_pin_selection
             self.stowed = False
-        self._executed_mode_command(counter, 51, 1)
+
+        self.executed_mode_command_counter = counter
+        self.executed_mode_command = 51
+        self.executed_mode_command_answer = 1
 
     # mode_id == 52
-    def _drive_to_stow(self, counter, stow_pos, rate):
+    def _drive_to_stow(self, counter, stow_pos, rate, stop):
         """This method moves the axis to the given stow position
         at a given rate.
 
@@ -1728,48 +1846,47 @@ class MasterAxisStatus(SimpleAxisStatus):
             desired_pos = int(round(self.stow_pos[int(stow_pos)] * 1000000))
             desired_rate = int(round(rate * 1000000))
             self.curr_mode_counter = counter
-            if not self._move(counter, desired_pos, desired_rate):
+            if not self._move(counter, desired_pos, desired_rate, stop):
                 return
             self.stow_pin_out = self.stow_pin_selection
             self.stow_pin_in = [False for __ in range(16)]
             self.stowed = True
-        self._executed_mode_command(counter, 52, 1)
+
+        self.executed_mode_command_counter = counter
+        self.executed_mode_command = 52
+        self.executed_mode_command_answer = 1
 
     # -------------------- Parameter Command --------------------
 
-    def _parameter_command(self, cmd):
+    def _parameter_command(self, cmd, _):
         """This method parses and executes the received parameter command.
 
         :param cmd: the received command.
         """
-        cmd_cnt = utils.bytes_to_uint(cmd[4:8])
+        self.parameter_command_counter = utils.bytes_to_uint(cmd[4:8])
+
         parameter_id = utils.bytes_to_uint(cmd[8:10])
         parameter_1 = utils.bytes_to_real(cmd[10:18], 2)
         parameter_2 = utils.bytes_to_real(cmd[18:26], 2)
 
-        pcs = ParameterCommandStatus()
-        pcs.counter = cmd_cnt
-        pcs.command = parameter_id
+        self.parameter_command = parameter_id
 
         if self.axis_state != 3:
-            pcs.answer = 4
-            self.pcs = pcs
+            self.parameter_command_answer = 4
             return
 
         if parameter_id == 11:
-            pcs.answer = self._absolute_position_offset(
+            self.parameter_command_answer = self._absolute_position_offset(
                 parameter_1,
                 parameter_2
             )
         elif parameter_id == 12:
-            pcs.answer = self._relative_position_offset(
+            self.parameter_command_answer = self._relative_position_offset(
                 parameter_1,
                 parameter_2
             )
         else:
-            pcs.answer = 5
-
-        self.pcs = pcs
+            self.parameter_command_answer = 5
 
     def _absolute_position_offset(self, offset, _):
         # 2nd parameter should be ramp time but in the
@@ -1788,11 +1905,9 @@ class SlaveAxisStatus(SimpleAxisStatus):
 
     def __init__(self, n_motors, master):
         SimpleAxisStatus.__init__(self, n_motors)
-
         self.master = master
 
-    def get_axis_status(self):
-        self.p_Ist = self.master.p_Ist
+    def update_status(self):
         self.v_Ist = self.master.v_Ist
 
         if self.master.axis_state == 3:
@@ -1807,5 +1922,3 @@ class SlaveAxisStatus(SimpleAxisStatus):
             self.brakes_open = brakes_open
         else:
             self.brakes_open = [False for __ in range(16)]
-
-        return SimpleAxisStatus.get_axis_status(self)
