@@ -18,8 +18,7 @@ from simulators.acu.facility_status import FacilityStatus
 # is the tuple that defines the optional sending node that exposes the
 # get_message method, while args is a tuple of optional extra arguments.
 servers = []
-servers.append((('0.0.0.0', 13000), ('0.0.0.0', 13001), ()))
-#servers.append((('127.0.0.1', 13000), ('127.0.0.1', 13001), ()))
+servers.append((('127.0.0.1', 13000), ('127.0.0.1', 13001), ()))
 
 start_flag = b'\x1A\xCF\xFC\x1D'
 end_flag = b'\xD1\xCF\xFC\xA1'

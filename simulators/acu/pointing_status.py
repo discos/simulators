@@ -104,7 +104,7 @@ class PointingStatus(object):
         self.posEncEl = self.elevation.p_Ist
         self.pointOffsetEl = self.elevation.p_Offset
 
-        if not self.ptState in [0, 4]:
+        if self.ptState not in [0, 4]:
             start_time = (
                 self.start_time
                 + timedelta(milliseconds=self.actPtTimeOffset)
@@ -138,8 +138,8 @@ class PointingStatus(object):
                     self.azimuth.ptState = 4
                     self.elevation.ptState = 4
                     self.azimuth.p_Bahn = int(
-                            round(self.azimuth_positions[-1] * 1000000)
-                        )
+                        round(self.azimuth_positions[-1] * 1000000)
+                    )
                     self.elevation.p_Bahn = int(
                         round(self.elevation_positions[-1] * 1000000)
                     )
