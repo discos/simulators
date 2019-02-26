@@ -6,6 +6,7 @@ import unittest
 
 from types import ModuleType
 from contextlib import contextmanager
+from threading import Thread
 
 from simulators.server import Server, Simulator
 from simulators.common import BaseSystem, ListeningSystem, SendingSystem
@@ -16,8 +17,11 @@ class TestListeningServer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.address = ('127.0.0.1', 10000)
-        cls.system = ListeningTestSystem()
-        cls.server = Server(cls.system, l_address=cls.address)
+        cls.server = Server(
+            ListeningTestSystem,
+            args=(),
+            l_address=cls.address
+        )
         cls.server.start()
 
     @classmethod
@@ -33,13 +37,14 @@ class TestListeningServer(unittest.TestCase):
         response = get_response(self.address, msg='#wrong_command:foo!')
         self.assertRegexpMatches(response, 'you sent a wrong command')
 
-    def _test_value_error(self):
+    def test_value_error(self):
         """The message of ValueError in the logfile"""
-        # TODO
+        get_response(self.address, msg='#valueerror:!', response=False)
+        self.assertTrue('unexpected value' in get_logs())
 
-    def _test_unexpected_error(self):
-        """The unexpected error in the logfile"""
-        # TODO
+    def test_unexpected_error(self):
+        get_response(self.address, msg='#unexpected:!', response=False)
+        self.assertTrue('unexpected exception' in get_logs())
 
     def test_custom_command_with_parameters(self):
         response = get_response(
@@ -58,8 +63,11 @@ class TestSendingServer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.address = ('127.0.0.1', 10001)
-        cls.system = SendingTestSystem()
-        cls.server = Server(cls.system, s_address=cls.address)
+        cls.server = Server(
+            SendingTestSystem,
+            args=(),
+            s_address=cls.address
+        )
         cls.server.start()
 
     @classmethod
@@ -70,6 +78,16 @@ class TestSendingServer(unittest.TestCase):
         response = get_response(self.address)
         self.assertEqual(response, 'message')
 
+    def test_unknown_command(self):
+        get_response(self.address, msg='$unknown!', response=False)
+        self.assertTrue('command unknown not supported' in get_logs())
+
+    def test_raise_exception(self):
+        get_response(self.address, msg='$raise_exception!', response=False)
+        self.assertTrue(
+            'unexpected exception raised by sendingtestsystem' in get_logs()
+        )
+
 
 class TestDuplexServer(unittest.TestCase):
 
@@ -77,8 +95,12 @@ class TestDuplexServer(unittest.TestCase):
     def setUpClass(cls):
         cls.l_address = ('127.0.0.1', 10002)
         cls.s_address = ('127.0.0.1', 10003)
-        cls.system = DuplexTestSystem()
-        cls.server = Server(cls.system, cls.l_address, cls.s_address)
+        cls.server = Server(
+            DuplexTestSystem,
+            args=(),
+            l_address=cls.l_address,
+            s_address=cls.s_address
+        )
         cls.server.start()
 
     @classmethod
@@ -126,8 +148,17 @@ class TestSimulator(unittest.TestCase):
         sys.modules[cls.mymodulename] = cls.mymodule
         cls.simulator = Simulator(cls.mymodule)
 
-    def test_create_simulator_from_name(self):
+    def test_create_simulator_from_module(self):
         address = ('127.0.0.1', 10004)
+        self.mymodule.servers = [(address, (), ())]
+        self.mymodule.System = ListeningTestSystem
+
+        simulator = Simulator(self.mymodule)
+        simulator.start(daemon=True)
+        simulator.stop()
+
+    def test_create_simulator_from_name(self):
+        address = ('127.0.0.1', 10005)
         self.mymodule.servers = [(address, (), ())]
         self.mymodule.System = BaseSystem
 
@@ -135,10 +166,8 @@ class TestSimulator(unittest.TestCase):
         simulator.start(daemon=True)
         simulator.stop()
 
-        wait_until_connection_closed(address)
-
     def test_start_and_stop_listening(self):
-        address = ('127.0.0.1', 10005)
+        address = ('127.0.0.1', 10006)
         self.mymodule.servers = [(address, (), ())]
         self.mymodule.System = ListeningTestSystem
 
@@ -148,10 +177,9 @@ class TestSimulator(unittest.TestCase):
         self.assertEqual(response, 'aabbcc')
 
         self.simulator.stop()
-        wait_until_connection_closed(address)
 
     def test_start_and_stop_sending(self):
-        address = ('127.0.0.1', 10006)
+        address = ('127.0.0.1', 10007)
         self.mymodule.servers = [((), address, ())]
         self.mymodule.System = SendingTestSystem
 
@@ -161,11 +189,10 @@ class TestSimulator(unittest.TestCase):
         self.assertEqual(response, 'message')
 
         self.simulator.stop()
-        wait_until_connection_closed(address)
 
     def test_start_and_stop_duplex(self):
-        l_address = ('127.0.0.1', 10007)
-        s_address = ('127.0.0.1', 10008)
+        l_address = ('127.0.0.1', 10008)
+        s_address = ('127.0.0.1', 10009)
         self.mymodule.servers = [(l_address, s_address, ())]
         self.mymodule.System = DuplexTestSystem
 
@@ -177,18 +204,59 @@ class TestSimulator(unittest.TestCase):
         self.assertEqual(s_response, 'command:a,b,c')
 
         self.simulator.stop()
-        wait_until_connection_closed(l_address)
-        wait_until_connection_closed(s_address)
+
+    def test_stop_without_start(self):
+        address = ('127.0.0.1', 10007)
+        self.mymodule.servers = [((), address, ())]
+        self.mymodule.System = SendingTestSystem
+        self.simulator.stop()
+
+    def test_non_daemon_simulator(self):
+        l_address = ('127.0.0.1', 10010)
+        s_address = ('127.0.0.1', 10011)
+        self.mymodule.servers = [(l_address, s_address, ())]
+        self.mymodule.System = DuplexTestSystem
+
+        simulator = Simulator(self.mymodule)
+
+        t = Thread(target=simulator.start)
+        t.start()
+        time.sleep(0.1)
+        response = get_response(l_address, msg='$system_stop!')
+        self.assertEqual(response, '$server_shutdown!')
+        response = get_response(s_address, msg='$system_stop!')
+        self.assertEqual(response, '$server_shutdown!')
+        t.join()
 
 
-def wait_until_connection_closed(address, timeout=2):
-    t0 = datetime.datetime.now()
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    while sock.connect_ex(address):  # Connection succeeded
-        if (datetime.datetime.now() - t0).seconds < timeout:
+class TestServerVarious(unittest.TestCase):
+
+    def test_server_shutdown(self):
+        address = ('127.0.0.1', 10012)
+        server = Server(
+            ListeningTestSystem,
+            args=(),
+            l_address=address,
+        )
+        server.start()
+
+        def shutdown(self):
             time.sleep(0.01)
-        else:
-            break
+            response = get_response(address, msg='$system_stop!')
+            self.assertEqual(response, '$server_shutdown!')
+
+        t = Thread(target=shutdown, args=(self,))
+        t.start()
+        t.join()
+        while server.is_alive:
+            time.sleep(0.01)
+
+    def test_server_no_addresses(self):
+        with self.assertRaises(ValueError):
+            Server(
+                ListeningTestSystem,
+                args=()
+            )
 
 
 def get_response(server_address, msg=None, timeout=2.0, response=True):
@@ -198,6 +266,22 @@ def get_response(server_address, msg=None, timeout=2.0, response=True):
         if msg:
             sock.sendall(msg)
         return sock.recv(1024) if response else b''
+
+
+def get_logs():
+    time.sleep(0.03)
+    now = datetime.datetime.now()
+    logs = []
+    for line in open('sim-server.log', 'r').readlines():
+        line = line.strip()
+        log_date = datetime.datetime.strptime(
+            ' '.join(line.split(' ')[0:2]) + '000',
+            '%Y-%m-%d %H:%M:%S,%f'
+        )
+        log_date += datetime.timedelta(microseconds=25000)
+        if (now - log_date).total_seconds() < 0.01:
+            logs.append(' '.join(line.split(' ')[2:]))
+    return logs
 
 
 class ListeningTestSystem(ListeningSystem):
@@ -221,8 +305,10 @@ class ListeningTestSystem(ListeningSystem):
                 self.msg = b''
                 if name == 'wrong_command':
                     return b'you sent a wrong command'
-                elif name == 'unexpected':
+                elif name == 'valueerror':
                     raise ValueError('unexpected value')
+                elif name == 'unexpected':
+                    raise AttributeError('unexpected exception')
                 params = params_str.split(',')
                 response = b''
                 for param in params:
@@ -241,13 +327,17 @@ class ListeningTestSystem(ListeningSystem):
 
 class SendingTestSystem(SendingSystem):
 
-    sampling_time = 1
+    sampling_time = 0.01
 
     def __init__(self):
         self.last_cmd = 'message'
 
     def get_message(self):
         return self.last_cmd
+
+    @staticmethod
+    def raise_exception():
+        raise Exception('raised by sendingtestsystem')
 
 
 class DuplexTestSystem(ListeningTestSystem, SendingTestSystem):

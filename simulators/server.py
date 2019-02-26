@@ -1,4 +1,5 @@
 from __future__ import print_function
+import abc
 import os
 import types
 import socket
@@ -45,6 +46,8 @@ class BaseHandler(BaseRequestHandler):
             response = method(*params)
             if isinstance(response, str):
                 self.request.sendall(response)
+                if response == '$server_shutdown!':
+                    self.server.stop()
         except AttributeError:
             logging.debug('command %s not supported', name)
         except Exception, ex:
@@ -120,12 +123,12 @@ class SendHandler(BaseHandler):
                 pass
             try:
                 self.request.sendall(self.system.get_message())
+                elapsed_time = time.time() - t0
+                time.sleep(sampling_time - elapsed_time)
             except IOError:
                 # Something went wrong while sending the message, probably
                 # the client was stopped without closing the connection
                 break
-            elapsed_time = time.time() - t0
-            time.sleep(sampling_time - elapsed_time)
 
 
 class Server(ThreadingMixIn, ThreadingTCPServer):
@@ -139,26 +142,30 @@ class Server(ThreadingMixIn, ThreadingTCPServer):
     `l_address` and `s_address` must have at least different ports,
     if not different ips.
 
-    :param system: the system instance needed by the server.
+    :param system: the system needed by the server.
     :param l_address: a tuple (ip, port), the address of the server that
         exposes the `System.parse()` method.
     :param s_address: a tuple (ip, port), the address of the server that
         exposes the `System.get_message()` method.
     """
-    def __init__(self, system, l_address=None, s_address=None):
+    def __init__(self, system, args, l_address=None, s_address=None):
+        self.system = system
+        self.system_args = args
+        self.is_alive = False
+
         self.child_server = None
         if l_address:
             self.address = l_address
-            ListenHandler.system = system
             ThreadingTCPServer.__init__(self, l_address, ListenHandler)
             if s_address:
-                self.child_server = Server(system, None, s_address)
+                self.child_server = Server(system, args, None, s_address)
         elif s_address:
             self.address = s_address
-            SendHandler.system = system
             ThreadingTCPServer.__init__(self, s_address, SendHandler)
         else:
             raise ValueError('You must specify at least one server.')
+        self.RequestHandlerClass.system = None
+        self.RequestHandlerClass.server = self
 
     def serve_forever(self, poll_interval=0.5):
         """This method overrides the ThreadingTCPServer `serve_forever`
@@ -166,9 +173,20 @@ class Server(ThreadingMixIn, ThreadingTCPServer):
         until the process is stopped, it starts the eventual child server
         as a daemon thread.
         """
+        if isinstance(self.system, types.ModuleType):
+            self.system = self.system.System(*self.system_args)
+        elif isinstance(self.system, abc.ABCMeta):
+            self.system = self.system(*self.system_args)
+        if not self.RequestHandlerClass.system:
+            self.RequestHandlerClass.system = self.system
         if self.child_server:
+            self.child_server.system = self.system
             self.child_server.start()
-        ThreadingTCPServer.serve_forever(self, poll_interval)
+        try:
+            self.is_alive = True
+            ThreadingTCPServer.serve_forever(self, poll_interval)
+        except KeyboardInterrupt:
+            self.stop()
 
     def start(self):
         """This method starts a daemon thread which calls the `serve_forever`
@@ -182,6 +200,7 @@ class Server(ThreadingMixIn, ThreadingTCPServer):
         if self.child_server:
             self.child_server.shutdown()
         self.shutdown()
+        self.is_alive = False
 
 
 class Simulator(object):
@@ -213,8 +232,7 @@ class Simulator(object):
         """
         processes = []
         for l_address, s_address, args in self.system_module.servers:
-            system = self.system_module.System(*args)
-            s = Server(system, l_address, s_address)
+            s = Server(self.system_module, args, l_address, s_address)
             p = Process(target=s.serve_forever)
             p.daemon = daemon
             processes.append(p)
@@ -230,8 +248,7 @@ class Simulator(object):
                 for p in processes:
                     p.join()
             except KeyboardInterrupt:
-                for p in processes:
-                    p.terminate()
+                self.stop()
             print('\nSimulator stopped.')
 
     def stop(self):
@@ -241,8 +258,8 @@ class Simulator(object):
             for address in entry[:-1]:
                 if not address:
                     continue
+                sockobj = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 try:
-                    sockobj = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     sockobj.settimeout(1)
                     sockobj.connect(address)
                     sockobj.sendall('$system_stop!')

@@ -1,6 +1,4 @@
-import os
 import abc
-import signal
 
 
 class BaseSystem(object):
@@ -9,7 +7,7 @@ class BaseSystem(object):
 
     @staticmethod
     def system_stop():
-        os.kill(os.getpid(), signal.SIGHUP)  # Send myself SIGHUP
+        return '$server_shutdown!'
 
 
 class ListeningSystem(BaseSystem):
