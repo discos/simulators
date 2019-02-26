@@ -1,3 +1,5 @@
+from multiprocessing import Array
+from ctypes import c_char
 from simulators import utils
 
 
@@ -7,7 +9,7 @@ class GeneralStatus(object):
     human-machine interfaces status."""
 
     def __init__(self):
-        self.status = bytearray(b'\x00' * 25)
+        self.status = Array(c_char, 25)
 
         self.version = (1, 0)
         self.master = 2
@@ -64,14 +66,12 @@ class GeneralStatus(object):
 
         self.diag_signal = 0
 
-    def get_status(self):
-        """This method returns the general status message. It is meant to be
-        called by the System class to compose the whole status message."""
-        return str(self.status)
-
     @property
     def version(self):
-        return (int(self.status[1]), int(self.status[0]))
+        return (
+            utils.bytes_to_uint(self.status[1]),
+            utils.bytes_to_uint(self.status[0])
+        )
 
     @version.setter
     def version(self, value):
@@ -143,7 +143,7 @@ class GeneralStatus(object):
 
     @property
     def software_IO(self):
-        return bool(self.status[5])
+        return bool(utils.bytes_to_uint(self.status[5]))
 
     @software_IO.setter
     def software_IO(self, value):
@@ -154,7 +154,7 @@ class GeneralStatus(object):
 
     @property
     def simulation(self):
-        return bool(self.status[6])
+        return bool(utils.bytes_to_uint(self.status[6]))
 
     @simulation.setter
     def simulation(self, value):
@@ -165,7 +165,7 @@ class GeneralStatus(object):
 
     @property
     def control_system_on(self):
-        return bool(self.status[7])
+        return bool(utils.bytes_to_uint(self.status[7]))
 
     @control_system_on.setter
     def control_system_on(self, value):
@@ -176,7 +176,7 @@ class GeneralStatus(object):
 
     @property
     def service(self):
-        return bool(self.status[8])
+        return bool(utils.bytes_to_uint(self.status[8]))
 
     @service.setter
     def service(self, value):

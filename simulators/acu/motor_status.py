@@ -1,3 +1,5 @@
+from multiprocessing import Array
+from ctypes import c_char
 from simulators import utils
 
 
@@ -5,7 +7,7 @@ class MotorStatus(object):
     """This class holds the status of a generic axis motor."""
 
     def __init__(self):
-        self.status = bytearray(b'\x00' * 27)
+        self.status = Array(c_char, 27)
 
         self.actual_position = 0
         self.actual_velocity = 0
@@ -39,13 +41,6 @@ class MotorStatus(object):
         self.wa_err_sts_EF = False
         self.wa_err_sts_RF = False
         # bits 18:31 = 0, not used
-
-    def get_status(self):
-        """This method composes and returns the motor status message. It is
-        meant to be called by the axis to which the motor belongs to compose,
-        along with the other motors' status messages, the whole motor status
-        message."""
-        return str(self.status)
 
     @property
     def actual_position(self):

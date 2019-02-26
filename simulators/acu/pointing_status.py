@@ -1,3 +1,6 @@
+from bisect import bisect_left
+from multiprocessing import Array
+from ctypes import c_char
 from datetime import datetime, timedelta
 import numpy as np
 from scipy import interpolate
@@ -17,10 +20,6 @@ class PointingStatus(object):
         self.elevation = elevation
         self.cable_wrap = cable_wrap
 
-        self.azimuth.pointing = self
-        self.elevation.pointing = self
-        self.cable_wrap.pointing = self
-
         self.relative_times = []
         self.azimuth_positions = []
         self.elevation_positions = []
@@ -31,7 +30,7 @@ class PointingStatus(object):
         self.time_source_offset = timedelta(0)
         self.time_offset = timedelta(0)
 
-        self.status = bytearray(b'\x00' * 129)
+        self.status = Array(c_char, 129)
         self.confVersion = 0
         self.confOk = True
         self.posEncAz = 0
@@ -64,6 +63,8 @@ class PointingStatus(object):
         self.actPtPos_Azimuth = 0
         self.actPtPos_Elevation = 0
         self.ptState = 0
+        self.azimuth.ptState = 0
+        self.elevation.ptState = 0
 
         # ptError
         self.Data_Overflow = False
@@ -83,16 +84,10 @@ class PointingStatus(object):
 
         # Counter relative to the load table command
         self.pt_command_id = None
+        self.azimuth.pt_command_id = None
+        self.elevation.pt_command_id = None
 
-    def get_status(self):
-        """This method composes and returns the pointing status message. It is
-        meant to be called by the System class to compose the whole status
-        message."""
-        self._update_status()
-
-        return str(self.status)
-
-    def _update_status(self):
+    def update_status(self):
         """This method updates some attributes (I.e. the ACU time and tracking
         status)."""
         curr_time = self.actual_time()
@@ -109,38 +104,117 @@ class PointingStatus(object):
         self.posEncEl = self.elevation.p_Ist
         self.pointOffsetEl = self.elevation.p_Offset
 
-        if self.ptState in [0, 4]:
-            return
+        if self.ptState not in [0, 4]:
+            start_time = (
+                self.start_time
+                + timedelta(milliseconds=self.actPtTimeOffset)
+            )
+            elapsed = (curr_time - start_time).total_seconds() * 1000
 
-        start_time = (
-            self.start_time
-            + timedelta(milliseconds=self.actPtTimeOffset)
-        )
+            if self.ptState == 2:
+                if curr_time < start_time:
+                    if self.azimuth_positions:
+                        self.azimuth.p_Bahn = int(
+                            round(self.azimuth_positions[0] * 1000000)
+                        )
+                    if self.elevation_positions:
+                        self.elevation.p_Bahn = int(
+                            round(self.elevation_positions[0] * 1000000)
+                        )
+                else:
+                    self.ptState = 3
+                    self.azimuth.ptState = 3
+                    self.elevation.ptState = 3
 
-        if self.ptState == 2 and self.actual_time() >= start_time:
-            self.ptState = 3
-        elif self.ptState == 3:
-            current_pt_time = self.actual_time() - start_time
-            current_pt_time = current_pt_time.total_seconds() * 1000
+            if self.ptState == 3:
+                pt_index = None
 
-            pt_index = None
-            for index in range(len(self.relative_times)):
-                if current_pt_time < self.relative_times[index]:
-                    pt_index = index
-                    break
+                pt_index = bisect_left(self.relative_times, elapsed)
+                if pt_index == len(self.relative_times):
+                    pt_index = None
 
-            if pt_index is None:
-                self.ptState = 4
-                self.ptTableLength = 0
-                self.ptActTableIndex = 0
-                self.ptEndTableIndex = 0
-            else:
-                self.ptActTableIndex = pt_index
-                self.relative_times = self.relative_times[pt_index:]
-                self.azimuth_positions = self.azimuth_positions[pt_index:]
-                self.elevation_positions = self.elevation_positions[pt_index:]
-                self.ptTableLength = len(self.relative_times)
-                self.ptEndTableIndex = self.ptTableLength - 1
+                if pt_index is None:
+                    self.ptState = 4
+                    self.azimuth.ptState = 4
+                    self.elevation.ptState = 4
+                    self.azimuth.p_Bahn = int(
+                        round(self.azimuth_positions[-1] * 1000000)
+                    )
+                    self.elevation.p_Bahn = int(
+                        round(self.elevation_positions[-1] * 1000000)
+                    )
+                    self.ptTableLength = 0
+                    self.ptActTableIndex = 0
+                    self.ptEndTableIndex = 0
+                    return
+                else:
+                    if self.az_tck:
+                        self.azimuth.p_Bahn = int(round(
+                            1000000 *
+                            interpolate.splev(
+                                elapsed,
+                                self.az_tck
+                            ).item(0)
+                        ))
+                        self.azimuth.v_Bahn = int(round(
+                            1000000 *
+                            interpolate.splev(
+                                elapsed,
+                                self.az_tck,
+                                der=1
+                            ).item(0)
+                        ))
+                        self.azimuth.a_Bahn = int(round(
+                            1000000 *
+                            interpolate.splev(
+                                elapsed,
+                                self.az_tck,
+                                der=2
+                            ).item(0)
+                        ))
+                    if self.el_tck:
+                        self.elevation.p_Bahn = int(round(
+                            1000000 *
+                            interpolate.splev(
+                                elapsed,
+                                self.el_tck
+                            ).item(0)
+                        ))
+                        self.elevation.v_Bahn = int(round(
+                            1000000 *
+                            interpolate.splev(
+                                elapsed,
+                                self.el_tck,
+                                der=1
+                            ).item(0)
+                        ))
+                        self.elevation.a_Bahn = int(round(
+                            1000000 *
+                            interpolate.splev(
+                                elapsed,
+                                self.el_tck,
+                                der=2
+                            ).item(0)
+                        ))
+
+                    self.ptActTableIndex = pt_index
+                    self.relative_times = \
+                        self.relative_times[pt_index:]
+                    self.azimuth_positions = \
+                        self.azimuth_positions[pt_index:]
+                    self.elevation_positions = \
+                        self.elevation_positions[pt_index:]
+                    self.ptTableLength = len(self.relative_times)
+                    self.ptEndTableIndex = max(self.ptTableLength - 1, 0)
+
+            if self.azimuth_positions:
+                self.azimuth.next_pos = int(round(
+                    self.azimuth_positions[0] * 1000000
+                ))
+            if self.elevation_positions:
+                self.elevation.next_pos = int(round(
+                    self.elevation_positions[0] * 1000000
+                ))
 
     def actual_time(self):
         """This method returns the actual ACU time, which is equal to the
@@ -153,7 +227,7 @@ class PointingStatus(object):
 
     # -------------------- Parameter Command --------------------
 
-    def _parameter_command(self, command):
+    def _parameter_command(self, command, _):
         """This method parses and executes the received parameter command.
 
         :param command: the received command.
@@ -256,7 +330,7 @@ class PointingStatus(object):
 
     # --------------- Program Track Parameter Command ---------------
 
-    def _program_track_parameter_command(self, command):
+    def _program_track_parameter_command(self, command, _):
         """This method parses the received program track parameter command.
         It interpolates the received tracking points and stores the generated
         trajectories in order for the axes to use them while tracking some
@@ -371,6 +445,8 @@ class PointingStatus(object):
             )
             elevation_positions.append(elevation_position)
 
+        self.parameter_command_answer = 1
+
         self.relative_times = relative_times
 
         self.start_time = start_time
@@ -383,14 +459,18 @@ class PointingStatus(object):
         self.azimuth_positions = azimuth_positions
         self.elevation_positions = elevation_positions
 
-        self._update_status()
-
         if load_mode == 1:
             self.pt_command_id = cmd_cnt
+            self.azimuth.pt_command_id = cmd_cnt
+            self.elevation.pt_command_id = cmd_cnt
             self.ptEndTableIndex = 0
             self.ptState = 2
+            self.azimuth.ptState = 2
+            self.elevation.ptState = 2
         elif self.ptState != 3:
             self.ptState = 2
+            self.azimuth.ptState = 2
+            self.elevation.ptState = 2
 
         self.ptInterpolMode = interpolation_mode
         self.ptTableLength = sequence_length
@@ -405,61 +485,6 @@ class PointingStatus(object):
             np.array(elevation_positions)
         )
 
-        self.parameter_command_answer = 1
-
-    def get_next_position(self, subsystem):
-        """This method returns the next fixed point of the generated
-        trajectory. It is meant to be called from an axis subsystem.
-
-        :param subsystem: the axis asking for its next trajectory fixed point
-        """
-        retval = None
-        if subsystem is self.azimuth and self.azimuth_positions:
-            retval = int(round(self.azimuth_positions[0] * 1000000))
-        elif subsystem is self.elevation and self.elevation_positions:
-            retval = int(round(self.elevation_positions[0] * 1000000))
-        return retval
-
-    def get_trajectory_values(self, subsystem):
-        """This method returns the trajectory value for the given subsystem
-        (axis). It is meant to be called from an axis subsystem.
-
-        :param subsystem: the axis asking for its trajectory values
-        """
-        self._update_status()
-
-        if (not self.start_time
-                or subsystem not in [self.azimuth, self.elevation]):
-            return self.ptState, None, None, None
-        elif subsystem is self.azimuth:
-            trajectory = self.az_tck
-        elif subsystem is self.elevation:
-            trajectory = self.el_tck
-
-        start_time = (
-            self.start_time
-            + timedelta(milliseconds=self.actPtTimeOffset)
-        )
-
-        elapsed = (
-            (self.actual_time() - start_time).total_seconds() * 1000
-        )
-
-        if self.ptState == 2:
-            start_pos = 0
-            if subsystem is self.azimuth:
-                start_pos = int(round(self.azimuth_positions[0] * 1000000))
-            elif subsystem is self.elevation:
-                start_pos = int(round(self.elevation_positions[0] * 1000000))
-            return self.ptState, start_pos, None, None
-        elif self.ptState == 4:
-            return self.ptState, None, None, None
-
-        pos = interpolate.splev(elapsed, trajectory).item(0) * 1000000
-        vel = interpolate.splev(elapsed, trajectory, der=1).item(0) * 1000000
-        acc = interpolate.splev(elapsed, trajectory, der=2).item(0) * 1000000
-        return self.ptState, int(round(pos)), int(round(vel)), int(round(acc))
-
     @property
     def confVersion(self):
         return utils.bytes_to_real(self.status[0:8], precision=2)
@@ -473,7 +498,7 @@ class PointingStatus(object):
 
     @property
     def confOk(self):
-        return bool(self.status[8])
+        return bool(utils.bytes_to_uint(self.status[8]))
 
     @confOk.setter
     def confOk(self, value):
@@ -532,7 +557,7 @@ class PointingStatus(object):
 
     @property
     def posCorrTableAzOn(self):
-        return bool(self.status[25])
+        return bool(utils.bytes_to_uint(self.status[25]))
 
     @posCorrTableAzOn.setter
     def posCorrTableAzOn(self, value):
@@ -545,7 +570,7 @@ class PointingStatus(object):
 
     @property
     def encAzFault(self):
-        return bool(self.status[26])
+        return bool(utils.bytes_to_uint(self.status[26]))
 
     @encAzFault.setter
     def encAzFault(self, value):
@@ -558,7 +583,7 @@ class PointingStatus(object):
 
     @property
     def sectorSwitchAz(self):
-        return bool(self.status[27])
+        return bool(utils.bytes_to_uint(self.status[27]))
 
     @sectorSwitchAz.setter
     def sectorSwitchAz(self, value):
@@ -617,7 +642,7 @@ class PointingStatus(object):
 
     @property
     def posCorrTableElOn(self):
-        return bool(self.status[44])
+        return bool(utils.bytes_to_uint(self.status[44]))
 
     @posCorrTableElOn.setter
     def posCorrTableElOn(self, value):
@@ -630,7 +655,7 @@ class PointingStatus(object):
 
     @property
     def encElFault(self):
-        return bool(self.status[45])
+        return bool(utils.bytes_to_uint(self.status[45]))
 
     @encElFault.setter
     def encElFault(self, value):
@@ -666,7 +691,7 @@ class PointingStatus(object):
 
     @property
     def encCwFault(self):
-        return bool(self.status[54])
+        return bool(utils.bytes_to_uint(self.status[54]))
 
     @encCwFault.setter
     def encCwFault(self, value):
@@ -715,7 +740,7 @@ class PointingStatus(object):
 
     @property
     def clockOnline(self):
-        return bool(self.status[73])
+        return bool(utils.bytes_to_uint(self.status[73]))
 
     @clockOnline.setter
     def clockOnline(self, value):
@@ -728,7 +753,7 @@ class PointingStatus(object):
 
     @property
     def clockOK(self):
-        return bool(self.status[74])
+        return bool(utils.bytes_to_uint(self.status[74]))
 
     @clockOK.setter
     def clockOK(self, value):
@@ -981,7 +1006,7 @@ class PointingStatus(object):
             raise ValueError('Provide an integer number!')
         parameter_command_status = bytearray(self.parameter_command_status)
         parameter_command_status[0:4] = utils.uint_to_bytes(value, n_bytes=4)
-        self.status[121:129] = parameter_command_status
+        self.status[121:129] = str(parameter_command_status)
 
     @property
     def parameter_command(self):
@@ -994,7 +1019,7 @@ class PointingStatus(object):
             raise ValueError('Provide an integer number!')
         parameter_command_status = bytearray(self.parameter_command_status)
         parameter_command_status[4:6] = utils.uint_to_bytes(value, n_bytes=2)
-        self.status[121:129] = parameter_command_status
+        self.status[121:129] = str(parameter_command_status)
 
     @property
     def parameter_command_answer(self):
@@ -1007,4 +1032,4 @@ class PointingStatus(object):
             raise ValueError('Provide an integer number!')
         parameter_command_status = bytearray(self.parameter_command_status)
         parameter_command_status[6:8] = utils.uint_to_bytes(value, n_bytes=2)
-        self.status[121:129] = parameter_command_status
+        self.status[121:129] = str(parameter_command_status)

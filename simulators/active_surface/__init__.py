@@ -1,4 +1,6 @@
 import time
+from multiprocessing import Value
+from ctypes import c_bool
 from simulators import utils
 from simulators.common import ListeningSystem
 from simulators.active_surface.usd import USD
@@ -58,6 +60,11 @@ class System(ListeningSystem):
     def __init__(self):
         self._set_default()
         self.drivers = [USD() for _ in range(32)]
+        self.stop = Value(c_bool, False)
+
+    def __del__(self):
+        self.stop.value = True
+        time.sleep(0.05)
 
     def _set_default(self):
         """This method reset the received command string to its default value.
@@ -199,10 +206,10 @@ class System(ListeningSystem):
         else:
             if params[0] == -1:
                 for driver in self.drivers:
-                    driver.soft_trigger()
+                    driver.soft_trigger(self.stop)
                 return None
             else:
-                self.drivers[params[0]].soft_trigger()
+                self.drivers[params[0]].soft_trigger(self.stop)
                 return self.byte_ack
 
     def _get_version(self, params):
@@ -677,11 +684,13 @@ class System(ListeningSystem):
 
             if params[0] == -1:
                 for driver in self.drivers:
-                    driver.set_absolute_position(absolute_position)
+                    driver.set_absolute_position(absolute_position, self.stop)
                 return None
             else:
                 self.drivers[params[0]].set_absolute_position(
-                    absolute_position)
+                    absolute_position,
+                    self.stop
+                )
                 return self.byte_ack
 
     def _set_relative_position(self, params):
@@ -711,11 +720,13 @@ class System(ListeningSystem):
 
             if params[0] == -1:
                 for driver in self.drivers:
-                    driver.set_relative_position(relative_position)
+                    driver.set_relative_position(relative_position, self.stop)
                 return None
             else:
                 self.drivers[params[0]].set_relative_position(
-                    relative_position)
+                    relative_position,
+                    self.stop
+                )
                 return self.byte_ack
 
     def _rotate(self, params):
@@ -742,10 +753,10 @@ class System(ListeningSystem):
             # Start an infinite rotation, sign = direction
             if params[0] == -1:
                 for driver in self.drivers:
-                    driver.rotate(sign)
+                    driver.rotate(sign, self.stop)
                 return None
             else:
-                if self.drivers[params[0]].rotate(sign):
+                if self.drivers[params[0]].rotate(sign, self.stop):
                     return self.byte_ack
                 else:
                     return self.byte_nak
@@ -782,10 +793,10 @@ class System(ListeningSystem):
             else:
                 if params[0] == -1:
                     for driver in self.drivers:
-                        driver.set_velocity(velocity)
+                        driver.set_velocity(velocity, self.stop)
                     return None
                 else:
-                    self.drivers[params[0]].set_velocity(velocity)
+                    self.drivers[params[0]].set_velocity(velocity, self.stop)
                     return self.byte_ack
 
     def _set_stop_io(self, params):
