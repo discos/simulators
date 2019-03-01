@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from simulators import utils
 
 
-class TestServer(unittest.TestCase):
+class TestUtils(unittest.TestCase):
 
     def test_right_checksum(self):
         """Return the sum of bytes that compose the string, capped to 8 bits
@@ -246,20 +246,40 @@ class TestServer(unittest.TestCase):
         expected_result = 58091.57720095525
         self.assertEqual(result, expected_result)
 
-    def test_mjd_old_date(self):
-        time = datetime(1500, 1, 1, 12, 0, 0, 0)
+    def test_mjd_given_date_first_months(self):
+        """Return the modified julian date of a given datetime object."""
+        time = datetime(2017, 1, 4, 13, 51, 10, 162534)
         result = utils.mjd(time)
-        expected_result = -131067.5
+        expected_result = 57757.57720095525
         self.assertEqual(result, expected_result)
+
+    def test_mjd_old_date(self):
+        time = datetime(1500, 1, 1, 0, 0, 0, 0)
+        with self.assertRaises(ValueError):
+            utils.mjd(time)
 
     def test_mjd_to_date(self):
         """Return the datetime object of a given modified julian date."""
-        expected_date = datetime(2018, 1, 20, 10, 30, 45, 100000)
-        self.assertEqual(utils.mjd_to_date(58138.43802199074), expected_date)
+        expected_date = datetime(2017, 12, 4, 13, 51, 10, 162534)
+        self.assertEqual(utils.mjd_to_date(58091.57720095525), expected_date)
 
-    def test_mjd_to_date_old_date(self):
-        expected_date = datetime(45, 6, 2, 8, 30, 39, 772000)
-        self.assertEqual(utils.mjd_to_date(-662354.354627354), expected_date)
+    def test_mjd_to_date_starting_date(self):
+        with self.assertRaises(ValueError):
+            utils.mjd_to_date(-1)
+
+    def test_mjd_to_date_wrong_date(self):
+        with self.assertRaises(ValueError):
+            utils.mjd_to_date(None)
+
+    def test_datetime_to_mjd_and_back(self):
+        date_datetime = datetime.now()
+        date_mjd = utils.mjd(date_datetime)
+        self.assertEqual(date_datetime, utils.mjd_to_date(date_mjd))
+
+    def test_mjd_to_datetime_and_back(self):
+        date_mjd = 58412.4267483
+        date_datetime = utils.mjd_to_date(date_mjd)
+        self.assertEqual(date_mjd, utils.mjd(date_datetime))
 
     def test_day_microseconds_now(self):
         """Make sure that the datatype of the response is the correct one.
@@ -293,6 +313,11 @@ class TestServer(unittest.TestCase):
         date = datetime(2018, 3, 7, 10, 30, 20, 123456)
         day_milliseconds = utils.day_milliseconds(date)
         self.assertEqual(day_milliseconds, 37820123)
+
+    def test_day_milliseconds_wrong_type(self):
+        """Test the function sending a different type object."""
+        with self.assertRaises(ValueError):
+            utils.day_milliseconds('dummy')
 
     def test_day_percentage(self):
         """Make sure that the datatype of the response is the correct one.

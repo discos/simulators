@@ -4,12 +4,17 @@ import struct
 import importlib
 import inspect
 import os
+import warnings
 from datetime import datetime, timedelta
+from astropy.time import Time
 from simulators.common import BaseSystem
 
 
 def checksum(msg):
     """Returns the checksum of a string message.
+
+    :param msg: the message of which the checksum will be calculated and
+        returned
 
     >>> checksum('fooo')
     'L'
@@ -27,6 +32,12 @@ def checksum(msg):
 
 def binary_complement(bin_string, mask=''):
     """Returns the binary complement of bin_string, with bits masked by mask.
+
+    :param bin_string: the binary_string of which the binary complement will be
+        calculated
+    :param mask: a binary string that will act as mask allowing to complement
+        only bin_string's digits corresponding to mask's ones, leaving the
+        bin_string's digits corresponding to mask's zeros as they are
 
     >>> binary_complement('11010110')
     '00101001'
@@ -67,11 +78,12 @@ def binary_complement(bin_string, mask=''):
 def twos_to_int(binary_string):
     """Returns the two's complement of binary_string.
 
+    :param binary_string: the string containing only zeros and ones. It is
+        mandatory to pad this value to the desired bits length before passing
+        it to the method in order to avoid representation errors.
+
     >>> twos_to_int('11111011')
     -5
-
-    It is mandatory to pad the binary string to the desired bits length
-    before passing it to the method in order to avoid representation errors.
 
     >>> binary_string = '111'
     >>> twos_to_int(binary_string)
@@ -94,6 +106,11 @@ def twos_to_int(binary_string):
 def int_to_twos(val, n_bytes=4):
     """Returns the two's complement of the given integer as a string of zeroes
     and ones with len = 8*n_bytes.
+
+    :param val: the signed integer to be returned as binary string in two's
+        complement
+    :param n_bytes: the number of total bytes to use for the given signed
+        integer conversion to two's complement
 
     >>> int_to_twos(5)
     '00000000000000000000000000000101'
@@ -143,6 +160,10 @@ def binary_to_bytes(binary_string, little_endian=True):
 def bytes_to_int(byte_string, little_endian=True):
     """Converts a string of bytes to an integer (like C atoi function).
 
+    :param byte_string: the signed integer represented as bytes
+    :param little_endian: boolean indicating whether the byte_string param was
+        received with little endian or big endian notation
+
     >>> bytes_to_int(b'hello', False)
     448378203247
     """
@@ -159,6 +180,10 @@ def bytes_to_int(byte_string, little_endian=True):
 
 def bytes_to_binary(byte_string, little_endian=True):
     """Converts a string of bytes to a binary string.
+
+    :param byte_string: the byte string to be converted to binary
+    :param little_endian: boolean indicating whether the byte_string param was
+        received with little endian or big endian notation
 
     >>> bytes_to_binary(b'hi', little_endian=False)
     '0110100001101001'
@@ -177,6 +202,10 @@ def bytes_to_binary(byte_string, little_endian=True):
 def bytes_to_uint(byte_string, little_endian=True):
     """Converts a string of bytes to an unsigned integer.
 
+    :param byte_string: the unsigned integer represented as bytes
+    :param little_endian: boolean indicating whether the byte_string param was
+        received with little endian or big endian notation
+
     >>> bytes_to_uint(b'hi', little_endian=False)
     26729
     """
@@ -190,6 +219,10 @@ def real_to_binary(num, precision=1):
     https://en.wikipedia.org/wiki/Single-precision_floating-point_format
     A double-precision format description can be found here:
     https://en.wikipedia.org/wiki/Double-precision_floating-point_format.
+
+    :param num: the floating-point number to be converted
+    :param precision: integer indicating whether the floating-point precision
+        to be adopted should be single (1) or double (2)
 
     >>> real_to_binary(619.34000405413)
     '01000100000110101101010111000011'
@@ -221,6 +254,12 @@ def real_to_bytes(num, precision=1, little_endian=True):
     """Returns the bytestring representation of a floating-point number
     (IEEE 754 standard).
 
+    :param num: the floating-point number to be converted
+    :param precision: integer indicating whether the floating-point precision
+        to be adopted should be single (1) or double (2)
+    :param little_endian: boolean indicating whether the byte string should be
+        returned with little endian or big endian notation
+
     >>> [hex(ord(x)) for x in real_to_bytes(436.56, 1, False)]
     ['0x43', '0xda', '0x47', '0xae']
 
@@ -233,8 +272,14 @@ def real_to_bytes(num, precision=1, little_endian=True):
 
 
 def bytes_to_real(bytes_real, precision=1, little_endian=True):
-    """Returns the floating-point representation (IEEE 754 standard)
-    of bytestring number.
+    """Returns the floating-point representation (IEEE 754 standard) of
+    bytestring number.
+
+    :param bytes_real: the floating-point number represented as bytes
+    :param precision: integer indicating whether the floating-point precision
+        to be adopted should be single (1) or double (2)
+    :param little_endian: boolean indicating whether the bytes_real param was
+        received with little endian or big endian notation
 
     >>> round(bytes_to_real('\x44\x77\x2C\x31', 1, False), 2)
     988.69
@@ -260,6 +305,11 @@ def bytes_to_real(bytes_real, precision=1, little_endian=True):
 def int_to_bytes(val, n_bytes=4, little_endian=True):
     """Returns the bytestring representation of a given signed integer.
 
+    :param val: the signed integer to be converted
+    :param n_bytes: the number of bytes to fit the given unsigned integer to
+    :param little_endian: boolean indicating whether the byte string should be
+        returned with little endian or big endian notation
+
     >>> [hex(ord(x)) for x in int_to_bytes(354, little_endian=False)]
     ['0x0', '0x0', '0x1', '0x62']
     """
@@ -269,6 +319,11 @@ def int_to_bytes(val, n_bytes=4, little_endian=True):
 
 def uint_to_bytes(val, n_bytes=4, little_endian=True):
     """Returns the bytestring representation of a given unsigned integer.
+
+    :param val: the unsigned integer to be converted
+    :param n_bytes: the number of bytes to fit the given unsigned integer to
+    :param little_endian: boolean indicating whether the byte string should be
+        returned with little endian or big endian notation
 
     >>> [hex(ord(x)) for x in uint_to_bytes(657, little_endian=False)]
     ['0x0', '0x0', '0x2', '0x91']
@@ -305,121 +360,62 @@ def sign(number):
 
     if not isinstance(number, (int, long, float)):
         raise ValueError(
-            '%s is not of a valid datatype. Use only int, long or float.'
-            % str(number)
+            '%s is not of a valid datatype. ' % str(number)
+            + 'Use only int, long, or float.'
         )
     return number and (1, -1)[number < 0]
 
 
-def mjd(time=None):
+def mjd(date=None):
     """Returns the modified julian date (MJD) of a given datetime object.
     If no datetime object is given, it returns the current MJD.
     For more informations about modified julian date check the following link:
     https://bowie.gsfc.nasa.gov/time/
 
+    :param date: the datetime object to calculate the equivalent modified
+        julian date. If None, the current time is used.
+
     >>> d = datetime(2018, 1, 20, 10, 30, 45, 100000)
     >>> mjd(d)
     58138.43802199074
     """
+    if not date:
+        date = datetime.utcnow()
+    elif date < datetime(1858, 11, 17):
+        raise ValueError('Provide a date after Nov 17 1858')
 
-    if not time:
-        time = datetime.utcnow()
-
-    year = time.year
-    month = time.month
-    day = time.day
-
-    if month == 1 or month == 2:
-        yearp = year - 1
-        monthp = month + 12
-    else:
-        yearp = year
-        monthp = month
-
-    # Check where we are in relation to October 15, 1582, the beginning
-    # of the Gregorian calendar.
-    if (year < 1582 or (year == 1582 and month < 10)
-            or (year == 1582 and month == 10 and day < 15)):
-        # Before the beginning of Gregorian calendar
-        b = 0
-    else:
-        # After the beginning of Gregorian calendar
-        a = math.trunc(yearp / 100.)
-        b = 2 - a + math.trunc(a / 4.)
-
-    c = math.trunc(365.25 * yearp)
-    d = math.trunc(30.6001 * (monthp + 1))
-
-    jd = b + c + d + day + 1720994.5
-
-    modified_julian_day = jd - 2400000.5
-
-    return float(modified_julian_day + day_percentage(time))
+    t = Time(date, format='datetime')
+    return t.mjd
 
 
 def mjd_to_date(original_mjd_date):
     """Returns the UTC date representation of a modified julian date one.
 
+    :param original_mjd_date: a floating point number representing the modified
+        julian date to be converted to a datetime object.
+
     >>> mjd_to_date(58138.43802199074)
     datetime.datetime(2018, 1, 20, 10, 30, 45, 100000)
     """
-    str_d = str(original_mjd_date)
-    mjdate = int(str_d[:str_d.find('.')])
-    millisecond = int(float('0.' + str_d[str_d.find('.') + 1:]) * 86400000)
+    try:
+        if not isinstance(original_mjd_date, (int, long, float)):
+            raise ValueError
+        elif original_mjd_date < 0:
+            raise ValueError
+    except ValueError:
+        raise ValueError('Provide a non-negative floating-point number!')
 
-    mjdate += 2400000.5
-
-    mjdate = mjdate + 0.5
-
-    f, i = math.modf(mjdate)
-    i = int(i)
-
-    a = math.trunc((i - 1867216.25) / 36524.25)
-
-    if i > 2299160:
-        b = i + 1 + a - math.trunc(a / 4.)
-    else:
-        b = i
-
-    c = b + 1524
-
-    d = math.trunc((c - 122.1) / 365.25)
-
-    e = math.trunc(365.25 * d)
-
-    g = math.trunc((c - e) / 30.6001)
-
-    day = int(c - e + f - math.trunc(30.6001 * g))
-
-    if g < 13.5:
-        month = g - 1
-    else:
-        month = g - 13
-
-    if month > 2.5:
-        year = d - 4716
-    else:
-        year = d - 4715
-
-    second, millisecond = divmod(millisecond, 1000)
-    minute, second = divmod(second, 60)
-    hour, minute = divmod(minute, 60)
-
-    result_date = datetime(
-        year,
-        month,
-        day,
-        hour,
-        minute,
-        second,
-        millisecond * 1000
-    )
-
-    return result_date
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        t = Time(original_mjd_date, format='mjd')
+        return t.datetime
 
 
 def day_microseconds(date=None):
-    """Returns the microseconds elapsed since last midnight UTC."""
+    """Returns the microseconds elapsed since last midnight UTC.
+
+    :param date: the datetime object to calculate the total day amount of
+        microseconds. If None, the current time is used."""
     if not date:
         date = datetime.utcnow()
     elif not isinstance(date, datetime):
@@ -436,13 +432,23 @@ def day_microseconds(date=None):
 
 
 def day_milliseconds(date=None):
-    """Returns the milliseconds elapsed since last midnight UTC."""
+    """Returns the milliseconds elapsed since last midnight UTC.
+
+    :param date: the datetime object to calculate the total day amount of
+        milliseconds. If None, the current time is used."""
+    if not date:
+        date = datetime.utcnow()
+    elif not isinstance(date, datetime):
+        raise ValueError('Date parameter must be a datetime object.')
     microseconds = day_microseconds(date)
     return int(round(float(microseconds) / 1000))
 
 
 def day_percentage(date=None):
-    """Returns the day percentage. 00:00 = 0.0, 23:59:999999 = 1.0"""
+    """Returns the day percentage. 00:00 = 0.0, 23:59:999999 = 1.0
+
+    :param date: the datetime or timedelta object of which will be calculated
+        the equivalent percentage. If None, the current datetime is used."""
     if not date:
         date = datetime.utcnow()
 
@@ -453,7 +459,7 @@ def day_percentage(date=None):
     else:
         raise ValueError('Date parameter must be a datetime object.')
 
-    return float(microseconds) / 86400000000
+    return microseconds / 86400000000.
 
 
 def get_systems():
