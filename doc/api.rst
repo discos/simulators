@@ -141,7 +141,7 @@ System class
 
 
 Useful Functions and Classes
-----------------------------
+============================
 
 .. module:: simulators.utils
 
@@ -156,6 +156,8 @@ Useful Functions and Classes
 .. autofunction:: binary_to_bytes
 
 .. autofunction:: bytes_to_int
+
+.. autofunction:: bytes_to_binary
 
 .. autofunction:: bytes_to_uint
 
