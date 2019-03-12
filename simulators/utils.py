@@ -4,9 +4,7 @@ import struct
 import importlib
 import inspect
 import os
-import warnings
 from datetime import datetime, timedelta
-from astropy.time import Time
 from simulators.common import BaseSystem
 
 
@@ -384,8 +382,37 @@ def mjd(date=None):
     elif date < datetime(1858, 11, 17):
         raise ValueError('Provide a date after Nov 17 1858')
 
-    t = Time(date, format='datetime')
-    return t.mjd
+    year = date.year
+    month = date.month
+    day = date.day
+
+    if month == 1 or month == 2:
+        year = year - 1
+        month = month + 12
+    else:
+        year = year
+        month = month
+
+    a = math.trunc(year / 100.)
+    b = 2 - a + math.trunc(a / 4.)
+    c = math.trunc(365.25 * year)
+    d = math.trunc(30.6001 * (month + 1))
+
+    modified_julian_day = int(b + c + d + day - 679006)
+
+    # Total UTC hours of the day
+    day_hour = date.hour
+    # Total minutes of the day
+    day_minute = (day_hour * 60) + date.minute
+    # Total seconds of the day
+    day_second = (day_minute * 60) + date.second
+    # Total microseconds of the day
+    day_microsecond = (day_second * 1000000) + date.microsecond
+
+    day_percent = day_microsecond / 86400000000.
+    modified_julian_date = modified_julian_day + day_percent
+
+    return float(modified_julian_date)
 
 
 def mjd_to_date(original_mjd_date):
@@ -405,10 +432,53 @@ def mjd_to_date(original_mjd_date):
     except ValueError:
         raise ValueError('Provide a non-negative floating-point number!')
 
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        t = Time(original_mjd_date, format='mjd')
-        return t.datetime
+    str_d = repr(original_mjd_date)
+    mjdate, microsecond = str_d.split('.')
+    mjdate = int(mjdate)
+    microsecond = microsecond + (12 - len(microsecond)) * '0'
+    microsecond = int(round(float('0.' + microsecond) * 86400000000))
+
+    mjdate += 2400000.5
+
+    mjdate = mjdate + 0.5
+
+    f, i = math.modf(mjdate)
+    i = int(i)
+
+    a = math.trunc((i - 1867216.25) / 36524.25)
+    b = i + 1 + a - math.trunc(a / 4.)
+    c = b + 1524
+    d = math.trunc((c - 122.1) / 365.25)
+    e = math.trunc(365.25 * d)
+    g = math.trunc((c - e) / 30.6001)
+
+    day = int(c - e + f - math.trunc(30.6001 * g))
+
+    if g < 13.5:
+        month = g - 1
+    else:
+        month = g - 13
+
+    if month > 2.5:
+        year = d - 4716
+    else:
+        year = d - 4715
+
+    second, microsecond = divmod(microsecond, 1000000)
+    minute, second = divmod(second, 60)
+    hour, minute = divmod(minute, 60)
+
+    result_date = datetime(
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        second,
+        microsecond
+    )
+
+    return result_date
 
 
 def day_microseconds(date=None):
