@@ -7,6 +7,8 @@ class BaseSystem(object):
 
     @staticmethod
     def system_stop():
+        """This method sends back to the server the message `$server_shutdown!`
+        ordering it to stop accepting requests and to shut down."""
         return '$server_shutdown!'
 
 
