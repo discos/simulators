@@ -1,6 +1,11 @@
+[run]
+concurrency = multiprocessing
+
 [report]
 exclude_lines =
     if __name__ == '__main__':
+    self.fail\(.*\)
+    except KeyboardInterrupt:
 include =
     ./*
 omit =

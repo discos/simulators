@@ -24,21 +24,38 @@ class ListeningSystem(BaseSystem):
         The method eventually raises a ValueError in one of the following
         cases: the declared length of the message exceeds the maximum expected
         length, the sent message carries a wrong checksum, the client asks to
-        execute an unknown command. See
-        https://github.com/discos/simulators/issues/1 for more information.
+        execute an unknown command.
+        Additional information here:
+        https://github.com/discos/simulators/issues/1
 
-        :param byte: the byte recived by the server"""
+        :param byte: the received message byte."""
 
 
 class SendingSystem(BaseSystem):
 
     @abc.abstractmethod
-    def get_message(self):
-        """This method returns the message the system wants to send to
-        its client(s). The message is sent periodically and the system
-        must have an attribute called 'sampling_time'. Make sure that
-        the method is implemented thread safely. See
-        https://github.com/discos/simulators/issues/51 for more information."""
+    def subscribe(self, q):
+        """This method passes a queue object to the System instance in order
+        for it to add it to its clients list. The System will therefore put any
+        new status message into this queue, along with the queue of other
+        clients, as soon as the status message is updated.
+        Additional information here:
+        https://github.com/discos/simulators/issues/175
+
+        :param q: the queue object in which the System will put the last status
+            message to be sent to the client."""
+
+    @abc.abstractmethod
+    def unsubscribe(self, q):
+        """This method passes a queue object to the System instance in order
+        for it to be removed from the clients list. The System will therefore
+        release the handle to the queue object in order for the garbage
+        collector to destroy it when the client has finally disconnected.
+        Additional information here:
+        https://github.com/discos/simulators/issues/175
+
+        :param q: the queue object that contains the last status message to
+            send to the connected client."""
 
 
 class MultiTypeSystem(object):

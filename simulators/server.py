@@ -6,7 +6,7 @@ import socket
 import logging
 import importlib
 import threading
-import time
+from Queue import Queue, Empty
 from multiprocessing import Process
 from SocketServer import (
     ThreadingMixIn, ThreadingTCPServer, BaseRequestHandler
@@ -32,11 +32,18 @@ class BaseHandler(BaseRequestHandler):
     custom_header, custom_tail = ('$', '!')
 
     def _execute_custom_command(self, msg_body):
+        """This method accepts a custom command (without the custom header and
+        tail) formatted as `command_name:par1,par2,...,parN`. It then parses
+        the command and its parameters and tries to call the system's
+        equivalent method, also handling unexpected exceptions.
+
+        :param msg_body: the custom command message without the custom header
+            and tail (`$` and `!` respectively)
+        """
         if ':' in msg_body:
             name, params_str = msg_body.split(':')
         else:
             name, params_str = msg_body, ''
-        # $command:par1,par2,...,parN!
         if params_str:
             params = params_str.split(',')
         else:
@@ -57,7 +64,6 @@ class BaseHandler(BaseRequestHandler):
 class ListenHandler(BaseHandler):
 
     def handle(self):
-        """See https://github.com/discos/simulators/issues/1"""
         logging.info('Got connection from %s', self.client_address)
         custom_msg = b''
         while True:
@@ -102,12 +108,12 @@ class ListenHandler(BaseHandler):
 class SendHandler(BaseHandler):
 
     def handle(self):
-        """See https://github.com/discos/simulators/issues/51"""
         logging.info('Got connection from %s', self.client_address)
         self.request.setblocking(False)
         sampling_time = self.system.sampling_time
+        message_queue = Queue(1)
+        self.system.subscribe(message_queue)
         while True:
-            t0 = time.time()
             try:
                 custom_msg = self.request.recv(1024)
                 # Check if the client is sending a custom command
@@ -122,13 +128,15 @@ class SendHandler(BaseHandler):
                 # No data received, just pass
                 pass
             try:
-                self.request.sendall(self.system.get_message())
-                elapsed_time = time.time() - t0
-                time.sleep(sampling_time - elapsed_time)
+                msg = message_queue.get(timeout=sampling_time)
+                self.request.sendall(msg)
+            except Empty:
+                pass
             except IOError:
                 # Something went wrong while sending the message, probably
                 # the client was stopped without closing the connection
                 break
+        self.system.unsubscribe(message_queue)
 
 
 class Server(ThreadingMixIn, ThreadingTCPServer):
@@ -142,7 +150,9 @@ class Server(ThreadingMixIn, ThreadingTCPServer):
     `l_address` and `s_address` must have at least different ports,
     if not different ips.
 
-    :param system: the system needed by the server.
+    :param system: the desired simulator system module.
+    :param args: a tuple containing the arguments to pass to the system
+        instance constructor method.
     :param l_address: a tuple (ip, port), the address of the server that
         exposes the `System.parse()` method.
     :param s_address: a tuple (ip, port), the address of the server that

@@ -7,6 +7,9 @@ import unittest
 from types import ModuleType
 from contextlib import contextmanager
 from threading import Thread
+from multiprocessing import Value, Array
+from ctypes import c_bool, c_char
+from Queue import Empty
 
 from simulators.server import Server, Simulator
 from simulators.common import BaseSystem, ListeningSystem, SendingSystem
@@ -27,6 +30,9 @@ class TestListeningServer(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.server.stop()
+
+    def tearDown(self):
+        time.sleep(0.1)
 
     def test_proper_request(self):
         response = get_response(self.address, msg='#command:a,b,c!')
@@ -74,6 +80,9 @@ class TestSendingServer(unittest.TestCase):
     def tearDownClass(cls):
         cls.server.stop()
 
+    def tearDown(self):
+        time.sleep(0.1)
+
     def test_get_message(self):
         response = get_response(self.address)
         self.assertEqual(response, 'message')
@@ -106,6 +115,9 @@ class TestDuplexServer(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.server.stop()
+
+    def tearDown(self):
+        time.sleep(0.1)
 
     def test_proper_request(self):
         response = get_response(self.l_address, msg='#command:a,b,c!')
@@ -260,12 +272,15 @@ class TestServerVarious(unittest.TestCase):
 
 
 def get_response(server_address, msg=None, timeout=2.0, response=True):
+    retval = b''
     with socket_context(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.settimeout(timeout)
         sock.connect(server_address)
         if msg:
             sock.sendall(msg)
-        return sock.recv(1024) if response else b''
+        if response:
+            retval = sock.recv(1024)
+    return retval
 
 
 def get_logs():
@@ -291,6 +306,10 @@ class ListeningTestSystem(ListeningSystem):
 
     def __init__(self):
         self.msg = b''
+        try:
+            getattr(self, 'last_cmd')
+        except AttributeError:
+            self.last_cmd = Array(c_char, b'\x00' * 50)
 
     def parse(self, byte):
         # Example of msg: #command_name:par1,par2,par3!
@@ -300,8 +319,8 @@ class ListeningTestSystem(ListeningSystem):
         elif self.msg.startswith(self.header):
             self.msg += byte
             if byte == self.tail:
-                self.last_cmd = self.msg[1:-1]
-                name, params_str = self.last_cmd.split(':')
+                self.last_cmd.value = self.msg[1:-1]
+                name, params_str = str(self.last_cmd.value).split(':')
                 self.msg = b''
                 if name == 'wrong_command':
                     return b'you sent a wrong command'
@@ -330,10 +349,37 @@ class SendingTestSystem(SendingSystem):
     sampling_time = 0.01
 
     def __init__(self):
-        self.last_cmd = 'message'
+        try:
+            getattr(self, 'last_cmd')
+        except AttributeError:
+            self.last_cmd = Array(c_char, b'\x00' * 50)
+        self.last_cmd.value = 'message'
+        self.t = None
 
-    def get_message(self):
-        return self.last_cmd
+    def subscribe(self, q):
+        self.stop = Value(c_bool, False)
+        t = Thread(
+            target=self.put,
+            args=(q, self.stop, self.sampling_time, self.last_cmd)
+        )
+        t.daemon = True
+        t.start()
+
+    @staticmethod
+    def put(q, stop, sampling_time, last_cmd):
+        while True:
+            if stop.value:
+                break
+            while True:
+                try:
+                    q.get_nowait()
+                except Empty:
+                    break
+            q.put(str(last_cmd.value))
+            time.sleep(sampling_time)
+
+    def unsubscribe(self, _):
+        self.stop.value = True
 
     @staticmethod
     def raise_exception():

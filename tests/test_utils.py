@@ -262,6 +262,8 @@ class TestUtils(unittest.TestCase):
         """Return the datetime object of a given modified julian date."""
         expected_date = datetime(2017, 12, 4, 13, 51, 10, 162534)
         self.assertEqual(utils.mjd_to_date(58091.57720095525), expected_date)
+        expected_date = datetime(2018, 1, 1, 16, 46, 25, 346278)
+        self.assertEqual(utils.mjd_to_date(58119.69890447081), expected_date)
 
     def test_mjd_to_date_starting_date(self):
         with self.assertRaises(ValueError):

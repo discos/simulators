@@ -1,4 +1,5 @@
 import time
+from datetime import datetime, timedelta
 from multiprocessing import Value, Array
 from ctypes import c_bool, c_char
 from threading import Thread
@@ -102,6 +103,9 @@ class System(ListeningSystem, SendingSystem):
         statuses.append(self.FS.status)
         self._update_status(self.status, statuses)
 
+        self.subscribe_q = Queue()
+        self.unsubscribe_q = Queue()
+
         args = (
             self.stop,
             self.sampling_time,
@@ -110,7 +114,9 @@ class System(ListeningSystem, SendingSystem):
             statuses,
             self.command_threads,
             self._update_subsystems,
-            self._update_status
+            self._update_status,
+            self.subscribe_q,
+            self.unsubscribe_q
         )
 
         self.update_thread = Thread(
@@ -129,8 +135,7 @@ class System(ListeningSystem, SendingSystem):
         while True:
             try:
                 command_thread = self.command_threads.get_nowait()
-                if command_thread.is_alive():
-                    command_thread.join()
+                command_thread.join()
             except Empty:
                 break
         return '$server_shutdown!'
@@ -195,13 +200,24 @@ class System(ListeningSystem, SendingSystem):
         status[12:-4] = payload
 
     @staticmethod
-    def _update_loop(stop, samp_time, status, subsystems, statuses,
-                     cmd_queue, update_subsystems, update_status):
-        t_status = time.time()
-        to_update = True
+    def _update_loop(stop, sampling_time, status, subsystems, statuses,
+                     cmd_queue, update_subsystems, update_status,
+                     subscribe_q, unsubscribe_q):
         command_threads = []
+        nxt = None
+        counter = 0
+        subscribers = []
         while not stop.value:
-            t0 = time.time()
+            try:
+                sub = subscribe_q.get_nowait()
+                subscribers.append(sub)
+            except Empty:
+                pass
+            try:
+                sub = unsubscribe_q.get_nowait()
+                subscribers.remove(sub)
+            except Empty:
+                pass
             try:
                 command_threads.append(cmd_queue.get_nowait())
             except Empty:
@@ -212,23 +228,43 @@ class System(ListeningSystem, SendingSystem):
 
             update_subsystems(subsystems)
 
-            if to_update:
-                t_status = time.time()
+            if counter % 20 == 0:
                 update_status(status, statuses)
-                to_update = False
+                for q in subscribers:
+                    while True:
+                        try:
+                            q.get_nowait()
+                        except Empty:
+                            break
+                    q.put(str(status.raw))
+                now = utils.bytes_to_real(status[721:729], precision=2)
+                now = utils.mjd_to_date(now)
+                counter = 0
+            else:
+                now = datetime.utcnow()
 
-            t1 = time.time()
-            elapsed = t1 - t0
-            time_to_sleep = max(0, 0.01 - elapsed)
-            if t1 - t_status + time_to_sleep > samp_time:
-                time_to_sleep = max(0, samp_time - (t1 - t_status))
-                to_update = True
-            time.sleep(time_to_sleep)
+            counter += 1
+
+            correction = 0
+            if nxt:
+                correction = (now - nxt).total_seconds()
+                if correction < 0:
+                    correction = 0
+                now = nxt
+            nxt = now + timedelta(seconds=sampling_time / 20.)
+
+            time.sleep(
+                max(0, (nxt - datetime.utcnow()).total_seconds() - correction)
+            )
+
         for command_thread in command_threads:
             cmd_queue.put(command_thread)
 
-    def get_message(self):
-        return self.status.raw
+    def subscribe(self, q):
+        self.subscribe_q.put(q)
+
+    def unsubscribe(self, q):
+        self.unsubscribe_q.put(q)
 
     def _parse_commands(self, msg):
         cmds_number = utils.bytes_to_int(msg[12:16])
