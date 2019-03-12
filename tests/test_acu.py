@@ -1,5 +1,6 @@
 import unittest
 import time
+import socket
 from datetime import datetime, timedelta
 from simulators import acu
 from simulators import utils
@@ -10,6 +11,7 @@ from simulators.acu.acu_utils import (
     ProgramTrackCommand,
     ProgramTrackEntry
 )
+from simulators.server import Simulator
 
 
 class TestACUUtils(unittest.TestCase):
@@ -64,7 +66,7 @@ class TestACUCommands(unittest.TestCase):
         time.sleep(0.01)
 
     def test_status_message_length(self):
-        status = self.system.get_message()
+        status = str(self.system.status.raw)
         msg_length = utils.bytes_to_uint(status[4:8])
         self.assertEqual(msg_length, 813)
         self.assertEqual(len(status), 813)
@@ -171,9 +173,6 @@ class TestACUCommands(unittest.TestCase):
 
         az_command_counter = command.get_counter(0)
         el_command_counter = command.get_counter(1)
-
-        # Update the status
-        self.system.get_message()
 
         # Check if the azimuth command has been received
         self.assertEqual(
@@ -2143,6 +2142,48 @@ class TestACUCommands(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             self._send(command_string)
+
+
+class TestACUSimulator(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.start_flag = b'\x1A\xCF\xFC\x1D'
+        cls.end_flag = b'\xD1\xCF\xFC\xA1'
+        cls.simulator = Simulator('acu')
+        cls.simulator.start(daemon=True)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.simulator.stop()
+
+    def test_different_statuses(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect(('127.0.0.1', 13001))
+        prev = ''
+        for _ in range(5):
+            status = s.recv(1024)
+            self.assertEqual(len(status), 813)
+            self.assertEqual(status[0:4], self.start_flag)
+            self.assertEqual(status[-4:], self.end_flag)
+            self.assertNotEqual(prev, status)
+            prev = status
+            time.sleep(0.2)
+        s.close()
+
+    def test_multiple_clients(self):
+        s1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s1.connect(('127.0.0.1', 13001))
+        s2.connect(('127.0.0.1', 13001))
+
+        status1 = s1.recv(1024)
+        status2 = s2.recv(1024)
+        self.assertEqual(status1, status2)
+
+        s1.close()
+        time.sleep(0.5)
+        s2.close()
 
 
 class TestACUValues(unittest.TestCase):
