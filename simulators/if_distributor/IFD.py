@@ -6,7 +6,7 @@ class System(ListeningSystem):
     shifts the received signal wave by means of a local oscillator.
     This system is the simulator of the SRT LP band IFDistributor."""
 
-    tail = b'\n'
+    tail = [b'\x0A', b'\x0D']  # NEWLINE and CR
     ref_freq = 10
     ol_freq = 2300
     max_attenuation = 31.5
@@ -83,10 +83,10 @@ class System(ListeningSystem):
                 self.msg = b''
                 return False
         elif len(self.msg) < self.max_msg_length:
-            if byte != self.tail:
+            if byte not in self.tail:
                 return True
         elif len(self.msg) == self.max_msg_length:
-            if byte != self.tail:
+            if byte not in self.tail:
                 self.msg = b''
                 raise ValueError(
                     'Message too long: max length should be %d'
