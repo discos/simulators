@@ -104,7 +104,7 @@ class System(ListeningSystem):
         return self.ack
 
     def _get_status(self, params):
-        if len(params) > 0:
+        if params:
             return self.nak
         retval = b'%s %s %s\n' % (
             self.current_channel,

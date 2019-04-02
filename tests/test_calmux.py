@@ -16,8 +16,8 @@ class TestCalmux(unittest.TestCase):
             if response[0] == 'nak':
                 raise Exception('Received nak')
         else:
-            for i in range(len(response)):
-                response[i] = int(response[i])
+            for index, val in enumerate(response):
+                response[index] = int(val)
         return response
 
     def test_known_headers(self):
