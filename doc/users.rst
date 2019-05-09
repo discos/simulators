@@ -44,7 +44,7 @@ To run a specific configuration for some of the simulators:
 The ``--type`` flag, or its shortcut ``-t``, will let you specify a
 configuration for the desired simulator. Not all simulators have multiple
 configurations. Providing an unknown configuration will prevent the system
-from starting and the operation will fail.
+from starting and the command will fail.
 
 Currently available simulators are: ``active_surface``, ``acu`` and
 ``if_distributor`` with configurations ``IFD`` and ``IFD_14_channels``.

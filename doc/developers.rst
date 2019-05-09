@@ -4,15 +4,6 @@
 Developers documentation
 ************************
 
-.. topic:: Preface
-
-   If you want to know how to write a simulator, how to run the
-   tests or how to contribute to this project, then you have to read
-   this section.  If you just want to know how to use the simulators
-   in order to run your code without the real hardware, then you
-   should read the :ref:`user` chapter.  This project requires Python 2.7.
-
-
 Testing environment
 ===================
 In the contiunuos deployment workflow, the tests are executed more than
@@ -91,6 +82,7 @@ Now you can generate an HTML report:
 
 .. code-block:: shell
 
+   $ coverage combine
    $ coverage report
    $ coverage html
 
@@ -182,11 +174,11 @@ requests, ``System.parse()`` has to return ``True``.
 It eventually raises a ``ValueError`` in case there is an unexpected error (not
 considered by the system protocol).
 
-The ``SendingSystem`` class and the ``System.get_message()`` method
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The ``SendingSystem`` class and the ``System.subscribe()`` and ``System.unsubscribe()`` methods
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If the ``System`` class inherits from ``server.SendingSystem``, it has to define
-a ``get_message()`` method and a ``sampling_rate`` attribute::
+the ``subscribe()`` and ``unsubscribe()`` methods, along with a ``sampling_rate`` attribute::
 
     from simulators.common import SendingSystem
 
@@ -195,20 +187,30 @@ a ``get_message()`` method and a ``sampling_rate`` attribute::
 
         self.sampling_rate = ...
 
-        def get_message(self):
+        def subscribe(self, q):
             ...
 
-The ``System.get_message()`` method should return some arbitrary data that the system
-would like to send to its client(s). The ``System.sampling_rate`` attribute should be a
-strictly positive integer or floating point number, it represents the time interval
-(in seconds) between each message sent by the system.
+        def unsubscribe(self, q):
+            ...
+
+The ``System.subscribe()`` interface is described in `issue #175
+<https://github.com/discos/simulators/issues/175>`__.  This method takes a queue object
+as argument and adds it to the list of the connected clients. For each client
+in this list the system will then be able to send the required message putting
+it into each of the clients queues.
+
+The ``System.unsubscribe()`` interface is also described in `issue #175
+<https://github.com/discos/simulators/issues/175>`__.  This method receives
+once again the same queue object received by the ``System.subscribe()`` method,
+letting the system know that that queue object, relative to a disconnecting
+client, should be removed from the clients queues.
 
 Inheriting from both ``ListeningSystem`` and ``SystemSystem``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A ``System`` class can inherit from both ``ListeningSystem`` and ``SendingSystem`` at
-the same time. If it does, it has to implement both the ``System.parse()`` and the
-``System.get_message()`` methods, along with the ``System.sampling_rate`` value.
+the same time. If it does, it has to implement the ``System.parse()``, the
+``System.subscribe()`` and the ``System.unsubscribe()`` methods.
 
 
 The ``servers`` list
@@ -225,9 +227,8 @@ of three items:
 Each element of the ``servers`` list represents an instance of the ``system``,
 ``l_address`` is the address in which the server will wait for its clients
 to send the commands to pass to the ``System.parse()`` method. ``s_address`` is
-the address from which the server will send its data retrieved via the
-``System.get_message()`` method, at a constant period of ``System.sampling_rate``
-seconds.
+the address from which the server will send its data received via the queue
+registered to the system via the ``System.subscribe()`` method.
 
 For instance, let's suppose the system to simulate has 2 listening servers
 and no sending servers, the first one with address ``('192.168.100.10', 5000)``
