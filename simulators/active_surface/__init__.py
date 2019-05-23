@@ -13,7 +13,7 @@ from simulators.active_surface.usd import USD
 # get_message method, while args is a tuple of optional extra arguments.
 servers = []
 for line in range(96):  # 96 servers
-    l_address = ('127.0.0.1', 11000 + line)
+    l_address = ('0.0.0.0', 11000 + line)
     servers.append((l_address, (), ()))
 
 

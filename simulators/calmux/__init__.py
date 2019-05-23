@@ -9,7 +9,7 @@ from simulators.common import ListeningSystem
 # is the tuple that defines the optional sending node that exposes the
 # subscribe and unsibscribe methods, while args is a tuple of optional
 # extra arguments.
-servers = [(('127.0.0.1', 12500), (), ())]
+servers = [(('0.0.0.0', 12500), (), ())]
 
 
 class System(ListeningSystem):
