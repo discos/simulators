@@ -2168,7 +2168,7 @@ class TestACUSimulator(unittest.TestCase):
             self.assertEqual(status[-4:], self.end_flag)
             self.assertNotEqual(prev, status)
             prev = status
-            time.sleep(0.2)
+            time.sleep(acu.System.default_sampling_time)
         s.close()
 
     def test_multiple_clients(self):

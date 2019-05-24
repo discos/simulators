@@ -47,7 +47,9 @@ class System(ListeningSystem, SendingSystem):
         4: '_program_track_parameter_command',
     }
 
-    def __init__(self, sampling_time=0.2):
+    default_sampling_time = 0.1
+
+    def __init__(self, sampling_time=default_sampling_time):
         self._set_default()
         self.sampling_time = sampling_time
         self.cmd_counter = None
