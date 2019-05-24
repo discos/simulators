@@ -272,7 +272,7 @@ its ``servers`` list in defined in the following way::
 
     servers = []
     for line in range(96):  # 96 servers
-        l_address = ('127.0.0.1', 11000 + line)
+        l_address = ('0.0.0.0', 11000 + line)
         servers.append((l_address, (), ()))  # No sending servers or extra args
 
 
