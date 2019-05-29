@@ -1401,9 +1401,11 @@ class MasterAxisStatus(SimpleAxisStatus):
         if self.stowed:
             self.stow_pin_out = self.stow_pin_selection
             self.stow_pin_in = [False for __ in range(16)]
+            self.Stowpins_Extracted = True
         else:
             self.stow_pin_out = [False for __ in range(16)]
             self.stow_pin_in = self.stow_pin_selection
+            self.Stowpins_Extracted = False
 
     def _calc_position(self, delta_time, desired_pos, desired_rate):
         """This method calculates the current position of the axis
@@ -1811,6 +1813,7 @@ class MasterAxisStatus(SimpleAxisStatus):
         if self.stow_pos:
             self.stow_pin_out = self.stow_pin_selection
             self.stow_pin_in = [False for __ in range(16)]
+            self.Stowpins_Extracted = True
             self.stowed = True
 
         self.executed_mode_command_counter = counter
@@ -1826,6 +1829,7 @@ class MasterAxisStatus(SimpleAxisStatus):
         if self.stow_pos:
             self.stow_pin_out = [False for __ in range(16)]
             self.stow_pin_in = self.stow_pin_selection
+            self.Stowpins_Extracted = False
             self.stowed = False
 
         self.executed_mode_command_counter = counter
@@ -1850,6 +1854,7 @@ class MasterAxisStatus(SimpleAxisStatus):
                 return
             self.stow_pin_out = self.stow_pin_selection
             self.stow_pin_in = [False for __ in range(16)]
+            self.Stowpins_Extracted = True
             self.stowed = True
 
         self.executed_mode_command_counter = counter
