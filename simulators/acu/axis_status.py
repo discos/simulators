@@ -1706,14 +1706,13 @@ class MasterAxisStatus(SimpleAxisStatus):
             if next_pos and self.axis_state == 3 and not self.stowed:
 
                 if self.ptState == 2:
-                    desired_pos = self.next_pos + self.p_Offset
-                    self.p_Soll = desired_pos
+                    self.p_Soll = self.next_pos + self.p_Offset
                     self.v_Soll = int(round(rate * 1000000))
 
-                    if p_Ist != desired_pos:
+                    if p_Ist != self.p_Soll:
                         current_pos = self._calc_position(
                             delta_time,
-                            desired_pos,
+                            self.p_Soll,
                             self.v_Soll
                         )
 
@@ -1725,25 +1724,26 @@ class MasterAxisStatus(SimpleAxisStatus):
 
                 go_on = False
                 if self.ptState == 4:
-                    desired_pos = next_pos + self.p_Offset
-                    if self.p_Ist != desired_pos:
+                    self.p_Soll = next_pos + self.p_Offset
+                    if self.p_Ist != self.p_Soll:
                         p_Ist = self.p_Ist
                         go_on = True
                     else:
                         break
 
                 if self.ptState == 3 or go_on:
-                    desired_pos = self.p_Bahn + self.p_Offset
+                    self.p_Soll = self.p_Bahn + self.p_Offset
 
                     calc_position = self._calc_position(
                         delta_time,
-                        desired_pos,
+                        self.p_Soll,
                         int(round(self.max_velocity * 1000000)),
                     )
 
                     v_Ist = int(round(
                         (calc_position - p_Ist) / delta_time
                     ))
+
                     p_Ist = calc_position
 
             else:
@@ -1751,6 +1751,7 @@ class MasterAxisStatus(SimpleAxisStatus):
 
             self.p_Ist = p_Ist
             self.v_Ist = v_Ist
+            self.v_Soll = self.v_Ist
 
             time.sleep(0.01)
 
@@ -1913,8 +1914,6 @@ class SlaveAxisStatus(SimpleAxisStatus):
         self.master = master
 
     def update_status(self):
-        self.v_Ist = self.master.v_Ist
-
         if self.master.axis_state == 3:
             brakes_open = []
 
