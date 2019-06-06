@@ -313,7 +313,7 @@ class PointingStatus(object):
 
     def _program_track_time_correction(self, time_offset):
         """This method is called when a program track time offset parameter
-        command is received. It is used to chift the start time of program
+        command is received. It is used to shift the start time of program
         tracks.
 
         :param time_offset: the offset time added to start time of the program
