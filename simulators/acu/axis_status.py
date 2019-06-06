@@ -1470,6 +1470,28 @@ class MasterAxisStatus(SimpleAxisStatus):
         or sending."""
         if self.stow_pos:
             self.stowPosOk = float(self.p_Ist) / 1000000 in self.stow_pos
+        if self.p_Ist == int(round(self.min_pos * 1000000)):
+            self.Pre_Limit_Dn = True
+            self.Fin_Limit_Dn = False
+        elif self.p_Ist < int(round(self.min_pos * 1000000)):
+            self.Pre_Limit_Dn = True
+            self.Fin_Limit_Dn = True
+        else:
+            self.Pre_Limit_Dn = False
+            self.Fin_Limit_Dn = False
+        if self.p_Ist == int(round(self.max_pos * 1000000)):
+            self.Pre_Limit_Up = True
+            self.Fin_Limit_Up = False
+        elif self.p_Ist > int(round(self.max_pos * 1000000)):
+            self.Pre_Limit_Up = True
+            self.Fin_Limit_Up = True
+        else:
+            self.Pre_Limit_Up = False
+            self.Fin_Limit_Up = False
+        if abs(self.v_Ist) > int(round(self.max_velocity * 1000000)):
+            self.Rate_Limit = True
+        else:
+            self.Rate_Limit = False
 
     # -------------------- Mode Command --------------------
 

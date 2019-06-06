@@ -25,6 +25,7 @@ pylint:
     - too-many-statements
     - too-many-arguments
     - too-many-lines
+    - simplifiable-if-statement
 
 pep8:
   disable:
