@@ -1,3 +1,4 @@
+from SocketServer import ThreadingTCPServer
 from simulators import utils
 from simulators.common import MultiTypeSystem
 
@@ -7,7 +8,7 @@ from simulators.common import MultiTypeSystem
 # defines the listening node that exposes the parse method, s_address
 # is the tuple that defines the optional sending node that exposes the
 # get_message method, while args is a tuple of optional extra arguments.
-servers = [(('0.0.0.0', 12000), (), ())]
+servers = [(('0.0.0.0', 12000), (), ThreadingTCPServer, ())]
 
 systems = utils.get_systems()
 default_system_type = 'IFD'
