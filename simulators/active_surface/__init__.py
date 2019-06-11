@@ -1,6 +1,7 @@
 import time
 from multiprocessing import Value
 from ctypes import c_bool
+from SocketServer import ThreadingTCPServer
 from simulators import utils
 from simulators.common import ListeningSystem
 from simulators.active_surface.usd import USD
@@ -14,7 +15,7 @@ from simulators.active_surface.usd import USD
 servers = []
 for line in range(96):  # 96 servers
     l_address = ('0.0.0.0', 11000 + line)
-    servers.append((l_address, (), ()))
+    servers.append((l_address, (), ThreadingTCPServer, ()))
 
 
 class System(ListeningSystem):

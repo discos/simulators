@@ -1,4 +1,5 @@
 import time
+from SocketServer import ThreadingTCPServer
 from simulators.common import ListeningSystem
 
 
@@ -9,7 +10,7 @@ from simulators.common import ListeningSystem
 # is the tuple that defines the optional sending node that exposes the
 # subscribe and unsibscribe methods, while args is a tuple of optional
 # extra arguments.
-servers = [(('0.0.0.0', 12500), (), ())]
+servers = [(('0.0.0.0', 12500), (), ThreadingTCPServer, ())]
 
 
 class System(ListeningSystem):

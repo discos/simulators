@@ -9,7 +9,7 @@ import threading
 from Queue import Queue, Empty
 from multiprocessing import Process
 from SocketServer import (
-    ThreadingMixIn, ThreadingTCPServer, BaseRequestHandler
+    ThreadingMixIn, ThreadingTCPServer, ThreadingUDPServer, BaseRequestHandler
 )
 
 
@@ -52,7 +52,7 @@ class BaseHandler(BaseRequestHandler):
             method = getattr(self.system, name)
             response = method(*params)
             if isinstance(response, str):
-                self.request.sendall(response)
+                self.socket.sendto(response, self.client_address)
                 if response == '$server_shutdown!':
                     self.server.stop()
         except AttributeError:
@@ -63,13 +63,19 @@ class BaseHandler(BaseRequestHandler):
 
 class ListenHandler(BaseHandler):
 
-    def handle(self):
+    custom_msg = b''
+
+    def setup(self):
         logging.info('Got connection from %s', self.client_address)
-        custom_msg = b''
-        while True:
-            byte = self.request.recv(1)
-            if not byte:
-                break
+
+    def handle(self):
+        self.socket = self.request
+        if isinstance(self.socket, tuple):  # UDP client
+            msg, self.socket = self.socket
+        else:  # TCP client
+            msg = self.socket.recv(1024)
+
+        for byte in msg:
             try:
                 response = self.system.parse(byte)
             except ValueError, ex:
@@ -81,11 +87,11 @@ class ListenHandler(BaseHandler):
             if response is True:
                 # All custom command bytes should be different than the
                 # system header, otherwise the custom command will be cleared
-                custom_msg = b''
+                self.custom_msg = b''
                 continue  # The system is still composing the message
             elif response and isinstance(response, str):
                 try:
-                    self.request.sendall(response)
+                    self.socket.sendto(response, self.client_address)
                 except IOError:
                     # Something went wrong while sending the response, probably
                     # the client was stopped without closing the connection
@@ -94,12 +100,12 @@ class ListenHandler(BaseHandler):
                 # The system is still waiting for the header:
                 # check if the client is sending a custom command
                 if byte == self.custom_header:
-                    custom_msg = byte
-                elif custom_msg.startswith(self.custom_header):
-                    custom_msg += byte
+                    self.custom_msg = byte
+                elif self.custom_msg.startswith(self.custom_header):
+                    self.custom_msg += byte
                     if byte == self.custom_tail:
-                        msg_body = custom_msg[1:-1]
-                        custom_msg = b''
+                        msg_body = self.custom_msg[1:-1]
+                        self.custom_msg = b''
                         self._execute_custom_command(msg_body)
             else:
                 logging.debug('unexpected response: %s', response)
@@ -107,15 +113,29 @@ class ListenHandler(BaseHandler):
 
 class SendHandler(BaseHandler):
 
-    def handle(self):
+    def setup(self):
         logging.info('Got connection from %s', self.client_address)
-        self.request.setblocking(False)
+
+    def handle(self):
         sampling_time = self.system.sampling_time
         message_queue = Queue(1)
+
+        self.socket = self.request
+        udp = False
+        msg = None
+        if isinstance(self.socket, tuple):
+            msg, self.socket = self.socket
+            udp = True
+        self.socket.setblocking(False)
+
         self.system.subscribe(message_queue)
         while True:
             try:
-                custom_msg = self.request.recv(1024)
+                if msg:
+                    custom_msg = msg
+                    msg = None
+                else:
+                    custom_msg = self.socket.recv(1024)
                 # Check if the client is sending a custom command
                 if not custom_msg:
                     break
@@ -128,8 +148,10 @@ class SendHandler(BaseHandler):
                 # No data received, just pass
                 pass
             try:
-                msg = message_queue.get(timeout=sampling_time)
-                self.request.sendall(msg)
+                response = message_queue.get(timeout=sampling_time)
+                self.socket.sendto(response, self.client_address)
+                if udp:
+                    break
             except Empty:
                 pass
             except IOError:
@@ -139,18 +161,19 @@ class SendHandler(BaseHandler):
         self.system.unsubscribe(message_queue)
 
 
-class Server(ThreadingMixIn, ThreadingTCPServer):
-    """This class inherits from the ThreadingTCPServer class.
-    It instances a TCP server for the given address(es), and pass it the
-    given system instance. A server could be a listening server,
-    if param l_address is provided, or a sending server,
-    if param s_address is provided. If both addresses are provided,
-    the server acts as both as a listening server and a sending server.
-    Be aware that if the server both listens and send to its clients,
-    `l_address` and `s_address` must have at least different ports,
+class Server(ThreadingMixIn):
+    """This class inherits from the ThreadingMixIn class.
+    It can instance a server for the given address(es). The server can be a TCP
+    or a UDP server, depending on which `server_type` argument is provided.
+    Also, the server could be a listening server, if param `l_address` is
+    provided, or a sending server, if param `s_address` is provided. If both
+    addresses are provided, the server acts as both as a listening server and
+    a sending server. Be aware that if the server both listens and send to its
+    clients, `l_address` and `s_address` must have at least different ports,
     if not different ips.
 
     :param system: the desired simulator system module.
+    :param server_type: can be ThreadingTCPServer or ThreadingUDPServer
     :param args: a tuple containing the arguments to pass to the system
         instance constructor method.
     :param l_address: a tuple (ip, port), the address of the server that
@@ -158,27 +181,37 @@ class Server(ThreadingMixIn, ThreadingTCPServer):
     :param s_address: a tuple (ip, port), the address of the server that
         exposes the `System.get_message()` method.
     """
-    def __init__(self, system, args, l_address=None, s_address=None):
+    def __init__(
+            self, system, server_type, args, l_address=None, s_address=None):
+        if server_type not in [ThreadingTCPServer, ThreadingUDPServer]:
+            raise ValueError(
+                'Provide either the `ThreadingTCPServer` class '
+                + 'or the `ThreadingUDPServer` class!'
+            )
+        self.__class__.__bases__ = (ThreadingMixIn, server_type, )
+        self.server_type = server_type
+        self.server_type.allow_reuse_address = True
         self.system = system
         self.system_args = args
-        self.is_alive = False
 
         self.child_server = None
         if l_address:
             self.address = l_address
-            ThreadingTCPServer.__init__(self, l_address, ListenHandler)
+            self.server_type.__init__(self, l_address, ListenHandler)
             if s_address:
-                self.child_server = Server(system, args, None, s_address)
+                self.child_server = Server(
+                    system, self.server_type, args, None, s_address
+                )
         elif s_address:
             self.address = s_address
-            ThreadingTCPServer.__init__(self, s_address, SendHandler)
+            self.server_type.__init__(self, s_address, SendHandler)
         else:
             raise ValueError('You must specify at least one server.')
         self.RequestHandlerClass.system = None
         self.RequestHandlerClass.server = self
 
-    def serve_forever(self, poll_interval=0.5):
-        """This method overrides the ThreadingTCPServer `serve_forever`
+    def serve_forever(self, poll_interval=0.05):
+        """This method overrides the base class `serve_forever`
         method. Before calling the base method, which would stay in a loop
         until the process is stopped, it starts the eventual child server
         as a daemon thread.
@@ -193,8 +226,7 @@ class Server(ThreadingMixIn, ThreadingTCPServer):
             self.child_server.system = self.system
             self.child_server.start()
         try:
-            self.is_alive = True
-            ThreadingTCPServer.serve_forever(self, poll_interval)
+            self.server_type.serve_forever(self, poll_interval)
         except KeyboardInterrupt:
             self.stop()
 
@@ -210,7 +242,6 @@ class Server(ThreadingMixIn, ThreadingTCPServer):
         if self.child_server:
             self.child_server.shutdown()
         self.shutdown()
-        self.is_alive = False
 
 
 class Simulator(object):
@@ -241,17 +272,19 @@ class Simulator(object):
             destroyed. To stop these processes, method `stop` must be called.
         """
         processes = []
-        for l_address, s_address, args in self.system_module.servers:
-            s = Server(self.system_module, args, l_address, s_address)
+        for l_addr, s_addr, server_type, args in self.system_module.servers:
+            s = Server(
+                self.system_module, server_type, args, l_addr, s_addr
+            )
             p = Process(target=s.serve_forever)
             p.daemon = daemon
             processes.append(p)
             p.start()
             if not daemon:
-                if l_address:
-                    print('Server %s up and running.' % (l_address,))
-                if s_address:
-                    print('Server %s up and running.' % (s_address,))
+                if l_addr:
+                    print('Server %s up and running.' % (l_addr,))
+                if s_addr:
+                    print('Server %s up and running.' % (s_addr,))
 
         if not daemon:
             try:
@@ -265,14 +298,18 @@ class Simulator(object):
         """This method stops a simulator by sending the custom `$system_stop!`
         command to all servers of the given simulator."""
         for entry in self.system_module.servers:
-            for address in entry[:-1]:
+            for address in entry[:2]:
                 if not address:
                     continue
-                sockobj = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                if entry[2] == ThreadingTCPServer:
+                    socket_type = socket.SOCK_STREAM
+                else:
+                    socket_type = socket.SOCK_DGRAM
+                sockobj = socket.socket(socket.AF_INET, socket_type)
                 try:
                     sockobj.settimeout(1)
                     sockobj.connect(address)
-                    sockobj.sendall('$system_stop!')
+                    sockobj.sendto('$system_stop!', address)
                 except Exception, ex:
                     logging.debug(ex)
                 finally:

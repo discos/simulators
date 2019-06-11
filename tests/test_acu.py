@@ -51,7 +51,7 @@ class TestACUUtils(unittest.TestCase):
             command.get_counter(-5)
 
 
-class TestACUCommands(unittest.TestCase):
+class TestACU(unittest.TestCase):
 
     def setUp(self):
         self.system = acu.System()
@@ -2142,6 +2142,42 @@ class TestACUCommands(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             self._send(command_string)
+
+    def test_pre_limits_down(self):
+        self.system.AZ.p_Ist = int(round(self.system.AZ.min_pos * 1000000))
+        self.system.EL.p_Ist = int(round(self.system.EL.min_pos * 1000000))
+        time.sleep(0.1)
+        self.assertTrue(self.system.AZ.Pre_Limit_Dn)
+        self.assertTrue(self.system.EL.Pre_Limit_Dn)
+        self.assertFalse(self.system.AZ.Fin_Limit_Dn)
+        self.assertFalse(self.system.EL.Fin_Limit_Dn)
+
+    def test_pre_limits_up(self):
+        self.system.AZ.p_Ist = int(round(self.system.AZ.max_pos * 1000000))
+        self.system.EL.p_Ist = int(round(self.system.EL.max_pos * 1000000))
+        time.sleep(0.1)
+        self.assertTrue(self.system.AZ.Pre_Limit_Up)
+        self.assertTrue(self.system.EL.Pre_Limit_Up)
+        self.assertFalse(self.system.AZ.Fin_Limit_Up)
+        self.assertFalse(self.system.EL.Fin_Limit_Up)
+
+    def test_final_limits_down(self):
+        self.system.AZ.p_Ist = int(round(self.system.AZ.min_pos * 1000000)) - 1
+        self.system.EL.p_Ist = int(round(self.system.EL.min_pos * 1000000)) - 1
+        time.sleep(0.1)
+        self.assertTrue(self.system.AZ.Pre_Limit_Dn)
+        self.assertTrue(self.system.EL.Pre_Limit_Dn)
+        self.assertTrue(self.system.AZ.Fin_Limit_Dn)
+        self.assertTrue(self.system.EL.Fin_Limit_Dn)
+
+    def test_final_limits_up(self):
+        self.system.AZ.p_Ist = int(round(self.system.AZ.max_pos * 1000000)) + 1
+        self.system.EL.p_Ist = int(round(self.system.EL.max_pos * 1000000)) + 1
+        time.sleep(0.1)
+        self.assertTrue(self.system.AZ.Pre_Limit_Up)
+        self.assertTrue(self.system.EL.Pre_Limit_Up)
+        self.assertTrue(self.system.AZ.Fin_Limit_Up)
+        self.assertTrue(self.system.EL.Fin_Limit_Up)
 
 
 class TestACUSimulator(unittest.TestCase):

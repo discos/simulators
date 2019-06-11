@@ -4,6 +4,7 @@ from multiprocessing import Value, Array
 from ctypes import c_bool, c_char
 from threading import Thread
 from Queue import Queue, Empty
+from SocketServer import ThreadingTCPServer
 from simulators import utils
 from simulators.common import ListeningSystem, SendingSystem
 from simulators.acu.general_status import GeneralStatus
@@ -19,7 +20,9 @@ from simulators.acu.facility_status import FacilityStatus
 # is the tuple that defines the optional sending node that exposes the
 # get_message method, while args is a tuple of optional extra arguments.
 servers = []
-servers.append((('0.0.0.0', 13000), ('0.0.0.0', 13001), ()))
+servers.append(
+    (('0.0.0.0', 13000), ('0.0.0.0', 13001), ThreadingTCPServer, ())
+)
 
 start_flag = b'\x1A\xCF\xFC\x1D'
 end_flag = b'\xD1\xCF\xFC\xA1'

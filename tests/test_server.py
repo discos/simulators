@@ -10,9 +10,10 @@ from threading import Thread
 from multiprocessing import Value, Array
 from ctypes import c_bool, c_char
 from Queue import Empty
+from SocketServer import ThreadingTCPServer, ThreadingUDPServer
 
 from simulators.server import Server, Simulator
-from simulators.common import BaseSystem, ListeningSystem, SendingSystem
+from simulators.common import ListeningSystem, SendingSystem
 
 
 class TestListeningServer(unittest.TestCase):
@@ -22,6 +23,7 @@ class TestListeningServer(unittest.TestCase):
         cls.address = ('127.0.0.1', 10000)
         cls.server = Server(
             ListeningTestSystem,
+            ThreadingTCPServer,
             args=(),
             l_address=cls.address
         )
@@ -64,6 +66,61 @@ class TestListeningServer(unittest.TestCase):
         self.assertRegexpMatches(response, 'no_params')
 
 
+class TestListeningUDPServer(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.address = ('127.0.0.1', 10000)
+        cls.server = Server(
+            ListeningTestSystem,
+            ThreadingUDPServer,
+            args=(),
+            l_address=cls.address
+        )
+        cls.server.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.stop()
+
+    def tearDown(self):
+        time.sleep(0.1)
+
+    def test_proper_request(self):
+        response = get_response(self.address, msg='#command:a,b,c!', udp=True)
+        self.assertEqual(response, 'aabbcc')
+
+    def test_wrong_request(self):
+        """Wrong request but expected by the protocol"""
+        response = get_response(
+            self.address, msg='#wrong_command:foo!', udp=True
+        )
+        self.assertRegexpMatches(response, 'you sent a wrong command')
+
+    def test_value_error(self):
+        """The message of ValueError in the logfile"""
+        get_response(
+            self.address, msg='#valueerror:!', response=False, udp=True
+        )
+        self.assertTrue('unexpected value' in get_logs())
+
+    def test_unexpected_error(self):
+        get_response(
+            self.address, msg='#unexpected:!', response=False, udp=True
+        )
+        self.assertTrue('unexpected exception' in get_logs())
+
+    def test_custom_command_with_parameters(self):
+        response = get_response(
+            self.address, msg='$custom_command:a,b,c!', udp=True
+        )
+        self.assertRegexpMatches(response, 'ok_abc')
+
+    def test_custom_command_without_parameters(self):
+        response = get_response(self.address, msg='$custom_command!', udp=True)
+        self.assertRegexpMatches(response, 'no_params')
+
+
 class TestSendingServer(unittest.TestCase):
 
     @classmethod
@@ -71,6 +128,7 @@ class TestSendingServer(unittest.TestCase):
         cls.address = ('127.0.0.1', 10001)
         cls.server = Server(
             SendingTestSystem,
+            ThreadingTCPServer,
             args=(),
             s_address=cls.address
         )
@@ -98,6 +156,43 @@ class TestSendingServer(unittest.TestCase):
         )
 
 
+class TestSendingUDPServer(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.address = ('127.0.0.1', 10001)
+        cls.server = Server(
+            SendingTestSystem,
+            ThreadingUDPServer,
+            args=(),
+            s_address=cls.address
+        )
+        cls.server.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.stop()
+
+    def tearDown(self):
+        time.sleep(0.1)
+
+    def test_get_message(self):
+        response = get_response(self.address, udp=True)
+        self.assertEqual(response, 'message')
+
+    def test_unknown_command(self):
+        get_response(self.address, msg='$unknown!', response=False, udp=True)
+        self.assertTrue('command unknown not supported' in get_logs())
+
+    def test_raise_exception(self):
+        get_response(
+            self.address, msg='$raise_exception!', response=False, udp=True
+        )
+        self.assertTrue(
+            'unexpected exception raised by sendingtestsystem' in get_logs()
+        )
+
+
 class TestDuplexServer(unittest.TestCase):
 
     @classmethod
@@ -106,6 +201,7 @@ class TestDuplexServer(unittest.TestCase):
         cls.s_address = ('127.0.0.1', 10003)
         cls.server = Server(
             DuplexTestSystem,
+            ThreadingTCPServer,
             args=(),
             l_address=cls.l_address,
             s_address=cls.s_address
@@ -151,6 +247,67 @@ class TestDuplexServer(unittest.TestCase):
         self.assertEqual(s_response, message[1:-1])
 
 
+class TestDuplexUDPServer(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.l_address = ('127.0.0.1', 10002)
+        cls.s_address = ('127.0.0.1', 10003)
+        cls.server = Server(
+            DuplexTestSystem,
+            ThreadingUDPServer,
+            args=(),
+            l_address=cls.l_address,
+            s_address=cls.s_address
+        )
+        cls.server.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.stop()
+
+    def tearDown(self):
+        time.sleep(0.1)
+
+    def test_proper_request(self):
+        response = get_response(
+            self.l_address, msg='#command:a,b,c!', udp=True
+        )
+        self.assertEqual(response, 'aabbcc')
+
+    def test_wrong_request(self):
+        """Wrong request but expected by the protocol"""
+        response = get_response(
+            self.l_address, msg='#wrong_command:foo!', udp=True
+        )
+        self.assertRegexpMatches(response, 'you sent a wrong command')
+
+    def test_custom_command_with_parameters(self):
+        response = get_response(
+            self.l_address,
+            msg='$custom_command:a,b,c!',
+            udp=True
+        )
+        self.assertRegexpMatches(response, 'ok_abc')
+
+    def test_custom_command_without_parameters(self):
+        response = get_response(
+            self.l_address, msg='$custom_command!', udp=True
+        )
+        self.assertRegexpMatches(response, 'no_params')
+
+    def test_get_message(self):
+        response = get_response(self.s_address, udp=True)
+        self.assertEqual(response, 'message')
+
+    def test_last_cmd(self):
+        message = '#test:1,2,3!'
+        l_response = get_response(self.l_address, msg=message, udp=True)
+        self.assertEqual(l_response, '112233')
+        s_response = get_response(self.s_address, udp=True)
+        self.assertEqual(s_response, message[1:-1])
+
+
 class TestSimulator(unittest.TestCase):
 
     @classmethod
@@ -162,7 +319,7 @@ class TestSimulator(unittest.TestCase):
 
     def test_create_simulator_from_module(self):
         address = ('127.0.0.1', 10004)
-        self.mymodule.servers = [(address, (), ())]
+        self.mymodule.servers = [(address, (), ThreadingTCPServer, ())]
         self.mymodule.System = ListeningTestSystem
 
         simulator = Simulator(self.mymodule)
@@ -171,8 +328,8 @@ class TestSimulator(unittest.TestCase):
 
     def test_create_simulator_from_name(self):
         address = ('127.0.0.1', 10005)
-        self.mymodule.servers = [(address, (), ())]
-        self.mymodule.System = BaseSystem
+        self.mymodule.servers = [(address, (), ThreadingTCPServer, ())]
+        self.mymodule.System = ListeningTestSystem
 
         simulator = Simulator('mymodule')
         simulator.start(daemon=True)
@@ -180,7 +337,7 @@ class TestSimulator(unittest.TestCase):
 
     def test_start_and_stop_listening(self):
         address = ('127.0.0.1', 10006)
-        self.mymodule.servers = [(address, (), ())]
+        self.mymodule.servers = [(address, (), ThreadingTCPServer, ())]
         self.mymodule.System = ListeningTestSystem
 
         self.simulator.start(daemon=True)
@@ -192,7 +349,7 @@ class TestSimulator(unittest.TestCase):
 
     def test_start_and_stop_sending(self):
         address = ('127.0.0.1', 10007)
-        self.mymodule.servers = [((), address, ())]
+        self.mymodule.servers = [((), address, ThreadingTCPServer, ())]
         self.mymodule.System = SendingTestSystem
 
         self.simulator.start(daemon=True)
@@ -203,16 +360,16 @@ class TestSimulator(unittest.TestCase):
         self.simulator.stop()
 
     def test_start_and_stop_duplex(self):
-        l_address = ('127.0.0.1', 10008)
-        s_address = ('127.0.0.1', 10009)
-        self.mymodule.servers = [(l_address, s_address, ())]
+        l_addr = ('127.0.0.1', 10008)
+        s_addr = ('127.0.0.1', 10009)
+        self.mymodule.servers = [(l_addr, s_addr, ThreadingTCPServer, ())]
         self.mymodule.System = DuplexTestSystem
 
         self.simulator.start(daemon=True)
 
-        l_response = get_response(l_address, msg='#command:a,b,c!')
+        l_response = get_response(l_addr, msg='#command:a,b,c!')
         self.assertEqual(l_response, 'aabbcc')
-        s_response = get_response(s_address)
+        s_response = get_response(s_addr)
         self.assertEqual(s_response, 'command:a,b,c')
 
         self.simulator.stop()
@@ -224,9 +381,9 @@ class TestSimulator(unittest.TestCase):
         self.simulator.stop()
 
     def test_non_daemon_simulator(self):
-        l_address = ('127.0.0.1', 10010)
-        s_address = ('127.0.0.1', 10011)
-        self.mymodule.servers = [(l_address, s_address, ())]
+        l_addr = ('127.0.0.1', 10010)
+        s_addr = ('127.0.0.1', 10011)
+        self.mymodule.servers = [(l_addr, s_addr, ThreadingTCPServer, ())]
         self.mymodule.System = DuplexTestSystem
 
         simulator = Simulator(self.mymodule)
@@ -234,9 +391,9 @@ class TestSimulator(unittest.TestCase):
         t = Thread(target=simulator.start)
         t.start()
         time.sleep(0.1)
-        response = get_response(l_address, msg='$system_stop!')
+        response = get_response(l_addr, msg='$system_stop!')
         self.assertEqual(response, '$server_shutdown!')
-        response = get_response(s_address, msg='$system_stop!')
+        response = get_response(s_addr, msg='$system_stop!')
         self.assertEqual(response, '$server_shutdown!')
         t.join()
 
@@ -247,6 +404,7 @@ class TestServerVarious(unittest.TestCase):
         address = ('127.0.0.1', 10012)
         server = Server(
             ListeningTestSystem,
+            ThreadingTCPServer,
             args=(),
             l_address=address,
         )
@@ -260,24 +418,40 @@ class TestServerVarious(unittest.TestCase):
         t = Thread(target=shutdown, args=(self,))
         t.start()
         t.join()
-        while server.is_alive:
-            time.sleep(0.01)
 
     def test_server_no_addresses(self):
         with self.assertRaises(ValueError):
             Server(
                 ListeningTestSystem,
+                ThreadingTCPServer,
                 args=()
             )
 
+    def test_server_wrong_socket_type(self):
+        address = ('127.0.0.1', 10012)
+        with self.assertRaises(ValueError):
+            Server(
+                ListeningTestSystem,
+                object,
+                args=(),
+                l_address=address
+            )
 
-def get_response(server_address, msg=None, timeout=2.0, response=True):
+
+def get_response(
+        server_address, msg=None, timeout=2.0, response=True, udp=False):
     retval = b''
-    with socket_context(socket.AF_INET, socket.SOCK_STREAM) as sock:
+    if udp:
+        socket_type = socket.SOCK_DGRAM
+        if not msg:
+            msg = ''
+    else:
+        socket_type = socket.SOCK_STREAM
+    with socket_context(socket.AF_INET, socket_type) as sock:
         sock.settimeout(timeout)
         sock.connect(server_address)
-        if msg:
-            sock.sendall(msg)
+        if isinstance(msg, str):
+            sock.sendto(msg, server_address)
         if response:
             retval = sock.recv(1024)
     return retval
