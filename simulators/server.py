@@ -63,18 +63,23 @@ class BaseHandler(BaseRequestHandler):
 
 class ListenHandler(BaseHandler):
 
-    custom_msg = b''
-
     def setup(self):
         logging.info('Got connection from %s', self.client_address)
+        self.custom_msg = b''
 
     def handle(self):
         self.socket = self.request
         if isinstance(self.socket, tuple):  # UDP client
             msg, self.socket = self.socket
+            self._handle(msg)
         else:  # TCP client
-            msg = self.socket.recv(1024)
+            while True:
+                msg = self.socket.recv(1)
+                if not msg:
+                    break
+                self._handle(msg)
 
+    def _handle(self, msg):
         for byte in msg:
             try:
                 response = self.system.parse(byte)
@@ -121,11 +126,9 @@ class SendHandler(BaseHandler):
         message_queue = Queue(1)
 
         self.socket = self.request
-        udp = False
         msg = None
         if isinstance(self.socket, tuple):
             msg, self.socket = self.socket
-            udp = True
         self.socket.setblocking(False)
 
         self.system.subscribe(message_queue)
@@ -150,7 +153,7 @@ class SendHandler(BaseHandler):
             try:
                 response = message_queue.get(timeout=sampling_time)
                 self.socket.sendto(response, self.client_address)
-                if udp:
+                if self.socket.type == socket.SOCK_DGRAM:
                     break
             except Empty:
                 pass
