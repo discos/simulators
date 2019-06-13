@@ -6,6 +6,7 @@ exclude_lines =
     if __name__ == '__main__':
     self.fail\(.*\)
     except KeyboardInterrupt:
+    pragma: no cover
 include =
     ./*
 omit =
