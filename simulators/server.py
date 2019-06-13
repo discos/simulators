@@ -71,6 +71,7 @@ class ListenHandler(BaseHandler):
         self.socket = self.request
         if isinstance(self.socket, tuple):  # UDP client
             msg, self.socket = self.socket
+            msg += '\n'
             self._handle(msg)
         else:  # TCP client
             while True:
@@ -313,7 +314,7 @@ class Simulator(object):
                     sockobj.settimeout(1)
                     sockobj.connect(address)
                     sockobj.sendto('$system_stop!', address)
-                except Exception, ex:
+                except Exception, ex:  # pragma: no cover
                     logging.debug(ex)
                 finally:
                     sockobj.close()
