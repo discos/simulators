@@ -217,10 +217,12 @@ The ``servers`` list
 --------------------
 
 The elements of the ``servers`` list are tuples.  Each tuple is composed
-of three items:
+of four items:
 
 * the server listening address, ``l_address``
 * the server sending address, ``s_address``
+* the type of  threading server from the ``SocketServer`` package to use to run
+  the simulator
 * another tuple (let's call it ``args``) of possible arguments required
   by ``System.__init__()``.
 
@@ -229,51 +231,68 @@ Each element of the ``servers`` list represents an instance of the ``system``,
 to send the commands to pass to the ``System.parse()`` method. ``s_address`` is
 the address from which the server will send its data received via the queue
 registered to the system via the ``System.subscribe()`` method.
+The type of threading server from the ``SocketServer`` argument can be either
+``ThreadingTCPServer`` or ``ThreadingUDPServer``, depending on the type of
+socket the server has to use. These Python object types have to be imported as
+follows::
 
-For instance, let's suppose the system to simulate has 2 listening servers
-and no sending servers, the first one with address ``('192.168.100.10', 5000)``
-and the second one with address ``('192.168.100.10', 5001)``.  In that case
-we have to define the ``servers`` list as follows::
+    from SocketServer import ThreadingTCPServer
+
+or::
+
+    from SocketServer import ThreadingUDPServer
+
+Let's suppose the system to simulate has 2 listening TCP servers and no sending
+servers, the first one with address ``('192.168.100.10', 5000)`` and the second
+one with address ``('192.168.100.10', 5001)``.  In that case we have to define
+the ``servers`` list as follows::
 
     servers = [
-        ('192.168.100.10', 5000), (), ()),
-        ('192.168.100.10', 5001), (), ()),
+        ('192.168.100.10', 5000), (), ThreadingTCPServer, ()),
+        ('192.168.100.10', 5001), (), ThreadingTCPServer, ()),
     ]
 
 If our ``System`` class takes some extra arguments, let's say two integers,
 we have to pass them throgh the ``args`` tuple.  For instance::
 
     servers = [
-        ('192.168.100.10', 5000), (), (10, 20)),
-        ('192.168.100.10', 5001), (), (4, 5)),
+        ('192.168.100.10', 5000), (), ThreadingTCPServer, (10, 20)),
+        ('192.168.100.10', 5001), (), ThreadingTCPServer, (4, 5)),
     ]
 
-If the system we want to simulate has instead 3 sending servers and no listening
-servers, we have to define the ``servers`` list as follows::
+If the system we want to simulate has instead a single listening UDP server, we
+have to define the ``servers`` list as follows::
 
     servers = [
-        ((), ('192.168.100.10', 5002), ()),
-        ((), ('192.168.100.10', 5003), ()),
-        ((), ('192.168.100.11', 5000), ()),
+        ('192.168.100.10', 5000), (), ThreadingUDPServer, ()),
+    ]
+
+If the system we want to simulate has instead 3 sending TCP servers and no
+listening servers, we have to define the ``servers`` list as follows::
+
+    servers = [
+        ((), ('192.168.100.10', 5002), ThreadingTCPServer, ()),
+        ((), ('192.168.100.10', 5003), ThreadingTCPServer, ()),
+        ((), ('192.168.100.11', 5000), ThreadingTCPServer, ()),
     ]
 
 Finally, a system instance can act as both listening and sending server. In this case,
 each server list entry must be defined as follows::
 
     servers = [
-        (('192.168.100.10', 5003), ('192.168.100.10', 5004), ()),
-        (('192.168.100.10', 6000), ('192.168.100.10', 6001), ()),
+        (('192.168.100.10', 5003), ('192.168.100.10', 5004), ThreadingTCPServer, ()),
+        (('192.168.100.10', 6000), ('192.168.100.10', 6001), ThreadingTCPServer, ()),
     ]
 
 If you want to see another example, have a look at the
 :download:`active surface <../simulators/active_surface/__init__.py>` module.
-The active surface system is composed of 96 listening servers, and in fact
+The active surface system is composed of 96 listening TCP servers, and in fact
 its ``servers`` list in defined in the following way::
 
     servers = []
     for line in range(96):  # 96 servers
         l_address = ('0.0.0.0', 11000 + line)
-        servers.append((l_address, (), ()))  # No sending servers or extra args
+        servers.append((l_address, (), ThreadingTCPServer, ()))  # No sending servers or extra args
 
 
 The ``MultiTypeSystem`` class

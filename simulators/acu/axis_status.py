@@ -1772,6 +1772,8 @@ class MasterAxisStatus(SimpleAxisStatus):
                 v_Ist = 0
 
             self.p_Ist = p_Ist
+            v_Ist = max(v_Ist, int(round(-self.max_velocity * 1000000)))
+            v_Ist = min(v_Ist, int(round(self.max_velocity * 1000000)))
             self.v_Ist = v_Ist
             self.v_Soll = self.v_Ist
 

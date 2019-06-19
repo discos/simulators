@@ -2179,6 +2179,15 @@ class TestACU(unittest.TestCase):
         self.assertTrue(self.system.AZ.Fin_Limit_Up)
         self.assertTrue(self.system.EL.Fin_Limit_Up)
 
+    def test_exceeded_rate(self):
+        self.system.AZ.v_Ist = \
+            int(round(self.system.AZ.max_velocity * 1000000)) + 1
+        self.system.EL.v_Ist = \
+            int(round(self.system.EL.max_velocity * 1000000)) + 1
+        time.sleep(0.1)
+        self.assertTrue(self.system.AZ.Rate_Limit)
+        self.assertTrue(self.system.EL.Rate_Limit)
+
 
 class TestACUSimulator(unittest.TestCase):
 
