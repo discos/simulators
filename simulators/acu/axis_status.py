@@ -1595,6 +1595,8 @@ class MasterAxisStatus(SimpleAxisStatus):
         """
         self.axis_state = 0
         self.brakes_open = [False for __ in range(16)]
+        self.v_Ist = 0
+        self.v_Soll = 0
         self.executed_mode_command_counter = counter
         self.executed_mode_command = 1
         self.executed_mode_command_answer = 1
@@ -1713,6 +1715,7 @@ class MasterAxisStatus(SimpleAxisStatus):
 
         t0 = time.time()
         next_pos = None
+        final_pos = None
         while (not stop.value
                 and self.axis_trajectory_state == 7
                 and counter == self.curr_mode_counter):
@@ -1721,6 +1724,11 @@ class MasterAxisStatus(SimpleAxisStatus):
             t0 = t1
 
             next_pos = self.next_pos
+
+            if next_pos:
+                final_pos = next_pos
+            elif self.ptState == 4 and self.p_Ist != final_pos and final_pos:
+                next_pos = final_pos
 
             p_Ist = self.p_Ist
             v_Ist = self.v_Ist
@@ -1750,8 +1758,6 @@ class MasterAxisStatus(SimpleAxisStatus):
                     if self.p_Ist != self.p_Soll:
                         p_Ist = self.p_Ist
                         go_on = True
-                    else:
-                        break
 
                 if self.ptState == 3 or go_on:
                     self.p_Soll = self.p_Bahn + self.p_Offset
@@ -1836,10 +1842,13 @@ class MasterAxisStatus(SimpleAxisStatus):
         :param counter: same as the `_inactive` method.
         """
         if self.stow_pos:
+            self.curr_mode_counter = counter
             self.stow_pin_out = self.stow_pin_selection
             self.stow_pin_in = [False for __ in range(16)]
             self.Stowpins_Extracted = True
             self.stowed = True
+            self.v_Ist = 0
+            self.v_Soll = 0
 
         self.executed_mode_command_counter = counter
         self.executed_mode_command = 50
@@ -1852,6 +1861,7 @@ class MasterAxisStatus(SimpleAxisStatus):
         :param counter: same as the `_inactive` method.
         """
         if self.stow_pos:
+            self.curr_mode_counter = counter
             self.stow_pin_out = [False for __ in range(16)]
             self.stow_pin_in = self.stow_pin_selection
             self.Stowpins_Extracted = False
@@ -1872,15 +1882,17 @@ class MasterAxisStatus(SimpleAxisStatus):
         """
         stow_pos = int(stow_pos)
         if self.stow_pos:
+            self.curr_mode_counter = counter
             desired_pos = int(round(self.stow_pos[int(stow_pos)] * 1000000))
             desired_rate = int(round(rate * 1000000))
-            self.curr_mode_counter = counter
             if not self._move(counter, desired_pos, desired_rate, stop):
                 return
             self.stow_pin_out = self.stow_pin_selection
             self.stow_pin_in = [False for __ in range(16)]
             self.Stowpins_Extracted = True
             self.stowed = True
+            self.v_Ist = 0
+            self.v_Soll = 0
 
         self.executed_mode_command_counter = counter
         self.executed_mode_command = 52
