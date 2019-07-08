@@ -104,7 +104,7 @@ class PointingStatus(object):
         self.posEncEl = self.elevation.p_Ist
         self.pointOffsetEl = self.elevation.p_Offset
 
-        if self.ptState not in [0, 4]:
+        if self.ptState not in [0]:
             start_time = (
                 self.start_time
                 + timedelta(milliseconds=self.actPtTimeOffset)
@@ -143,6 +143,9 @@ class PointingStatus(object):
                     self.elevation.p_Bahn = int(
                         round(self.elevation_positions[-1] * 1000000)
                     )
+                    self.relative_times = []
+                    self.azimuth_positions = []
+                    self.elevation_positions = []
                     self.ptTableLength = 0
                     self.ptActTableIndex = 0
                     self.ptEndTableIndex = 0
@@ -211,10 +214,14 @@ class PointingStatus(object):
                 self.azimuth.next_pos = int(round(
                     self.azimuth_positions[0] * 1000000
                 ))
+            else:
+                self.azimuth.next_pos = None
             if self.elevation_positions:
                 self.elevation.next_pos = int(round(
                     self.elevation_positions[0] * 1000000
                 ))
+            else:
+                self.elevation.next_pos = None
 
     def actual_time(self):
         """This method returns the actual ACU time, which is equal to the
