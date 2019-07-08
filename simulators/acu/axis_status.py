@@ -119,6 +119,7 @@ class SimpleAxisStatus(object):
         self.stow_pin_selection = [False for __ in range(16)]
 
         self.ptState = 0
+        self.program_track_active = False
 
     @property
     def simulation(self):
@@ -1597,6 +1598,7 @@ class MasterAxisStatus(SimpleAxisStatus):
         self.brakes_open = [False for __ in range(16)]
         self.v_Ist = 0
         self.v_Soll = 0
+        self.axis_trajectory_state = 0
         self.executed_mode_command_counter = counter
         self.executed_mode_command = 1
         self.executed_mode_command_answer = 1
@@ -1618,6 +1620,7 @@ class MasterAxisStatus(SimpleAxisStatus):
         ]
         self.brakes_open = brakes_open
 
+        self.axis_trajectory_state = 1
         self.executed_mode_command_counter = counter
         self.executed_mode_command = 2
         self.executed_mode_command_answer = 1
@@ -1711,17 +1714,24 @@ class MasterAxisStatus(SimpleAxisStatus):
         self.executed_mode_command = 8
         self.executed_mode_command_answer = 1
 
-        self.axis_trajectory_state = 7  # 7: tracking
+        if self.program_track_active:
+            return
+        self.program_track_active = True
 
         t0 = time.time()
         next_pos = None
         final_pos = None
-        while (not stop.value
-                and self.axis_trajectory_state == 7
-                and counter == self.curr_mode_counter):
+        while not stop.value:
             t1 = time.time()
             delta_time = t1 - t0
             t0 = t1
+            if counter != self.curr_mode_counter:
+                if self.axis_trajectory_state != 7:
+                    break
+                else:
+                    counter = self.curr_mode_counter
+
+            self.axis_trajectory_state = 7  # 7: tracking
 
             next_pos = self.next_pos
 
@@ -1786,6 +1796,7 @@ class MasterAxisStatus(SimpleAxisStatus):
             time.sleep(0.01)
 
         self.v_Ist = 0
+        self.program_track_active = False
 
     # mode_id == 14
     def _interlock(self, counter, *_):
@@ -1885,6 +1896,7 @@ class MasterAxisStatus(SimpleAxisStatus):
             self.curr_mode_counter = counter
             desired_pos = int(round(self.stow_pos[int(stow_pos)] * 1000000))
             desired_rate = int(round(rate * 1000000))
+            self.axis_trajectory_state = 6
             if not self._move(counter, desired_pos, desired_rate, stop):
                 return
             self.stow_pin_out = self.stow_pin_selection
