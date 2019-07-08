@@ -1892,6 +1892,28 @@ class TestACU(unittest.TestCase):
         self.assertEqual(self.system.AZ.p_Ist, 183000000)
         self.assertEqual(self.system.EL.p_Ist, 87000000)
 
+    def test_program_track_execution_repeated(self):
+        self.test_program_track_command_load_new_table()
+
+        # Axis needs to be unstowed and activated before sending this command
+        self.test_mode_command_unstow()
+        self.test_mode_command_active()
+
+        for _ in range(2):
+            start_azimuth = ModeCommand(1, 8, None, 0.5)
+            start_elevation = ModeCommand(2, 8, None, 0.5)
+            command = Command(
+                start_azimuth,
+                start_elevation,
+            )
+            self._send(command.get())
+            time.sleep(5)
+
+        time.sleep(1)
+
+        self.assertEqual(self.system.AZ.p_Ist, 183000000)
+        self.assertEqual(self.system.EL.p_Ist, 87000000)
+
     def test_program_track_execution_with_offset(self):
         self.test_program_track_command_load_new_table()
         self.test_parameter_command_pt_time_correction()
