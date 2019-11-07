@@ -40,4 +40,4 @@ inside the repository directory:
 
 This command will install all the simulator libraries and scripts into your
 Python environment, and you will be able to use it and test it as soon as the
-previous command's execution is completed.
+previous command execution is completed.

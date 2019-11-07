@@ -6,7 +6,7 @@ Developers documentation
 
 Testing environment
 ===================
-In the contiunuos deployment workflow, the tests are executed more than
+In the continuous deployment workflow, the tests are executed more than
 once.  During development you will execute the tests locally, and
 after pushing your code to Github, the tests will be executed on
 `Travis-CI <https://travis-ci.org/>`__.
@@ -25,11 +25,13 @@ we need some dependencies.  Let's install them:
 .. code-block:: shell
 
    $ pip install coverage  # testing coverage tool
+   $ pip install codecov  # testing coverage tool
+   $ pip install coveralls  # testing coverage tool
    $ pip install prospector  # linter
    $ pip install sphinx  # documentation generator
    $ pip install sphinx_rtd_theme  # HTML doc theme
    $ pip install tox
-   $ sudo install ruby
+   $ sudo apt-get install ruby  # apt-get, yum, ...
    $ sudo gem install wwtd  # travis-ci locally
 
 
@@ -41,7 +43,7 @@ You can run all tests by executing just one command:
 
    $ wwtd
 
-The ``wwtd`` program reads the *travis.yml* file and executes
+The ``wwtd`` program reads the *.travis.yml* file and executes
 the tests accordingly.  You can also run the tests manually,
 one by one, as described in the following sections.
 
