@@ -1,4 +1,7 @@
 #!/usr/bin/python
+"""This library holds various useful functions that are widely used by all the
+simulators systems. Most of them handle low level operations such as
+conversions to and from binary strings or byte arrays."""
 import math
 import struct
 import importlib
