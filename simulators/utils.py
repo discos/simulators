@@ -347,7 +347,7 @@ def uint_to_bytes(val, n_bytes=4, little_endian=True):
 
 
 def sign(number):
-    """Returns the sign (-1, 0, 1) of a given number (int or float).
+    """Returns the sign (-1, 0, 1) of a given number (int or float) as an int.
 
     >>> sign(5632)
     1
@@ -364,7 +364,7 @@ def sign(number):
             '%s is not of a valid datatype. ' % str(number)
             + 'Use only int, long, or float.'
         )
-    return number and (1, -1)[number < 0]
+    return int(number and (1, -1)[number < 0])
 
 
 def mjd(date=None):

@@ -1,4 +1,5 @@
 import time
+from threading import Thread
 from multiprocessing import Value
 from ctypes import c_bool
 from SocketServer import ThreadingTCPServer
@@ -15,7 +16,9 @@ from simulators.active_surface.usd import USD
 servers = []
 for line in range(96):  # 96 servers
     l_address = ('0.0.0.0', 11000 + line)
-    servers.append((l_address, (), ThreadingTCPServer, ()))
+    servers.append((l_address, (), ThreadingTCPServer, (1, 17)))
+# While the protocol allows up to 32 USDs per line,
+# the SRT only has a maximum of 17 USDs on the same line
 
 
 class System(ListeningSystem):
@@ -55,17 +58,43 @@ class System(ListeningSystem):
     byte_ack = '\x06'
     byte_nak = '\x15'
 
+    max_usd_per_line = 32
+
     delay_step = 0.000512  # 512 microseconds
     slope_time = 10  # msec
 
-    def __init__(self):
+    def __init__(self, min_usd_index=0, max_usd_index=31):
+        self.initialized = False
+        if min_usd_index < 0 or min_usd_index > 31:
+            raise ValueError(
+                'Choose a minimum USD index between 0 and 31!'
+            )
+        elif max_usd_index < 0 or max_usd_index > 31:
+            raise ValueError(
+                'Choose a maximum USD index between 0 and 31!'
+            )
+        elif max_usd_index < min_usd_index:
+            raise ValueError(
+                'max_usd_index cannot be lower than min_usd_index!'
+            )
         self._set_default()
-        self.drivers = [USD() for _ in range(32)]
         self.stop = Value(c_bool, False)
+        self.min_usd_index = min_usd_index
+        self.drivers = [
+            USD() for _ in range(max_usd_index - min_usd_index + 1)
+        ]
+        self.positioning_thread = Thread(
+            target=self._positioning,
+            args=(self.drivers, self.stop)
+        )
+        self.positioning_thread.daemon = True
+        self.initialized = True
+        self.positioning_thread.start()
 
     def __del__(self):
-        self.stop.value = True
-        time.sleep(0.05)
+        if self.initialized:
+            self.stop.value = True
+            self.positioning_thread.join()
 
     def _set_default(self):
         """This method reset the received command string to its default value.
@@ -138,7 +167,7 @@ class System(ListeningSystem):
         else:
             binary = bin(ord(msg[1]))[2:].zfill(8)
 
-            driver = int(binary[3:], 2)
+            driver = int(binary[3:], 2) - self.min_usd_index
 
             nparams = int(binary[:3], 2)
             cparams = msg[3:(3 + nparams - 1)]
@@ -207,10 +236,10 @@ class System(ListeningSystem):
         else:
             if params[0] == -1:
                 for driver in self.drivers:
-                    driver.soft_trigger(self.stop)
+                    driver.soft_trigger()
                 return None
             else:
-                self.drivers[params[0]].soft_trigger(self.stop)
+                self.drivers[params[0]].soft_trigger()
                 return self.byte_ack
 
     def _get_version(self, params):
@@ -236,7 +265,7 @@ class System(ListeningSystem):
             elif params[1] == 0xFC:
                 byte_nbyte_address = (
                     int(bin(1)[2:].zfill(3)
-                    + bin(params[0])[2:].zfill(5), 2)
+                    + bin(params[0] + self.min_usd_index)[2:].zfill(5), 2)
                 )
                 retval += (
                     chr(byte_nbyte_address)
@@ -300,7 +329,7 @@ class System(ListeningSystem):
             elif params[1] == 0xFC:
                 byte_nbyte_address = (
                     int(bin(4)[2:].zfill(3)
-                    + bin(params[0])[2:].zfill(5), 2)
+                    + bin(params[0] + self.min_usd_index)[2:].zfill(5), 2)
                 )
                 retval += chr(byte_nbyte_address) + val
 
@@ -332,7 +361,7 @@ class System(ListeningSystem):
             elif params[1] == 0xFC:
                 byte_nbyte_address = (
                     int(bin(3)[2:].zfill(3)
-                    + bin(params[0])[2:].zfill(5), 2)
+                    + bin(params[0] + self.min_usd_index)[2:].zfill(5), 2)
                 )
                 retval += chr(byte_nbyte_address) + status
 
@@ -362,7 +391,7 @@ class System(ListeningSystem):
             elif params[1] == 0xFC:
                 byte_nbyte_address = (
                     int(bin(1)[2:].zfill(3)
-                    + bin(params[0])[2:].zfill(5), 2)
+                    + bin(params[0] + self.min_usd_index)[2:].zfill(5), 2)
                 )
                 retval += (
                     chr(byte_nbyte_address)
@@ -503,18 +532,17 @@ class System(ListeningSystem):
             else:
                 return self.byte_nak
         else:
-            reference_position = utils.bytes_to_int(
+            reference_pos = utils.bytes_to_int(
                 [chr(x) for x in params[2]],
                 little_endian=False
             )
 
             if params[0] == -1:
                 for driver in self.drivers:
-                    driver.set_reference_position(reference_position)
+                    driver.set_reference_position(reference_pos)
                 return None
             else:
-                self.drivers[params[0]].set_reference_position(
-                    reference_position)
+                self.drivers[params[0]].set_reference_position(reference_pos)
                 return self.byte_ack
 
     def _set_io_pins(self, params):
@@ -685,14 +713,14 @@ class System(ListeningSystem):
 
             if params[0] == -1:
                 for driver in self.drivers:
-                    driver.set_absolute_position(absolute_position, self.stop)
+                    driver.set_absolute_position(absolute_position)
                 return None
             else:
-                self.drivers[params[0]].set_absolute_position(
-                    absolute_position,
-                    self.stop
-                )
-                return self.byte_ack
+                driver = self.drivers[params[0]]
+                if driver.set_absolute_position(absolute_position):
+                    return self.byte_ack
+                else:
+                    return self.byte_nak
 
     def _set_relative_position(self, params):
         """This method calls the desired USD's `soft_reset` method.
@@ -721,14 +749,14 @@ class System(ListeningSystem):
 
             if params[0] == -1:
                 for driver in self.drivers:
-                    driver.set_relative_position(relative_position, self.stop)
+                    driver.set_relative_position(relative_position)
                 return None
             else:
-                self.drivers[params[0]].set_relative_position(
-                    relative_position,
-                    self.stop
-                )
-                return self.byte_ack
+                driver = self.drivers[params[0]]
+                if driver.set_relative_position(relative_position):
+                    return self.byte_ack
+                else:
+                    return self.byte_nak
 
     def _rotate(self, params):
         """This method calls the desired USD's `soft_reset` method.
@@ -749,15 +777,16 @@ class System(ListeningSystem):
             else:
                 return self.byte_nak
         else:
-            param = utils.twos_to_int(bin(params[2][0])[2:].zfill(8))
-            sign = +1 if param >= 0 else -1
+            sign = utils.sign(
+                utils.twos_to_int(bin(params[2][0])[2:].zfill(8))
+            )
             # Start an infinite rotation, sign = direction
             if params[0] == -1:
                 for driver in self.drivers:
-                    driver.rotate(sign, self.stop)
+                    driver.rotate(sign)
                 return None
             else:
-                if self.drivers[params[0]].rotate(sign, self.stop):
+                if self.drivers[params[0]].rotate(sign):
                     return self.byte_ack
                 else:
                     return self.byte_nak
@@ -794,11 +823,13 @@ class System(ListeningSystem):
             else:
                 if params[0] == -1:
                     for driver in self.drivers:
-                        driver.set_velocity(velocity, self.stop)
+                        driver.set_velocity(velocity)
                     return None
                 else:
-                    self.drivers[params[0]].set_velocity(velocity, self.stop)
-                    return self.byte_ack
+                    if self.drivers[params[0]].set_velocity(velocity):
+                        return self.byte_ack
+                    else:
+                        return self.byte_nak
 
     def _set_stop_io(self, params):
         """This method calls the desired USD's `set_stop_io` method.
@@ -910,3 +941,18 @@ class System(ListeningSystem):
             else:
                 self.drivers[params[0]].set_working_mode(params[2])
                 return self.byte_ack
+
+    @staticmethod
+    def _positioning(drivers, stop):
+        t0 = time.time()
+        while not stop.value:
+            t1 = time.time()
+            elapsed = t1 - t0
+            t0 = t1
+
+            for driver in drivers:
+                driver.calc_position(elapsed)
+
+            t2 = time.time()
+            elapsed = t2 - t1
+            time.sleep(max(0.01 - elapsed, 0))

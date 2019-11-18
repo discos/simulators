@@ -1,5 +1,6 @@
 import unittest
 import time
+from random import randrange
 from simulators.active_surface import command_library, System
 from simulators import utils
 
@@ -760,7 +761,14 @@ class TestCommandLibrary(unittest.TestCase):
 class TestASParse(unittest.TestCase):
 
     def setUp(self):
-        self.system = System()
+        # Using only 5 random USDs per line instead of testing
+        # the full line will speed up the testing process
+        self.min_usd_index = randrange(28)
+        self.max_usd_index = self.min_usd_index + 4
+        self.system = System(
+            min_usd_index=self.min_usd_index,
+            max_usd_index=self.max_usd_index
+        )
         # Set the response delay to 0 to speed up the tests
         for driver in self.system.drivers:
             driver.delay_multiplier = 0
@@ -784,7 +792,7 @@ class TestASParse(unittest.TestCase):
         or equal to `True` for a broadcast one, as expected by the protocol.
         """
         binary_length = bin(len(command))[2:].zfill(3)
-        for i in range(len(self.system.drivers)):
+        for i in range(self.min_usd_index, self.max_usd_index + 1):
             binary_index = bin(i)[2:].zfill(5)
             byte_nbyte_address = binary_length + binary_index
             byte_nbyte_address = utils.binary_to_bytes(byte_nbyte_address)
@@ -803,6 +811,18 @@ class TestASParse(unittest.TestCase):
             msg += command
             msg += utils.checksum(msg)
             self.assertTrue(self._send_cmd(msg))
+
+    def test_min_usd_out_of_range(self):
+        with self.assertRaises(ValueError):
+            System(min_usd_index=-1)
+
+    def test_max_usd_out_of_range(self):
+        with self.assertRaises(ValueError):
+            System(max_usd_index=40)
+
+    def test_messed_up_usd_indexes(self):
+        with self.assertRaises(ValueError):
+            System(min_usd_index=10, max_usd_index=1)
 
     def test_fa_header(self):
         """Return True when the first byte is the 0xFA header."""
@@ -871,7 +891,9 @@ class TestASParse(unittest.TestCase):
     def test_soft_reset(self):
         """The system returns True for every proper byte, and
         returns the byte_ack when the message is completed."""
-        for i in range(len(self.system.drivers)):
+        for i in range(self.min_usd_index, self.max_usd_index + 1):
+            # Speed up the tests
+            self.system.drivers[i - self.min_usd_index].driver_reset_delay = 0
             for address_on_response in [True, False]:
                 msg = command_library.soft_reset(
                     usd_index=i,
@@ -886,20 +908,26 @@ class TestASParse(unittest.TestCase):
     def test_broadcast_soft_reset(self):
         """A proper broadcast command always returns True, also when
         the message is completed."""
+        for i in range(self.min_usd_index, self.max_usd_index + 1):
+            # Speed up the tests
+            self.system.drivers[i - self.min_usd_index].driver_reset_delay = 0
         for address_on_response in [True, False]:
             msg = command_library.soft_reset(
                 address_on_response=address_on_response
             )
             self.assertTrue(self._send_cmd(msg))
 
+    def _send_soft_trigger(self, address_on_response):
+        for index in range(self.min_usd_index, self.max_usd_index + 1):
+            msg = command_library.soft_trigger(
+                usd_index=index,
+                address_on_response=address_on_response
+            )
+            self.assertEqual(self._send_cmd(msg), byte_ack)
+
     def test_soft_trigger(self):
-        for i in range(len(self.system.drivers)):
-            for address_on_response in [True, False]:
-                msg = command_library.soft_trigger(
-                    usd_index=i,
-                    address_on_response=address_on_response
-                )
-                self.assertEqual(self._send_cmd(msg), byte_ack)
+        for address_on_response in [True, False]:
+            self._send_soft_trigger(address_on_response)
 
     def test_wrong_soft_trigger(self):
         command = '\x02\x00'
@@ -918,7 +946,7 @@ class TestASParse(unittest.TestCase):
         expressed as a byte when the message is completed."""
         expected_version = '\x13'
         binary_length = bin(len(expected_version))[2:].zfill(3)
-        for i in range(len(self.system.drivers)):
+        for i in range(self.min_usd_index, self.max_usd_index + 1):
             for address_on_response in [True, False]:
                 msg = command_library.get_version(
                     usd_index=i,
@@ -954,7 +982,7 @@ class TestASParse(unittest.TestCase):
             self.assertTrue(self._send_cmd(msg))
 
     def test_soft_stop(self):
-        for i in range(len(self.system.drivers)):
+        for i in range(self.min_usd_index, self.max_usd_index + 1):
             for address_on_response in [True, False]:
                 msg = command_library.soft_stop(
                     usd_index=i,
@@ -979,7 +1007,7 @@ class TestASParse(unittest.TestCase):
         expressed as 4 bytes when the message is completed."""
         expected_position = '\x00\x00\x00\x00'  # Default position is 0
         binary_length = bin(len(expected_position))[2:].zfill(3)
-        for i in range(len(self.system.drivers)):
+        for i in range(self.min_usd_index, self.max_usd_index + 1):
             for address_on_response in [True, False]:
                 msg = command_library.get_position(
                     usd_index=i,
@@ -1018,9 +1046,9 @@ class TestASParse(unittest.TestCase):
         """The system returns True for every proper byte, and
         returns the byte_ack followed by the current driver status
         expressed as 3 bytes when the message is completed."""
-        expected_status = '\x00\x20\x18'
+        expected_status = '\x00\x20\x11'
         binary_length = bin(len(expected_status))[2:].zfill(3)
-        for i in range(len(self.system.drivers)):
+        for i in range(self.min_usd_index, self.max_usd_index + 1):
             for address_on_response in [True, False]:
                 msg = command_library.get_status(
                     usd_index=i,
@@ -1061,7 +1089,7 @@ class TestASParse(unittest.TestCase):
         expressed as a byte when the message is completed."""
         expected_type = '\x20'  # Default type is USD50XXX
         binary_length = bin(len(expected_type))[2:].zfill(3)
-        for i in range(len(self.system.drivers)):
+        for i in range(self.min_usd_index, self.max_usd_index + 1):
             for address_on_response in [True, False]:
                 msg = command_library.get_driver_type(
                     usd_index=i,
@@ -1099,7 +1127,7 @@ class TestASParse(unittest.TestCase):
     def test_set_in_range_min_frequency(self, frequency=20):
         """Setting min freq to 20Hz, allowed range is 20-10000Hz, so the
         system returns the byte_ack"""
-        for i in range(len(self.system.drivers)):
+        for i in range(self.min_usd_index, self.max_usd_index + 1):
             for address_on_response in [True, False]:
                 msg = command_library.set_min_frequency(
                     frequency=frequency,
@@ -1119,7 +1147,7 @@ class TestASParse(unittest.TestCase):
     def test_set_out_range_min_frequency(self):
         """Setting min freq to 10Hz, outside the allowed range, so the system
         returns the byte_nak"""
-        for i in range(len(self.system.drivers)):
+        for i in range(self.min_usd_index, self.max_usd_index + 1):
             for address_on_response in [True, False]:
                 msg = command_library.set_min_frequency(
                     frequency=10,
@@ -1142,7 +1170,7 @@ class TestASParse(unittest.TestCase):
 
     def test_set_exceeding_min_frequency(self):
         self.test_set_in_range_max_frequency(frequency=1000)
-        for i in range(len(self.system.drivers)):
+        for i in range(self.min_usd_index, self.max_usd_index + 1):
             for address_on_response in [True, False]:
                 msg = command_library.set_min_frequency(
                     frequency=10000,
@@ -1154,7 +1182,7 @@ class TestASParse(unittest.TestCase):
     def test_set_in_range_max_frequency(self, frequency=10000):
         """Setting max freq to 10000Hz, allowed range is 20-10000Hz, so the
         system returns the byte_ack"""
-        for i in range(len(self.system.drivers)):
+        for i in range(self.min_usd_index, self.max_usd_index + 1):
             for address_on_response in [True, False]:
                 msg = command_library.set_max_frequency(
                     frequency=frequency,
@@ -1174,7 +1202,7 @@ class TestASParse(unittest.TestCase):
     def test_set_out_range_max_frequency(self):
         """Setting max freq to 11000Hz, outside the allowed range,
         so the system returns the byte_nak"""
-        for i in range(len(self.system.drivers)):
+        for i in range(self.min_usd_index, self.max_usd_index + 1):
             for address_on_response in [True, False]:
                 msg = command_library.set_max_frequency(
                     frequency=11000,
@@ -1197,7 +1225,7 @@ class TestASParse(unittest.TestCase):
 
     def test_set_exceeding_max_frequency(self):
         self.test_set_in_range_min_frequency(frequency=1000)
-        for i in range(len(self.system.drivers)):
+        for i in range(self.min_usd_index, self.max_usd_index + 1):
             for address_on_response in [True, False]:
                 msg = command_library.set_max_frequency(
                     frequency=20,
@@ -1207,7 +1235,7 @@ class TestASParse(unittest.TestCase):
                 self.assertEqual(self._send_cmd(msg), byte_nak)
 
     def test_set_slope_multiplier(self):
-        for i in range(len(self.system.drivers)):
+        for i in range(self.min_usd_index, self.max_usd_index + 1):
             for address_on_response in [True, False]:
                 msg = command_library.set_slope_multiplier(
                     multiplier=10,
@@ -1230,7 +1258,7 @@ class TestASParse(unittest.TestCase):
             self.assertTrue(self._send_cmd(msg))
 
     def test_set_reference_position(self):
-        for i in range(len(self.system.drivers)):
+        for i in range(self.min_usd_index, self.max_usd_index + 1):
             for address_on_response in [True, False]:
                 msg = command_library.set_reference_position(
                     position=0,
@@ -1253,7 +1281,7 @@ class TestASParse(unittest.TestCase):
 
     def test_set_io_pins(self):
         for byte_value in range(256):
-            for i in range(len(self.system.drivers)):
+            for i in range(self.min_usd_index, self.max_usd_index + 1):
                 for address_on_response in [True, False]:
                     msg = command_library.set_io_pins(
                         byte_value=byte_value,
@@ -1277,7 +1305,7 @@ class TestASParse(unittest.TestCase):
 
     def test_set_resolution(self):
         for resolution in range(256):
-            for i in range(len(self.system.drivers)):
+            for i in range(self.min_usd_index, self.max_usd_index + 1):
                 for address_on_response in [True, False]:
                     msg = command_library.set_resolution(
                         resolution=resolution,
@@ -1301,7 +1329,7 @@ class TestASParse(unittest.TestCase):
 
     def test_reduce_current(self):
         for byte_value in range(256):
-            for i in range(len(self.system.drivers)):
+            for i in range(self.min_usd_index, self.max_usd_index + 1):
                 for address_on_response in [True, False]:
                     msg = command_library.reduce_current(
                         byte_value=byte_value,
@@ -1324,7 +1352,7 @@ class TestASParse(unittest.TestCase):
                 self.assertTrue(self._send_cmd(msg))
 
     def test_set_finite_delay(self):
-        for i in range(len(self.system.drivers)):
+        for i in range(self.min_usd_index, self.max_usd_index + 1):
             for address_on_response in [True, False]:
                 msg = command_library.set_response_delay(
                     delay=0,
@@ -1342,7 +1370,7 @@ class TestASParse(unittest.TestCase):
             self.assertTrue(self._send_cmd(msg))
 
     def test_set_infinite_delay(self):
-        for i in range(len(self.system.drivers)):
+        for i in range(self.min_usd_index, self.max_usd_index + 1):
             for address_on_response in [True, False]:
                 msg = command_library.set_response_delay(
                     delay=255,
@@ -1363,16 +1391,24 @@ class TestASParse(unittest.TestCase):
         command = '\x28'
         self._test_wrong_cmd(command)
 
+    def _toggle_delayed_execution(self, byte_value,
+                                  usd_index, address_on_response):
+        msg = command_library.toggle_delayed_execution(
+            byte_value=byte_value,
+            usd_index=usd_index,
+            address_on_response=address_on_response
+        )
+        self.assertEqual(self._send_cmd(msg), byte_ack)
+
     def test_toggle_delayed_execution(self):
         for byte_value in range(256):
-            for i in range(len(self.system.drivers)):
+            for i in range(self.min_usd_index, self.max_usd_index + 1):
                 for address_on_response in [True, False]:
-                    msg = command_library.toggle_delayed_execution(
-                        byte_value=byte_value,
-                        usd_index=i,
-                        address_on_response=address_on_response
+                    self._toggle_delayed_execution(
+                        byte_value,
+                        i,
+                        address_on_response
                     )
-                    self.assertEqual(self._send_cmd(msg), byte_ack)
 
     def test_wrong_toggle_delayed_execution(self):
         command = '\x29'
@@ -1387,15 +1423,22 @@ class TestASParse(unittest.TestCase):
                 )
                 self.assertTrue(self._send_cmd(msg))
 
-    def test_set_absolute_position(self, position=0):
-        for i in range(len(self.system.drivers)):
-            for address_on_response in [True, False]:
-                msg = command_library.set_absolute_position(
-                    position=position,
-                    usd_index=i,
-                    address_on_response=address_on_response
-                )
-                self.assertEqual(self._send_cmd(msg), byte_ack)
+    def _enqueue_absolute_position(self, position, index, address_on_response):
+        msg = command_library.set_absolute_position(
+            position=position,
+            usd_index=index,
+            address_on_response=address_on_response
+        )
+        self.assertEqual(self._send_cmd(msg), byte_ack)
+
+    def test_set_absolute_position(self, position=10000):
+        for address_on_response in [True, False]:
+            pos = position if address_on_response else -position
+            for i in range(self.min_usd_index, self.max_usd_index + 1):
+                self._enqueue_absolute_position(pos, i, address_on_response)
+            time.sleep(0.05)
+            for driver in self.system.drivers:
+                self.assertEqual(driver.current_position, pos)
 
     def test_wrong_set_absolute_position(self):
         command = '\x30'
@@ -1409,15 +1452,37 @@ class TestASParse(unittest.TestCase):
             )
             self.assertTrue(self._send_cmd(msg))
 
-    def test_set_relative_position(self, position=0):
-        for i in range(len(self.system.drivers)):
-            for address_on_response in [True, False]:
+    def _enqueue_relative_position(self, position, index, address_on_response):
+        msg = command_library.set_relative_position(
+            position=position,
+            usd_index=index,
+            address_on_response=address_on_response
+        )
+        self.assertEqual(self._send_cmd(msg), byte_ack)
+
+    def test_set_relative_position(self, position=10000):
+        current_positions = {}
+        for address_on_response in [True, False]:
+            pos = position if address_on_response else -position
+            for i in range(self.min_usd_index, self.max_usd_index + 1):
+                usd_index = i - self.min_usd_index
+                current_positions[i] = \
+                    self.system.drivers[usd_index].current_position
                 msg = command_library.set_relative_position(
-                    position=position,
+                    position=pos,
                     usd_index=i,
                     address_on_response=address_on_response
                 )
                 self.assertEqual(self._send_cmd(msg), byte_ack)
+            time.sleep(0.05)
+            for i in range(self.min_usd_index, self.max_usd_index + 1):
+                exp = current_positions[i] + pos
+                usd_index = i - self.min_usd_index
+                self.assertEqual(
+                    self.system.drivers[usd_index].current_position,
+                    exp
+                )
+                current_positions[i] = exp
 
     def test_wrong_set_relative_position(self):
         command = '\x31'
@@ -1431,26 +1496,22 @@ class TestASParse(unittest.TestCase):
             )
             self.assertTrue(self._send_cmd(msg))
 
-    def test_rotate(self, should_fail=False):
+    def test_rotate(self):
         """The driver starts to rotate according to its set velocity.
         The last byte of the message (before the checksum)
         holds an int in twos complement notation, its sign (+ or -)
         represents the direction in which the motor will rotate."""
-        if should_fail:
-            expected_response = byte_nak
-        else:
-            expected_response = byte_ack
         for direction in [-1, 1]:
             for address_on_response in [True, False]:
-                for i in range(len(self.system.drivers)):
+                for i in range(self.min_usd_index, self.max_usd_index + 1):
                     msg = command_library.rotate(
                         direction=direction,
                         usd_index=i,
                         address_on_response=address_on_response
                     )
-                    self.assertEqual(self._send_cmd(msg), expected_response)
+                    self.assertEqual(self._send_cmd(msg), byte_ack)
                 self.test_soft_stop()
-                time.sleep(0.025)
+                time.sleep(0.01)
 
     def test_wrong_rotate(self):
         command = '\x32'
@@ -1466,8 +1527,8 @@ class TestASParse(unittest.TestCase):
                 self.assertTrue(self._send_cmd(msg))
 
     def test_set_velocity(self, velocity=0):
-        for i in range(len(self.system.drivers)):
-            for address_on_response in [True, False]:
+        for address_on_response in [True, False]:
+            for i in range(self.min_usd_index, self.max_usd_index + 1):
                 msg = command_library.set_velocity(
                     velocity=velocity,
                     usd_index=i,
@@ -1478,32 +1539,45 @@ class TestASParse(unittest.TestCase):
     def test_set_in_range_velocity(self):
         """Setting velocity in a range between -100000 and +100000
         tenths of Hz."""
-        starting_pos = []
-        for driver in self.system.drivers:
-            starting_pos.append(driver.current_position)
-
         self.test_set_velocity(100000)
 
-        time.sleep(0.01)
+        time.sleep(0.015)
 
-        current_pos = []
         for driver in self.system.drivers:
-            current_pos.append(driver.current_position)
+            self.assertTrue(driver.running)
+            self.assertEqual(driver.velocity, 100000)
 
-        for i in range(len(self.system.drivers)):
-            self.assertNotEqual(starting_pos[i], current_pos[i])
+    def test_set_zero_velocity(self):
+        self.test_set_velocity()
+
+        time.sleep(0.015)
+
+        for driver in self.system.drivers:
+            self.assertFalse(driver.running)
+            self.assertEqual(driver.velocity, None)
+
+    def test_too_low_velocity(self):
+        for address_on_response in [True, False]:
+            velocity = 5 if address_on_response else -5
+            for i in range(self.min_usd_index, self.max_usd_index + 1):
+                msg = command_library.set_velocity(
+                    velocity=velocity,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(self._send_cmd(msg), byte_nak)
 
     def test_broadcast_set_in_range_velocity(self):
         for address_on_response in [True, False]:
             msg = command_library.set_velocity(
-                velocity=0,
+                velocity=100000,
                 address_on_response=address_on_response
             )
             self.assertTrue(self._send_cmd(msg))
 
     def test_set_out_range_velocity(self):
         """Setting velocity outside allowed range. (8388607 tenths of Hz)."""
-        for i in range(len(self.system.drivers)):
+        for i in range(self.min_usd_index, self.max_usd_index + 1):
             for address_on_response in [True, False]:
                 msg = command_library.set_velocity(
                     velocity=8388607,
@@ -1526,7 +1600,7 @@ class TestASParse(unittest.TestCase):
 
     def test_set_stop_io(self):
         for byte_value in range(256):
-            for i in range(len(self.system.drivers)):
+            for i in range(self.min_usd_index, self.max_usd_index + 1):
                 for address_on_response in [True, False]:
                     msg = command_library.set_stop_io(
                         byte_value=byte_value,
@@ -1550,7 +1624,7 @@ class TestASParse(unittest.TestCase):
 
     def test_set_positioning_io(self):
         for byte_value in range(256):
-            for i in range(len(self.system.drivers)):
+            for i in range(self.min_usd_index, self.max_usd_index + 1):
                 for address_on_response in [True, False]:
                     msg = command_library.set_positioning_io(
                         byte_value=byte_value,
@@ -1574,7 +1648,7 @@ class TestASParse(unittest.TestCase):
 
     def test_set_home_io(self):
         for byte_value in range(256):
-            for i in range(len(self.system.drivers)):
+            for i in range(self.min_usd_index, self.max_usd_index + 1):
                 for address_on_response in [True, False]:
                     msg = command_library.set_home_io(
                         byte_value=byte_value,
@@ -1598,7 +1672,7 @@ class TestASParse(unittest.TestCase):
 
     def test_set_working_mode(self):
         for byte_value in range(256):
-            for i in range(len(self.system.drivers)):
+            for i in range(self.min_usd_index, self.max_usd_index + 1):
                 for address_on_response in [True, False]:
                     msg = command_library.set_working_mode(
                         byte_value=byte_value,
@@ -1621,46 +1695,87 @@ class TestASParse(unittest.TestCase):
                 self.assertTrue(self._send_cmd(msg))
 
     def test_delayed_execution(self):
-        self.test_toggle_delayed_execution()
-        self.test_set_absolute_position(2000)
-        self.test_set_relative_position(4000)
+        for index in range(self.min_usd_index, self.max_usd_index + 1):
+            self._toggle_delayed_execution(255, index, True)
+            self._enqueue_absolute_position(2000, index, True)
+            self._enqueue_relative_position(4000, index, True)
 
         for driver in self.system.drivers:
             self.assertEqual(driver.current_position, 0)
 
-        self.test_soft_trigger()
+        self._send_soft_trigger(True)
 
-        time.sleep(0.25)
+        time.sleep(0.015)
         for driver in self.system.drivers:
             self.assertEqual(driver.current_position, 2000)
+            self.assertFalse(driver.running)
 
-        self.test_soft_trigger()
+        self._send_soft_trigger(True)
 
-        time.sleep(0.25)
+        time.sleep(0.015)
         for driver in self.system.drivers:
-            self.assertEqual(driver.current_position, 4000)
+            self.assertEqual(driver.current_position, 6000)
+            self.assertFalse(driver.running)
+
+    def test_absolute_position_while_moving(self):
+        self.test_set_in_range_velocity()
+
+        for address_on_response in [True, False]:
+            position = 10000 if address_on_response else -10000
+            for i in range(self.min_usd_index, self.max_usd_index + 1):
+                msg = command_library.set_absolute_position(
+                    position=position,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(self._send_cmd(msg), byte_nak)
+
+    def test_relative_position_while_moving(self):
+        self.test_set_in_range_velocity()
+
+        for address_on_response in [True, False]:
+            position = 10000 if address_on_response else -10000
+            for i in range(self.min_usd_index, self.max_usd_index + 1):
+                msg = command_library.set_relative_position(
+                    position=position,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(self._send_cmd(msg), byte_nak)
 
     def test_rotate_while_moving(self):
         self.test_set_in_range_velocity()
-        self.test_rotate(should_fail=True)
+
+        for direction in [-1, 1]:
+            for address_on_response in [True, False]:
+                for i in range(self.min_usd_index, self.max_usd_index + 1):
+                    msg = command_library.rotate(
+                        direction=direction,
+                        usd_index=i,
+                        address_on_response=address_on_response
+                    )
+                    self.assertEqual(self._send_cmd(msg), byte_nak)
 
     def test_multiple_set_velocity(self):
         self.test_set_in_range_velocity()
         self.test_set_velocity()
 
-    def test_velocity_upper_limit(self):
+    def test_current_reduction_after_movement(self):
+        for i in range(self.min_usd_index, self.max_usd_index + 1):
+            byte_value = '11000000'  # 50% of current after 4096microseconds
+            byte_value = utils.binary_to_bytes(byte_value, 1)
+            for address_on_response in [True, False]:
+                msg = command_library.reduce_current(
+                    byte_value=byte_value,
+                    usd_index=i,
+                    address_on_response=address_on_response
+                )
+                self.assertEqual(self._send_cmd(msg), byte_ack)
+        self.test_set_absolute_position()
+
         for driver in self.system.drivers:
-            driver.current_position = 2147483640
-
-        self.test_set_velocity(1000)
-        time.sleep(0.3)
-
-    def test_velocity_lower_limit(self):
-        for driver in self.system.drivers:
-            driver.current_position = -2147483640
-
-        self.test_set_velocity(-1000)
-        time.sleep(0.3)
+            self.assertFalse(driver.full_current)
+            self.assertEqual(driver.current_percentage, 0.5)
 
 
 if __name__ == '__main__':

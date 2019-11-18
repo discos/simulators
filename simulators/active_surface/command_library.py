@@ -726,6 +726,7 @@ def set_working_mode(byte_value, usd_index=None, address_on_response=True):
     params = [byte_value, '\x00']
     return _compose(address_on_response, usd_index, '\x2D', params)
 
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
