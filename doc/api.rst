@@ -11,6 +11,28 @@ API
     important right here and provide links to the canonical documentation.
 
 
+Common module
+=============
+
+.. module:: simulators.common
+
+
+BaseSystem class
+~~~~~~~~~~~~~~~~
+
+.. autoclass:: BaseSystem
+   :members:
+   :inherited-members:
+
+
+ListeningSystem class
+~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: ListeningSystem
+   :members:
+   :inherited-members:
+
+
 Server module
 =============
 

@@ -1,19 +1,15 @@
 .. _setup:
 
-***************
-Package install
-***************
+*************
+Package setup
+*************
 
 .. topic:: Preface
 
    This project requires Python 2.7.
    The following section will guide you through the package setup process.
    Installing the required Python dependencies and the package itself will
-   require no longer than 5 minutes. If you want to know how to write a
-   simulator, how to run the tests or how to contribute to this project, then
-   you have to read the :ref:`developer` section after installing the package.
-   If you just want to know how to use the simulators in order to run your code
-   without the real hardware, then you should read the :ref:`user` chapter.
+   require no longer than 5 minutes.
 
 
 Install the package
@@ -41,3 +37,10 @@ inside the repository directory:
 This command will install all the simulator libraries and scripts into your
 Python environment, and you will be able to use it and test it as soon as the
 previous command execution is completed.
+
+
+.. note:: Now that you successfully installed the package, if you want to know
+   how to write a simulator, how to run the tests or how to contribute to this
+   project, read the :ref:`developer` section. If you just want to know how to
+   use the simulators in order to run your code without having to rely on the
+   real hardware, then you can jump to the :ref:`user` chapter.
