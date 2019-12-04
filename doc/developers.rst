@@ -180,14 +180,14 @@ The ``SendingSystem`` class and the ``System.subscribe()`` and ``System.unsubscr
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If the ``System`` class inherits from ``server.SendingSystem``, it has to define
-the ``subscribe()`` and ``unsubscribe()`` methods, along with a ``sampling_rate`` attribute::
+the ``subscribe()`` and ``unsubscribe()`` methods, along with a ``sampling_time`` attribute::
 
     from simulators.common import SendingSystem
 
 
     class System(SendingSystem):
 
-        self.sampling_rate = ...
+        self.sampling_time = ...
 
         def subscribe(self, q):
             ...
@@ -294,7 +294,8 @@ its ``servers`` list in defined in the following way::
     servers = []
     for line in range(96):  # 96 servers
         l_address = ('0.0.0.0', 11000 + line)
-        servers.append((l_address, (), ThreadingTCPServer, ()))  # No sending servers or extra args
+        servers.append((l_address, (), ThreadingTCPServer, ()))
+        # No sending servers or extra args
 
 
 The ``MultiTypeSystem`` class

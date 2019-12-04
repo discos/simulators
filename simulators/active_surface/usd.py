@@ -1,15 +1,21 @@
 import time
 from Queue import Queue
-from threading import Thread
+from simulators import utils
 
 
 class USD(object):
     """This class represents a single USD actuator driver. It is completely
     handled by the active surface System class.
+
+    :param usd_index: the index of the USD on its line.
+    :type usd_index: int
     """
 
     driver_reset_delay = 0.1  # 100 milliseconds
     standby_delay_step = 0.004096  # 4096 microseconds
+    min_position = -2147483648
+    max_position = 2147483647
+    out_of_scale_position = 2147483650  # Greater than any accepted position
 
     # Resolution denominator, i.e.:
     # 0 -> 1/1, full step
@@ -40,10 +46,14 @@ class USD(object):
         1: 19200
     }
 
-    def __init__(self):
+    def __init__(self, usd_index):
         self._set_default()
+        self.last_movement = None
+        self.usd_index = usd_index
 
     def _set_default(self):
+        """This method is called whenever the USD is initialized or reset to
+        its default parameters."""
         self.reference_position = 0
         self.current_position = 0
         self.position_queue = Queue()
@@ -53,7 +63,7 @@ class USD(object):
         self.current_percentage = 1.0
         self.version = [1, 3]  # Major, minor
         self.driver_type = 0x20  # 0x20: USD50xxx, 0x21: USD60xxx
-        self.slope_multiplier = 1
+        self.slope_delayer = 1
         self.min_frequency = 20
         self.max_frequency = 10000
         self.io_dir = [0, 1, 0]  # 0: input, 1: output
@@ -76,17 +86,17 @@ class USD(object):
         self.running = False  # True: driver is moving
         self.delayed_execution = False  # True: positioning by TRIGGER event
         self.ready = False  # True: new position enqueued
-        self.standby_status = True  # True: full current, False: fractioned
-        self.auto_resolution = True
-        self.resolution = self.resolutions.get(0)
+        self.full_current = True
+        self.auto_resolution = False
+        self.resolution = self.resolutions.get(1)
         self.velocity = 0
         self.baud_rate = self.baud_rates.get(0)
-        self.stop = False
-        self.running = False
-        self.move_thread = None
-        self.move_to_thread = None
+        self.cmd_position = None
+        self.standby = False
 
     def soft_reset(self):
+        """This method resets the USD to it default values. When a reset is
+        performed, the USD takes approximately 100ms to boot back up."""
         t0 = time.time()
 
         self._set_default()
@@ -94,35 +104,47 @@ class USD(object):
         elapsed_time = time.time() - t0
         time.sleep(max(self.driver_reset_delay - elapsed_time, 0))
 
-    def soft_trigger(self, stop):
+    def soft_trigger(self):
+        """This method implements the TRIGGER event for the delayed execution
+        of movements. Whenever this command is received, if there is at least
+        one position in the queue and the USD status is set to ready, the USD
+        starts moving towards the desired position."""
         if self.ready is True:
-            if self.move_to_thread:
-                self.running = False
-                time.sleep(0.01)
-                self.move_to_thread.join()
-                self.move_to_thread = None
-            next_position = self.position_queue.get()
-            self.running = True
-            self.move_to_thread = Thread(
-                target=self._move_to,
-                args=(next_position, stop)
-            )
-            self.move_to_thread.daemon = True
-            self.move_to_thread.start()
+            next_position, absolute = self.position_queue.get()
+            if not self.velocity:
+                if absolute:
+                    self.cmd_position = next_position
+                else:
+                    self.cmd_position = self.current_position + next_position
             if self.position_queue.empty() is True:
                 self.ready = False
 
-    def soft_stop(self):
-        t = Thread(target=self._soft_stop)
-        t.daemon = True
-        t.start()
+    def get_version(self):
+        """This method returns the USD software version.
 
-    def _soft_stop(self):
-        self.stop = True
-        time.sleep(0.025)
-        self.stop = False
+        :return: the software version as [major, minor]
+        :rtype: list"""
+        return self.version
+
+    def soft_stop(self):
+        """Immediate stop. The USD stops even if it did not completed its
+        previous positioning movement."""
+        self.velocity = None
+        self.cmd_position = None
+
+    def get_position(self):
+        """This method returns the USD current position.
+
+        :return: the current position
+        :rtype: int"""
+        return self.current_position
 
     def get_status(self):
+        """This method returns the USD current status.
+
+        :return: the current status
+        :rtype: string
+        """
         par0 = 0x00  # Reserved for future use
 
         par1 = (
@@ -133,7 +155,8 @@ class USD(object):
             + '0'
             + str(self.io_val[2])
             + str(self.io_val[1])
-            + str(self.io_val[0]))
+            + str(self.io_val[0])
+        )
 
         for key, val in self.resolutions.iteritems():
             if val == self.resolution:
@@ -144,20 +167,81 @@ class USD(object):
             str(int(self.running))
             + str(int(self.delayed_execution))
             + str(int(self.ready))
-            + str(int(self.standby_status))
+            + str(int(self.full_current))
             + str(int(self.auto_resolution))
-            + bin(res)[2:].zfill(3))
+            + bin(res)[2:].zfill(3)
+        )
 
         return (
             chr(par0)
             + chr(int(par1, 2))
-            + chr(int(par2, 2)))
+            + chr(int(par2, 2))
+        )
+
+    def get_driver_type(self):
+        """This method returns the USD type.
+
+        :return: the USD type. 0x20: USD50xxx, 0x21: USD60xxx
+        :rtype: byte"""
+        return self.driver_type
+
+    def set_min_frequency(self, frequency):
+        """This method sets the minimum USD rotation frequency. If the desired
+        frequency is greater than the current maximum frequency, it is
+        considered wrong and the parser will return a `byte_nak`.
+
+        :param frequency: the minimum frequency
+        :type frequency: int between 20 and 10000
+        :return: a boolean indicating whether the given frequency was accepted
+            or not
+        :rtype: boolean"""
+        if frequency < 20 or frequency > 10000:
+            return False
+        elif frequency > self.max_frequency:
+            return False
+        self.min_frequency = frequency
+        return True
+
+    def set_max_frequency(self, frequency):
+        """This method sets the maximum USD rotation frequency. If the desired
+        frequency is lower than the current minimum frequency, it is considered
+        wrong and the parser will return a `byte_nak`.
+
+        :param frequency: the maximum frequency
+        :type frequency: int between 20 and 10000
+        :return: a boolean indicating whether the given frequency was accepted
+            or not
+        :rtype: boolean"""
+        if frequency < 20 or frequency > 10000:
+            return False
+        elif frequency < self.min_frequency:
+            return False
+        self.max_frequency = frequency
+        return True
+
+    def set_slope_delayer(self, factor):
+        """This method sets the USD acceleration slope delayer. It means that
+        the higher the `delayer` parameter, the slower the acceleration will
+        be.
+
+        :param delayer: the desired slope delayer
+        :type delayer: int"""
+        self.slope_delayer = factor
 
     def set_reference_position(self, position):
-        # Update enqueued position values?
+        """This method sets the received position as the reference position
+        (zero position).
+
+        :param position: the absolute position to be set as reference
+        :type position: int between -2147483648 and 2147483647"""
         self.reference_position = position
 
     def set_io_pins(self, param):
+        """This method sets the direction of the I/O pins and their values
+        whenever a pin is configured as outbound.
+
+        :param param: a byte containing the configuration of the I/O pins
+        :type param: byte"""
         binary_string = bin(param)[2:].zfill(8)
 
         self.io_dir[0] = int(binary_string[3], 2)
@@ -178,23 +262,46 @@ class USD(object):
         else:
             self.io_val[2] = 0
 
-    def set_resolution(self, param):
-        binary_string = bin(param)[2:].zfill(4)
+    def set_resolution(self, resolution):
+        """This method sets the step resolution of the USD. The resolution
+        could be either automatic or fixed.
 
-        if int(binary_string[0], 2) == 1:
+        :param resolution: the USD resolution denominator. A resolution equal
+            to `None` means the automatic change of resolution is enabled
+        :type resolution: int from 0 to 7 (included), or `None`"""
+        if resolution is None:
             self.auto_resolution = True
             self.resolution = self.resolutions.get(0)
         else:
             self.auto_resolution = False
-            self.resolution = self.resolutions.get(int(binary_string[-3:], 2))
+            self.resolution = self.resolutions.get(resolution)
 
-    def reduce_current(self, param):
-        binary_string = bin(param)[2:].zfill(8)
+    def set_current_reduction(self, standby_mode, standby_delay_multiplier):
+        """This method sets the delay after which and in which way the USD
+        current should be reduced.
 
-        self.standby_mode = self.standby_modes.get(int(binary_string[0:2], 2))
-        self.standby_delay_multiplier = int(binary_string[2:], 2)
+        :param standby_mode: the desired standby mode
+        :param standby_delay_multiplier: the desired standby delay multiplier
+        :type standby_mode: int
+        :type standby_delay_multiplier: int"""
+        self.standby_mode = self.standby_modes.get(standby_mode)
+        self.standby_delay_multiplier = standby_delay_multiplier
 
-    def toggle_delayed_execution(self, param):
+    def set_response_delay(self, multiplier):
+        """This method sets the response delay multiplier of the USD.
+
+        :param multiplier: the desired delay multiplier, each unit corresponds
+            to 4096 microseconds
+        :type multiplier: int"""
+        self.delay_multiplier = multiplier
+
+    def set_delayed_execution(self, param):
+        """This method enables or disables the delayed execution of positioning
+        commands.
+
+        :param param: a byte containing information regarding the I/O lines and
+            if the delayed positioning has to be enabled or disabled
+        :type param: byte"""
         binary_string = bin(param)[2:].zfill(8)
 
         self.delayed_execution = bool(binary_string[0])
@@ -221,65 +328,106 @@ class USD(object):
         # Empty the position queue
         self.position_queue = Queue()
 
-    def set_absolute_position(self, position, stop):
+    def set_absolute_position(self, position):
+        """This method receives an absolute position to which the USD will have
+            to move. If the positioning strategy is set to immediate and the
+            USD is not already moving, it will start moving towards the desired
+            position. In case the USD is already moving and the positioning
+            strategy is immediate, this command will fail, returning NAK. If
+            the poisioning strategy is set to delayed instead, the position
+            will be enqueued and the USD will wait until it receives a TRIGGER
+            event. It will then move to the first enqueued position.
+
+        :param position: the absolute position to move to, expressed in 1/128
+            of step
+        :type position: int
+        :return: a boolean indicating whether the parser has to answer with an
+            ACK or a NAK (True or False respectively)
+        :rtype: boolean"""
         cmd_position = self.reference_position + position
         if self.delayed_execution is True:
-            self.position_queue.put(cmd_position)
+            self.position_queue.put((cmd_position, True))
             self.ready = True
         else:
-            t = Thread(target=self._position, args=(cmd_position, stop))
-            t.daemon = True
-            t.start()
+            if self.running:
+                # Driver is already moving, return False
+                # so the parser can return a byte_nak
+                return False
+            self.cmd_position = cmd_position
+        return True
 
-    def set_relative_position(self, position, stop):
+    def set_relative_position(self, position):
+        """This method receives a relative position to which the USD will have
+            to move in respect to its current position. If the positioning
+            strategy is set to immediate and the USD is not already moving, it
+            will start moving towards the resulting position. On the contrary,
+            if the USD is already moving and the positioning strategy is
+            immediate, this command will fail, returning NAK. If the poisioning
+            strategy is set to delayed, the resulting position will be enqueued
+            and the USD will wait until it receives a TRIGGER event. It will
+            then move to the first enqueued position.
+
+        :param position: the position relative to the current one, expressed in
+            1/128 of step
+        :type position: int
+        :return: a boolean indicating whether the parser has to answer with an
+            ACK or a NAK (True or False respectively)
+        :rtype: boolean"""
         cmd_position = self.current_position + position
         if self.delayed_execution is True:
-            self.position_queue.put(cmd_position)
+            self.position_queue.put((cmd_position, False))
             self.ready = True
         else:
-            t = Thread(target=self._position, args=(cmd_position, stop))
-            t.daemon = True
-            t.start()
+            if self.running:
+                # Driver is already moving, return False
+                # so the parser can return a byte_nak
+                return False
+            self.cmd_position = cmd_position
+        return True
 
-    def rotate(self, sign, stop):
+    def rotate(self, sign):
+        """This method starts moving the USD indefinitely. The direction of the
+        movement corresponds is given by the sign parameter. It accounts for
+        acceleration, minimum and maximum frequency.
+
+        :param sign: the direction towards the USD will have to start moving
+        :type sign: int
+        :return: a boolean indicating whether the parser has to answer with an
+            ACK or a NAK (True or False respectively)
+        :rtype: boolean"""
         if self.running:
-            # Failed command, return False so the parser can return a byte_nak
+            # Driver is already moving, return False
+            # so the parser can return a byte_nak
             return False
         else:
-            t = Thread(target=self._rotate, args=(sign, stop))
-            t.daemon = True
-            t.start()
+            self.cmd_position = sign * self.out_of_scale_position
             return True
 
-    def _rotate(self, sign, stop):
-        self.running = True
-        if not self.stop:
-            self._accel_ramp(sign)
-        if not self.stop:
-            cmd_position = 2147483647
-            if sign < 0:
-                cmd_position += 1
-            self._move_to(sign * cmd_position, stop)
-        self.running = False
+    def set_velocity(self, velocity):
+        """This method starts moving the USD at a given frequency, bypassing
+        the acceleration ramp. This is useful whenever the USD has to behave as
+        a common servo driver. This command can be sent even when the USD is
+        already moving. To stop the USD movement, use either a `stop` command
+        or this same command, sending a zero as `velocity` parameter.
 
-    def set_velocity(self, velocity, stop):
+        :param velocity: the desired frequency to use for the movement
+        :type velocity: int"""
+        if not self.auto_resolution and (abs(velocity) < 10 and velocity != 0):
+            return False
+        elif velocity == 0:
+            velocity = None
         # Start rotating with given velocity without an acceleration ramp
+        self.cmd_position = None
         self.velocity = velocity
-
-        if velocity != 0:
-            self.running = True
-            if not self.move_thread:
-                self.move_thread = Thread(target=self._move, args=(stop,))
-                self.move_thread.daemon = True
-                self.move_thread.start()
-        else:
-            self.running = False
-            if self.move_thread:
-                self.move_thread.join()
-                self.move_thread = None
-            self._go_standby()
+        return True
 
     def set_stop_io(self, param):
+        """This method activates the execution of a hardware stop whenever the
+        I/O lines reach the desired (given) values.
+
+        :param param: a byte containing information regarding the I/O values
+            and if the hardware stop has to be enabled or not
+        :type param: byte"""
         binary_string = bin(param)[2:].zfill(8)
 
         # binary_string[0:2] is currently unused
@@ -303,6 +451,12 @@ class USD(object):
             self.stop_io_level[2] = 0
 
     def set_positioning_io(self, param):
+        """This method sets the logical levels of the I/O lines that have to be
+        set whenever the USD reaches the desired position.
+
+        :param param: a byte containing information regarding the I/O values to
+            set whenever a commanded movement is completed
+        :type param: byte"""
         binary_string = bin(param)[2:].zfill(8)
 
         # binary_string[0:2] is currently unused
@@ -326,6 +480,14 @@ class USD(object):
             self.pos_io_level[2] = 0
 
     def set_home_io(self, param):
+        """This method sets the logical levels of the I/O lines that are used
+        with the HOME function. The HOME function sets to 0 the actuator
+        internal quota and stops its movement whenever the I/O lines get to a
+        specific level.
+
+        :param param: a byte containing information regarding the I/O values
+            that triggers the HOME function of the USD.
+        :type param: byte"""
         binary_string = bin(param)[2:].zfill(8)
 
         self.home_io_enable[0] = int(binary_string[7], 2)
@@ -347,74 +509,78 @@ class USD(object):
             self.home_io_level[2] = 0
 
     def set_working_mode(self, params):
+        """This method sets the working mode of the USD. For now, the only
+        tweakable parameter is the baud rate of the serial communication.
+
+        :param params: a string containing two bytes. The first one contains
+            information regarding the desired baud rate for the serial
+            communication, the second byte is currently unused.
+        :type params: string containing two bytes"""
         binary_string = bin(params[0])[2:].zfill(8)
 
         # binary_string[0:7] is currently unused
         self.baud_rate = self.baud_rates.get(int(binary_string[7], 2))
-
         #  params[1] is currently unused
 
-    def _accel_ramp(self, sign):
-        # Should gradually accelerate from 0 to min_frequency to max_frequency
-        # Not yet implemented
-        # while False:
-        #     delta = 0
-        #     self.current_position += delta * sign
-        pass
+    def calc_position(self, elapsed):
+        """This method calculates the current position of the USD considering
+        its current status and previously set parameters, along with the
+        elapsed time since last position calculation.
 
-    def _position(self, cmd_position, stop):
-        self.running = True
-        sign = -1 if cmd_position < self.current_position else +1
+        :param elapsed: the elapsed time in seconds since last position
+            calculation
+        :type elapsed: float"""
+        velocity = None
+        cmd_position = None
+        if self.velocity:
+            velocity = self.velocity
+            self.running = True
+        elif self.cmd_position is not None:
+            cmd_position = self.cmd_position
+            self.running = True
+        else:
+            self.running = False
 
-        if not self.stop:
-            self._accel_ramp(sign)
-        if not self.stop:
-            self._move_to(cmd_position, stop)
-        if not self.stop:
-            self._go_standby()
-        self.running = False
+        if self.running:
+            self.current_percentage = 1.0
+            self.full_current = True
+            self.standby = False
+            self.last_movement = time.time()
+            if velocity:
+                frequency = abs(velocity)
+                sign0 = utils.sign(velocity)
+            elif cmd_position is not None:
+                # To be replaced with the slope frequency calculation
+                frequency = self.max_frequency
+                sign0 = utils.sign(cmd_position - self.current_position)
 
-    def _move_to(self, cmd_position, stop):
-        sign0 = -1 if cmd_position < self.current_position else +1
-        t0 = time.time()
-        while not self.stop and self.running and not stop.value:
-            t1 = time.time()
-            elapsed = t1 - t0
-            t0 = t1
-            new_position = self.current_position + int(round(
-                (self.max_frequency / self.resolution) * elapsed
-            ))
-            sign1 = -1 if cmd_position < new_position else +1
-            if sign0 != sign1:
-                self.current_position = cmd_position
-                self.running = False
-                break
+            steps_per_second = frequency * (128 / self.resolution)
+            delta = sign0 * int(round(steps_per_second * elapsed))
+            new_position = self.current_position + delta
+            new_position = max(new_position, self.min_position)
+            new_position = min(new_position, self.max_position)
+
+            if cmd_position is not None:
+                sign1 = utils.sign(cmd_position - new_position)
+                if sign1 != sign0:
+                    self.current_position = cmd_position
+                    self.cmd_position = None
+                    self.running = False
+                else:
+                    self.current_position = new_position
             else:
                 self.current_position = new_position
-            time.sleep(0.005)
-
-    def _move(self, stop):
-        t0 = time.time()
-        while not self.stop and self.running and not stop.value:
-            t1 = time.time()
-            elapsed = t1 - t0
-            t0 = t1
-            new_position = self.current_position + int(round(
-                (self.velocity / self.resolution) * elapsed
-            ))
-            if new_position <= -2147483648:
-                self.current_position = -2147483648
-                self.running = False
-                break
-            elif new_position >= 2147483647:
-                self.current_position = 2147483647
-                self.running = False
-                break
-            else:
-                self.current_position = new_position
-            time.sleep(0.005)
-
-    def _go_standby(self):
-        time.sleep(self.standby_delay_multiplier * self.standby_delay_step)
-        self.current_percentage = 1.0 - self.standby_mode
-        self.standby_status = False if self.standby_mode > 0 else True
+        if not self.running and not self.standby:
+            if self.last_movement:
+                elapsed = time.time() - self.last_movement
+                standby_delay = (
+                    self.standby_delay_multiplier * self.standby_delay_step
+                )
+                if elapsed >= standby_delay:
+                    self.current_percentage = 1.0 - self.standby_mode
+                    if self.standby_mode > 0:
+                        self.full_current = False
+                    else:
+                        self.full_current = True
+                    self.last_movement = None
+                    self.standby = True
