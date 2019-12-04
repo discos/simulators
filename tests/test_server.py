@@ -1,4 +1,5 @@
 import sys
+import os
 import time
 import socket
 import datetime
@@ -37,32 +38,32 @@ class TestListeningServer(unittest.TestCase):
         time.sleep(0.1)
 
     def test_proper_request(self):
-        response = get_response(self.address, msg='#command:a,b,c!')
+        response = get_response(self.address, msg='#command:a,b,c%')
         self.assertEqual(response, 'aabbcc')
 
     def test_wrong_request(self):
         """Wrong request but expected by the protocol"""
-        response = get_response(self.address, msg='#wrong_command:foo!')
+        response = get_response(self.address, msg='#wrong_command:foo%')
         self.assertRegexpMatches(response, 'you sent a wrong command')
 
     def test_value_error(self):
         """The message of ValueError in the logfile"""
-        get_response(self.address, msg='#valueerror:!', response=False)
+        get_response(self.address, msg='#valueerror:%', response=False)
         self.assertTrue('unexpected value' in get_logs())
 
     def test_unexpected_error(self):
-        get_response(self.address, msg='#unexpected:!', response=False)
+        get_response(self.address, msg='#unexpected:%', response=False)
         self.assertTrue('unexpected exception' in get_logs())
 
     def test_custom_command_with_parameters(self):
         response = get_response(
             self.address,
-            msg='$custom_command:a,b,c!'
+            msg='$custom_command:a,b,c%'
         )
         self.assertRegexpMatches(response, 'ok_abc')
 
     def test_custom_command_without_parameters(self):
-        response = get_response(self.address, msg='$custom_command!')
+        response = get_response(self.address, msg='$custom_command%')
         self.assertRegexpMatches(response, 'no_params')
 
 
@@ -87,37 +88,37 @@ class TestListeningUDPServer(unittest.TestCase):
         time.sleep(0.1)
 
     def test_proper_request(self):
-        response = get_response(self.address, msg='#command:a,b,c!', udp=True)
+        response = get_response(self.address, msg='#command:a,b,c%', udp=True)
         self.assertEqual(response, 'aabbcc')
 
     def test_wrong_request(self):
         """Wrong request but expected by the protocol"""
         response = get_response(
-            self.address, msg='#wrong_command:foo!', udp=True
+            self.address, msg='#wrong_command:foo%', udp=True
         )
         self.assertRegexpMatches(response, 'you sent a wrong command')
 
     def test_value_error(self):
         """The message of ValueError in the logfile"""
         get_response(
-            self.address, msg='#valueerror:!', response=False, udp=True
+            self.address, msg='#valueerror:%', response=False, udp=True
         )
         self.assertTrue('unexpected value' in get_logs())
 
     def test_unexpected_error(self):
         get_response(
-            self.address, msg='#unexpected:!', response=False, udp=True
+            self.address, msg='#unexpected:%', response=False, udp=True
         )
         self.assertTrue('unexpected exception' in get_logs())
 
     def test_custom_command_with_parameters(self):
         response = get_response(
-            self.address, msg='$custom_command:a,b,c!', udp=True
+            self.address, msg='$custom_command:a,b,c%', udp=True
         )
         self.assertRegexpMatches(response, 'ok_abc')
 
     def test_custom_command_without_parameters(self):
-        response = get_response(self.address, msg='$custom_command!', udp=True)
+        response = get_response(self.address, msg='$custom_command%', udp=True)
         self.assertRegexpMatches(response, 'no_params')
 
 
@@ -146,11 +147,11 @@ class TestSendingServer(unittest.TestCase):
         self.assertEqual(response, 'message')
 
     def test_unknown_command(self):
-        get_response(self.address, msg='$unknown!', response=False)
+        get_response(self.address, msg='$unknown%', response=False)
         self.assertTrue('command unknown not supported' in get_logs())
 
     def test_raise_exception(self):
-        get_response(self.address, msg='$raise_exception!', response=False)
+        get_response(self.address, msg='$raise_exception%', response=False)
         self.assertTrue(
             'unexpected exception raised by sendingtestsystem' in get_logs()
         )
@@ -181,12 +182,12 @@ class TestSendingUDPServer(unittest.TestCase):
         self.assertEqual(response, 'message')
 
     def test_unknown_command(self):
-        get_response(self.address, msg='$unknown!', response=False, udp=True)
+        get_response(self.address, msg='$unknown%', response=False, udp=True)
         self.assertTrue('command unknown not supported' in get_logs())
 
     def test_raise_exception(self):
         get_response(
-            self.address, msg='$raise_exception!', response=False, udp=True
+            self.address, msg='$raise_exception%', response=False, udp=True
         )
         self.assertTrue(
             'unexpected exception raised by sendingtestsystem' in get_logs()
@@ -216,23 +217,23 @@ class TestDuplexServer(unittest.TestCase):
         time.sleep(0.1)
 
     def test_proper_request(self):
-        response = get_response(self.l_address, msg='#command:a,b,c!')
+        response = get_response(self.l_address, msg='#command:a,b,c%')
         self.assertEqual(response, 'aabbcc')
 
     def test_wrong_request(self):
         """Wrong request but expected by the protocol"""
-        response = get_response(self.l_address, msg='#wrong_command:foo!')
+        response = get_response(self.l_address, msg='#wrong_command:foo%')
         self.assertRegexpMatches(response, 'you sent a wrong command')
 
     def test_custom_command_with_parameters(self):
         response = get_response(
             self.l_address,
-            msg='$custom_command:a,b,c!'
+            msg='$custom_command:a,b,c%'
         )
         self.assertRegexpMatches(response, 'ok_abc')
 
     def test_custom_command_without_parameters(self):
-        response = get_response(self.l_address, msg='$custom_command!')
+        response = get_response(self.l_address, msg='$custom_command%')
         self.assertRegexpMatches(response, 'no_params')
 
     def test_get_message(self):
@@ -240,7 +241,7 @@ class TestDuplexServer(unittest.TestCase):
         self.assertEqual(response, 'message')
 
     def test_last_cmd(self):
-        message = '#test:1,2,3!'
+        message = '#test:1,2,3%'
         l_response = get_response(self.l_address, msg=message)
         self.assertEqual(l_response, '112233')
         s_response = get_response(self.s_address)
@@ -271,28 +272,28 @@ class TestDuplexUDPServer(unittest.TestCase):
 
     def test_proper_request(self):
         response = get_response(
-            self.l_address, msg='#command:a,b,c!', udp=True
+            self.l_address, msg='#command:a,b,c%', udp=True
         )
         self.assertEqual(response, 'aabbcc')
 
     def test_wrong_request(self):
         """Wrong request but expected by the protocol"""
         response = get_response(
-            self.l_address, msg='#wrong_command:foo!', udp=True
+            self.l_address, msg='#wrong_command:foo%', udp=True
         )
         self.assertRegexpMatches(response, 'you sent a wrong command')
 
     def test_custom_command_with_parameters(self):
         response = get_response(
             self.l_address,
-            msg='$custom_command:a,b,c!',
+            msg='$custom_command:a,b,c%',
             udp=True
         )
         self.assertRegexpMatches(response, 'ok_abc')
 
     def test_custom_command_without_parameters(self):
         response = get_response(
-            self.l_address, msg='$custom_command!', udp=True
+            self.l_address, msg='$custom_command%', udp=True
         )
         self.assertRegexpMatches(response, 'no_params')
 
@@ -301,7 +302,7 @@ class TestDuplexUDPServer(unittest.TestCase):
         self.assertEqual(response, 'message')
 
     def test_last_cmd(self):
-        message = '#test:1,2,3!'
+        message = '#test:1,2,3%'
         l_response = get_response(self.l_address, msg=message, udp=True)
         self.assertEqual(l_response, '112233')
         s_response = get_response(self.s_address, udp=True)
@@ -342,7 +343,7 @@ class TestSimulator(unittest.TestCase):
 
         self.simulator.start(daemon=True)
 
-        response = get_response(address, msg='#command:a,b,c!')
+        response = get_response(address, msg='#command:a,b,c%')
         self.assertEqual(response, 'aabbcc')
 
         self.simulator.stop()
@@ -367,7 +368,7 @@ class TestSimulator(unittest.TestCase):
 
         self.simulator.start(daemon=True)
 
-        l_response = get_response(l_addr, msg='#command:a,b,c!')
+        l_response = get_response(l_addr, msg='#command:a,b,c%')
         self.assertEqual(l_response, 'aabbcc')
         s_response = get_response(s_addr)
         self.assertEqual(s_response, 'command:a,b,c')
@@ -391,10 +392,10 @@ class TestSimulator(unittest.TestCase):
         t = Thread(target=simulator.start)
         t.start()
         time.sleep(0.1)
-        response = get_response(l_addr, msg='$system_stop!')
-        self.assertEqual(response, '$server_shutdown!')
-        response = get_response(s_addr, msg='$system_stop!')
-        self.assertEqual(response, '$server_shutdown!')
+        response = get_response(l_addr, msg='$system_stop%')
+        self.assertEqual(response, '$server_shutdown%')
+        response = get_response(s_addr, msg='$system_stop%')
+        self.assertEqual(response, '$server_shutdown%')
         t.join()
 
 
@@ -412,8 +413,8 @@ class TestServerVarious(unittest.TestCase):
 
         def shutdown(self):
             time.sleep(0.01)
-            response = get_response(address, msg='$system_stop!')
-            self.assertEqual(response, '$server_shutdown!')
+            response = get_response(address, msg='$system_stop%')
+            self.assertEqual(response, '$server_shutdown%')
 
         t = Thread(target=shutdown, args=(self,))
         t.start()
@@ -461,7 +462,8 @@ def get_logs():
     time.sleep(0.03)
     now = datetime.datetime.now()
     logs = []
-    for line in open('sim-server.log', 'r').readlines():
+    filename = os.path.join(os.getenv('ACSDATA', ''), 'sim-server.log')
+    for line in open(filename, 'r').readlines():
         line = line.strip()
         log_date = datetime.datetime.strptime(
             ' '.join(line.split(' ')[0:2]) + '000',
@@ -476,7 +478,7 @@ def get_logs():
 class ListeningTestSystem(ListeningSystem):
 
     header = b'#'
-    tail = b'!'
+    tail = b'%'
 
     def __init__(self):
         self.msg = b''
@@ -520,7 +522,7 @@ class ListeningTestSystem(ListeningSystem):
 
 class SendingTestSystem(SendingSystem):
 
-    sampling_time = 0.01
+    #sampling_time = 0.01
 
     def __init__(self):
         try:

@@ -21,15 +21,16 @@ logging.basicConfig(
 
 class BaseHandler(BaseRequestHandler):
     """This is the base handler class from which `ListenHandler` and
-    `SendHandler` classes are inherited. It only defines the custom
-    header and tail for accepting some commands not related to the system
-    protocol, and the `_execute_custom_command` method to parse the received
-    custom command.
-    I.e. a $system_stop! command will stop the server, a $error! command
-    will configure the system in order to respond with errors, etc.
-    """
+    `SendHandler` classes are inherited. It only defines the custom header
+    and tail for accepting some commands not related to the system protocol,
+    and the `_execute_custom_command` method to parse the received custom
+    command.
 
-    custom_header, custom_tail = ('$', '!')
+    :Example:
+        A $system_stop% command will stop the server, a $error% command
+        will configure the system in order to respond with errors, etc."""
+
+    custom_header, custom_tail = ('$', '%')
 
     def _execute_custom_command(self, msg_body):
         """This method accepts a custom command (without the custom header and
@@ -38,8 +39,8 @@ class BaseHandler(BaseRequestHandler):
         equivalent method, also handling unexpected exceptions.
 
         :param msg_body: the custom command message without the custom header
-            and tail (`$` and `!` respectively)
-        """
+            and tail (`$` and `%` respectively)
+        :type msg_body: string"""
         if ':' in msg_body:
             name, params_str = msg_body.split(':')
         else:
@@ -53,7 +54,7 @@ class BaseHandler(BaseRequestHandler):
             response = method(*params)
             if isinstance(response, str):
                 self.socket.sendto(response, self.client_address)
-                if response == '$server_shutdown!':
+                if response == '$server_shutdown%':
                     self.server.stop()
         except AttributeError:
             logging.debug('command %s not supported', name)
@@ -64,10 +65,20 @@ class BaseHandler(BaseRequestHandler):
 class ListenHandler(BaseHandler):
 
     def setup(self):
+        """This method gets called as soon as a client connects to the server.
+        """
         logging.info('Got connection from %s', self.client_address)
         self.custom_msg = b''
 
     def handle(self):
+        """This method gets called right after the `setup` method ends its
+        execution. It handles incoming messages, whether they are received via
+        a TCP or a UDP socket. It pass down the the `System` class the received
+        messages one byte at a time in order for the `System.parse()` method to
+        work properly. It then returns the `System` response when necessary.
+        It also constantly listens for custom commands that does not belong to
+        a specific `System` class, but are useful additions to the simulators
+        framework."""
         self.socket = self.request
         if isinstance(self.socket, tuple):  # UDP client
             msg, self.socket = self.socket
@@ -120,9 +131,15 @@ class ListenHandler(BaseHandler):
 class SendHandler(BaseHandler):
 
     def setup(self):
+        """This method gets called whenever a client connects to the server."""
         logging.info('Got connection from %s', self.client_address)
 
     def handle(self):
+        """This method gets called right after the `setup` method ends its
+        execution. It handles messages that the server has to periodically send
+        to its connected client(s). It also constantly listens for custom
+        commands that does not belong to a specific `System` class, but are
+        useful additions to the simulators framework."""
         sampling_time = self.system.sampling_time
         message_queue = Queue(1)
 
@@ -176,14 +193,20 @@ class Server(ThreadingMixIn):
     clients, `l_address` and `s_address` must have at least different ports,
     if not different ips.
 
-    :param system: the desired simulator system module.
-    :param server_type: can be ThreadingTCPServer or ThreadingUDPServer
-    :param args: a tuple containing the arguments to pass to the system
-        instance constructor method.
-    :param l_address: a tuple (ip, port), the address of the server that
-        exposes the `System.parse()` method.
-    :param s_address: a tuple (ip, port), the address of the server that
-        exposes the `System.get_message()` method.
+    :param system: the desired simulator system module
+    :param server_type: the type of threading server to be used
+    :param args: the arguments to pass to the system instance constructor
+        method
+    :param l_address: the address of the server that exposes the
+        `System.parse()` method
+    :param s_address: the address of the server that exposes the
+        `System.get_message()` method
+    :type system: System class that inherits from ListeningServer or/and
+        SendingServer
+    :type server_type: ThreadingTCPServer or ThreadingUDPServer
+    :type args: tuple
+    :type l_address: (ip, port)
+    :type s_address: (ip, port)
     """
     def __init__(
             self, system, server_type, args, l_address=None, s_address=None):
@@ -219,6 +242,10 @@ class Server(ThreadingMixIn):
         method. Before calling the base method, which would stay in a loop
         until the process is stopped, it starts the eventual child server
         as a daemon thread.
+
+        :param poll_interval: the interval used by the class to check for
+            incoming shutdown requests
+        :type poll_interval: float
         """
         if isinstance(self.system, types.ModuleType):
             self.system = self.system.System(*self.system_args)
@@ -252,9 +279,8 @@ class Simulator(object):
     """This class represents the whole simulator, composed of one
     or more servers.
 
-    :param system_module: the module that implements the system. It could
-        also be a module name. In that case the module will be loaded
-        dynamically.
+    :param system_module: the module that implements the System class.
+    :type system_module: module that implements the System class, string
     """
     def __init__(self, system_module):
         if not isinstance(system_module, types.ModuleType):
@@ -274,6 +300,7 @@ class Simulator(object):
             destroyed as well. Default value is false, meaning that the server
             processes will continue to run even if the simulator object gets
             destroyed. To stop these processes, method `stop` must be called.
+        :type daemon: bool
         """
         processes = []
         for l_addr, s_addr, server_type, args in self.system_module.servers:
@@ -299,7 +326,7 @@ class Simulator(object):
             print('\nSimulator stopped.')
 
     def stop(self):
-        """This method stops a simulator by sending the custom `$system_stop!`
+        """This method stops a simulator by sending the custom `$system_stop%`
         command to all servers of the given simulator."""
         for entry in self.system_module.servers:
             for address in entry[:2]:
@@ -313,7 +340,7 @@ class Simulator(object):
                 try:
                     sockobj.settimeout(1)
                     sockobj.connect(address)
-                    sockobj.sendto('$system_stop!', address)
+                    sockobj.sendto('$system_stop%', address)
                 except Exception, ex:  # pragma: no cover
                     logging.debug(ex)
                 finally:
