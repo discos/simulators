@@ -73,11 +73,11 @@ class ListenHandler(BaseHandler):
     def handle(self):
         """This method gets called right after the `setup` method ends its
         execution. It handles incoming messages, whether they are received via
-        a TCP or a UDP socket. It pass down the the `System` class the received
+        a TCP or a UDP socket. It passes down the `System` class the received
         messages one byte at a time in order for the `System.parse()` method to
         work properly. It then returns the `System` response when necessary.
-        It also constantly listens for custom commands that does not belong to
-        a specific `System` class, but are useful additions to the simulators
+        It also constantly listens for custom commands that do not belong to a
+        specific `System` class, but are useful additions to the simulators
         framework."""
         self.socket = self.request
         if isinstance(self.socket, tuple):  # UDP client
@@ -138,7 +138,7 @@ class SendHandler(BaseHandler):
         """This method gets called right after the `setup` method ends its
         execution. It handles messages that the server has to periodically send
         to its connected client(s). It also constantly listens for custom
-        commands that does not belong to a specific `System` class, but are
+        commands that do not belong to a specific `System` class, but are
         useful additions to the simulators framework."""
         sampling_time = self.system.sampling_time
         message_queue = Queue(1)

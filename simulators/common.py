@@ -17,7 +17,7 @@ class BaseSystem(object):
 
 
 class ListeningSystem(BaseSystem):
-    """This class implements a server that wait for its client(s) to send a
+    """This class implements a server that waits for its client(s) to send a
     command, it can then answer back when required. Unlike the `SendingSystem`
     described below, it does not start any communication with any client right
     after the connection is established."""
@@ -41,13 +41,12 @@ class ListeningSystem(BaseSystem):
 
 
 class SendingSystem(BaseSystem):
-    """This class implements a server that, as soon as a client(s) opens a
-    connection, it starts periodically sending to the said client(s)
-    information regarding the status of the system. The time period is the one
-    defined as `sampling_time` variable, which defaults to 10ms and can be
-    overridden. The class also accepts simulator-related custom commands, but
-    no regular commands are accepted (they are ignored and immediately
-    discarded)."""
+    """This class implements a server that periodically sends some information
+    data regarding the status of the system to every connected client.
+    The time period is the one defined as `sampling_time` variable, which
+    defaults to 10ms and can be overridden. The class also accepts
+    simulator-related custom commands, but no regular commands are accepted
+    (they are ignored and immediately discarded)."""
 
     sampling_time = 0.01  # 10ms
 
