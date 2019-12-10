@@ -143,7 +143,7 @@ class System(ListeningSystem, SendingSystem):
                 command_thread.join()
             except Empty:
                 break
-        return '$server_shutdown!'
+        return '$server_shutdown%'
 
     def _set_default(self):
         """This method resets the received command string to its default value.
