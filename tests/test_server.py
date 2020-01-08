@@ -522,8 +522,6 @@ class ListeningTestSystem(ListeningSystem):
 
 class SendingTestSystem(SendingSystem):
 
-    #sampling_time = 0.01
-
     def __init__(self):
         try:
             getattr(self, 'last_cmd')

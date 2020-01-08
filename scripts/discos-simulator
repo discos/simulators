@@ -14,8 +14,13 @@ from simulators.server import Simulator
 def system_from_arg(system_name):
     try:
         return importlib.import_module('simulators.%s' % system_name)
-    except ImportError:
-        raise ArgumentTypeError('System "%s" unavailable.' % system_name)
+    except ImportError as e:
+        error = e.args[0]
+        if 'No module named' in error:
+            error = 'System "%s" unavailable.' % system_name
+        else:
+            error = error % system_name
+        raise ArgumentTypeError(error)
 
 parser = ArgumentParser()
 parser.add_argument(

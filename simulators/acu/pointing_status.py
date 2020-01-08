@@ -2,8 +2,16 @@ from bisect import bisect_left
 from multiprocessing import Array
 from ctypes import c_char
 from datetime import datetime, timedelta
-import numpy as np
-from scipy import interpolate
+try:
+    import numpy as np
+except ImportError:
+    raise ImportError('The `numpy` package, required for the %s simulator'
+        + ' to run, is missing!')
+try:
+    from scipy import interpolate
+except ImportError:
+    raise ImportError('The `scipy` package, required for the %s simulator'
+        + ' to run, is missing!')
 from simulators import utils
 
 
