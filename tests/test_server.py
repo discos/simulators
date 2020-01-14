@@ -464,14 +464,17 @@ def get_logs():
     logs = []
     filename = os.path.join(os.getenv('ACSDATA', ''), 'sim-server.log')
     for line in open(filename, 'r').readlines():
-        line = line.strip()
-        log_date = datetime.datetime.strptime(
-            ' '.join(line.split(' ')[0:2]) + '000',
-            '%Y-%m-%d %H:%M:%S,%f'
-        )
-        log_date += datetime.timedelta(microseconds=25000)
-        if (now - log_date).total_seconds() < 0.01:
-            logs.append(' '.join(line.split(' ')[2:]))
+        try:
+            line = line.strip()
+            log_date = datetime.datetime.strptime(
+                ' '.join(line.split(' ')[0:2]) + '000',
+                '%Y-%m-%d %H:%M:%S,%f'
+            )
+            log_date += datetime.timedelta(microseconds=25000)
+            if (now - log_date).total_seconds() < 0.01:
+                logs.append(' '.join(line.split(' ')[2:]))
+        except ValueError:
+            continue
     return logs
 
 
