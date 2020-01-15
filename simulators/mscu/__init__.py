@@ -4,7 +4,7 @@
 from multiprocessing import Value
 from SocketServer import ThreadingTCPServer
 from simulators.common import ListeningSystem
-from simulators.mscu import servo
+from simulators.mscu.servo import Servo
 from simulators.mscu.parameters import headers, closers, app_nr
 
 servers = [(('0.0.0.0', 10000), (), ThreadingTCPServer, ())]
@@ -15,7 +15,7 @@ class System(ListeningSystem):
     def __init__(self):
         self.servos = {}
         for address in app_nr:
-            self.servos[address] = servo.Servo(address)
+            self.servos[address] = Servo(address)
         self.setpos_NAK = [Value('i', False)] * len(app_nr)
         self._set_default()
 
@@ -52,7 +52,16 @@ class System(ListeningSystem):
             cmd, cmd_num = whole_cmd.split(':')
             cmd_num = int(cmd_num)
             # Retrieve the command parameters
-            all_params = [eval(param.strip()) for param in params_str.split(',')]
+            all_params = []
+            for param in params_str.split(','):
+                param = param.strip()
+                if 'x' in param:
+                    param = int(param, 16)
+                elif '.' in param:
+                    param = float(param)
+                else:
+                    param = int(param.strip())
+                all_params.append(param)
             address, params = all_params[0], all_params[1:]
         except Exception:
             raise ValueError("Invalid message: %s" % msg)
