@@ -473,7 +473,7 @@ def get_logs():
             log_date += datetime.timedelta(microseconds=25000)
             if (now - log_date).total_seconds() < 0.01:
                 logs.append(' '.join(line.split(' ')[2:]))
-        except ValueError:
+        except ValueError:  # pragma: no cover
             continue
     return logs
 
