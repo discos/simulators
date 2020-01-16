@@ -81,11 +81,11 @@ class Servo(object):
         return [answer]
 
     def setpos(self, cmd_num, *params):
-        if self.setpos_NAK or len(params) != self.axes + 1:
+        if self.setpos_NAK or len(params) != self.axes + 3:
             answer = '!NAK_setpos' + ':%d=%d' % (cmd_num, self.id)
             params = ['cannot set the position']
         else:
-            timestamp, position = params[0], list(params[1:])
+            timestamp, position = params[0], list(params[-self.axes:])
             self.history.insert(position, timestamp)
             answer = '@setpos' + ':%d=%d' % (cmd_num, self.id)
 

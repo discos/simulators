@@ -52,7 +52,7 @@ class System(ListeningSystem):
     def _parse(self, msg):
         try:
             # Retrieve the message header
-            _, body = msg[0], msg[1:].rstrip()
+            body = msg[1:].rstrip()
             whole_cmd, params_str = body.split('=')
             # Retrieve the command and the command number
             cmd, cmd_num = whole_cmd.split(':')

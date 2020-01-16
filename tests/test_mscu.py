@@ -153,10 +153,10 @@ class TestMSCU(unittest.TestCase):
 
     def test_setpos(self, pos=0):
         for servo in range(4):
-            msg = '#setpos:0=%s,0' % servo  # Last 0 is timestamp
+            msg = '#setpos:0=%s,0,0,0' % servo
             msg += (',%s' % pos) * self.system.servos[servo].axes
             msg += '\r\n'
-            exp_response = 'setpos:0=%s,0' % servo # Last 0 is timestamp
+            exp_response = 'setpos:0=%s,0,0,0' % servo
             exp_response += (',%s' % pos) * self.system.servos[servo].axes
             exp_response += '\r\n'
             exp_response = '?%s@%s' % (exp_response, exp_response)
@@ -171,7 +171,7 @@ class TestMSCU(unittest.TestCase):
             exp_response += ',cannot set the position\r\n'
             exp_response = exp_response * 2
 
-            msg = '#setpos:0=%s' % servo
+            msg = '#setpos:0=%s,0,0' % servo
             msg += ',0' * 15  # Too many axes
             msg += '\r\n'
             for byte in msg[:-1]:
@@ -179,7 +179,7 @@ class TestMSCU(unittest.TestCase):
             response = self.system.parse(msg[-1])
             self.assertEqual(response, exp_response)
 
-            msg = '#setpos:0=%s\r\n' % servo  # No positions
+            msg = '#setpos:0=%s,0,0,0\r\n' % servo  # No positions
             for byte in msg[:-1]:
                 self.assertTrue(self.system.parse(byte))
             response = self.system.parse(msg[-1])
