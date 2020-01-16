@@ -27,6 +27,12 @@ class System(ListeningSystem):
             servo.stop()
         return '$server_shutdown%'
 
+    def system_setpos_NAK(self):
+        self.setpos_NAK[1].value = True  # The SRP address
+
+    def system_setpos_ACK(self):
+        self.setpos_NAK[1].value = False  # The SRP address
+
     def _set_default(self):
         self.msg = ''
 
@@ -46,7 +52,7 @@ class System(ListeningSystem):
     def _parse(self, msg):
         try:
             # Retrieve the message header
-            header, body = msg[0], msg[1:].rstrip()
+            _, body = msg[0], msg[1:].rstrip()
             whole_cmd, params_str = body.split('=')
             # Retrieve the command and the command number
             cmd, cmd_num = whole_cmd.split(':')
@@ -66,25 +72,18 @@ class System(ListeningSystem):
         except Exception:
             raise ValueError("Invalid message: %s" % msg)
 
-        srvo = self.servos[address]
+        servo = self.servos[address]
         if self.setpos_NAK[address].value:
-            srvo.setpos_NAK = True
+            servo.setpos_NAK = True
         else:
-            srvo.setpos_NAK = False
-        # Print a general error message if we received an invalid command
-        if header not in headers or not hasattr(srvo, cmd):
-            raise ValueError("Invalid message: %s" % msg)
+            servo.setpos_NAK = False
 
-        method = getattr(srvo, cmd)
-        if not method:
+        try:
+            method = getattr(servo, cmd)
+        except AttributeError:
+            # Print a general error message if we received an unknown command
             raise ValueError('Command %s unknown!' % cmd)
 
         # Call the appropriate command whose name is the string cmd
         answers = method(cmd_num, *params)
         return ''.join(answers)
-
-    def system_setpos_NAK(self):
-        self.setpos_NAK[1].value = True  # The SRP address
-
-    def system_setpos_ACK(self):
-        self.setpos_NAK[1].value = False  # The SRP address

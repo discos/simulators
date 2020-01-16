@@ -25,7 +25,10 @@ class DriveCabinet(object):
         self.cab_state = Value('i', DriveCabinet.cab_state['stow'])
 
     def set_state(self, state):
-        self.cab_state.value = DriveCabinet.cab_state[state]
+        try:
+            self.cab_state.value = DriveCabinet.cab_state[state]
+        except KeyError:
+            pass
 
 
 class Servo(object):
@@ -78,12 +81,12 @@ class Servo(object):
         return [answer]
 
     def setpos(self, cmd_num, *params):
-        timestamp, position = params[0], list(params[-self.axes:])
-        self.history.insert(position, timestamp)
-        if self.setpos_NAK:
+        if self.setpos_NAK or len(params) != self.axes + 1:
             answer = '!NAK_setpos' + ':%d=%d' % (cmd_num, self.id)
             params = ['cannot set the position']
         else:
+            timestamp, position = params[0], list(params[1:])
+            self.history.insert(position, timestamp)
             answer = '@setpos' + ':%d=%d' % (cmd_num, self.id)
 
         for param in params:
@@ -91,25 +94,19 @@ class Servo(object):
         answer += closers[0]
         return [answer.replace('@', '?'), answer]
 
-    def _set_cab_state(self, state):
-        try:
-            self.dc.cab_state.value = DriveCabinet.cab_state[state]
-        except KeyError:
-            pass
-
     def setup(self, cmd_num, *params):
         answer = '@setup' + ':%d=%d' % (cmd_num, self.id)
         for param in params:
             answer += ",%s" % param
         answer += closers[0]
-        self._set_cab_state('starting')
+        self.dc.set_state('starting')
 
         if self.dc_thread:
             self.dc_thread.cancel()
 
         self.dc_thread = Timer(
             3,  # The setup takes 3 seconds
-            function=self._set_cab_state,
+            function=self.dc.set_state,
             args=('ready',)
         )
         self.dc_thread.start()
@@ -149,7 +146,7 @@ class Servo(object):
         elif [1240, 0] == index_sub:  # Max speed
             answer += '10'
         else:
-            print 'index_sub, type: ', index_sub, type(index_sub)
+            # print 'index_sub, type: ', index_sub, type(index_sub)
             answer += '0'
 
         answer += closers[0]
@@ -173,6 +170,7 @@ class History(object):
     lock = Lock()
 
     def __init__(self, n_axes):
+        self.n_axes = n_axes
         self.history = []
         self.insert(n_axes * [0])
 
@@ -196,24 +194,26 @@ class History(object):
             self.history = self.history[:idx]
 
     def get(self, target_time=None):
-        """Returns the position @target_time as [timestamp, axisA, ..., axisN]
-        """
+        """Returns the position at target_time
+        as [timestamp, axisA, ..., axisN]"""
         if target_time is None:
             target_time = Servo.ctime()
         size = len(self.history)
         idx = -1
         with History.lock:
             while idx >= -size:
-                data = self.history[idx]
-                timestamp = data[0]
-                if timestamp <= target_time:
-                    return data
-                elif idx - 1 > -size:
-                    prev_timestamp = self.history[idx - 1]
-                    if prev_timestamp <= target_time:
-                        return self.history[idx - 1]  # Better to interpolate
-                    else:
-                        idx -= 1
-                        continue
-                else:
-                    return self.history[-size]
+                current = self.history[idx]
+                if target_time >= current[0]:
+                    if idx < -1:  # We are between two entries, interpolate
+                        nxt = self.history[idx + 1]
+                        factor = float(target_time - current[0])
+                        factor /= (nxt[0] - current[0])
+                        response = [target_time]
+                        for i in range(1, len(current)):
+                            value = (1 - factor) * current[i] + factor * nxt[i]
+                            response.append(value)
+                        return response
+                    else:  # First entry, return the values right away
+                        return current
+                idx -= 1
+            return self.history[0]
