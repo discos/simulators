@@ -14,26 +14,26 @@ class TestLocalOscillator(unittest.TestCase):
         msg = 'POWER %d dBm\n' % power
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system._power, power)
+        self.assertEqual(self.system.power, power)
 
     def test_set_wrong_power(self, power=10):
         # dBm suffix missing
         msg = 'POWER %d\n' % power
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
-        self.assertNotEqual(self.system._power, power)
+        self.assertNotEqual(self.system.power, power)
 
         # wrong dBm suffix
         msg = 'POWER %d dbm\n' % power
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
-        self.assertNotEqual(self.system._power, power)
+        self.assertNotEqual(self.system.power, power)
 
         # String instead of int power
         msg = 'POWER dummy dBm\n'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
-        self.assertNotEqual(self.system._power, power)
+        self.assertNotEqual(self.system.power, power)
 
     def test_get_power(self):
         power = 20
@@ -55,26 +55,26 @@ class TestLocalOscillator(unittest.TestCase):
         msg = 'FREQ %d MHZ\n' % frequency
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system._frequency, frequency)
+        self.assertEqual(self.system.frequency, frequency)
 
     def test_set_wrong_frequency(self, frequency=10):
         # MHZ suffix missing
         msg = 'FREQ %d\n' % frequency
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
-        self.assertNotEqual(self.system._frequency, frequency)
+        self.assertNotEqual(self.system.frequency, frequency)
 
         # wrong MHZ suffix
         msg = 'FREQ %d MHz\n' % frequency
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
-        self.assertNotEqual(self.system._frequency, frequency)
+        self.assertNotEqual(self.system.frequency, frequency)
 
         # String instead of int frequency
         msg = 'FREQ dummy MHZ\n'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
-        self.assertNotEqual(self.system._frequency, frequency)
+        self.assertNotEqual(self.system.frequency, frequency)
 
     def test_get_frequency(self):
         frequency = 20
