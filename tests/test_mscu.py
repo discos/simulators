@@ -77,7 +77,7 @@ class TestMSCU(unittest.TestCase):
             self.assertTrue(abs(recv_time - exp_time) < 1000)
             data = self.system.servos[servo].history.get()[1:]
             for i, _ in enumerate(data):
-                self.assertEqual(float(params[1+i]), data[i])
+                self.assertEqual(float(params[1 + i]), data[i])
 
     def test_getspar(self):
         for servo in range(4):
@@ -131,7 +131,7 @@ class TestMSCU(unittest.TestCase):
             self.assertEqual(recv_cab_state, 3)  # 3: stow, parked
             data = self.system.servos[servo].history.get()[1:]
             for i, _ in enumerate(data):
-                self.assertEqual(float(params[4+i]), data[i])
+                self.assertEqual(float(params[4 + i]), data[i])
 
     def test_setsdatbitb16(self):
         for servo in range(4):
