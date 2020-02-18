@@ -24,15 +24,15 @@ we need some dependencies.  Let's install them:
 
 .. code-block:: shell
 
-   $ pip install coverage  # testing coverage tool
-   $ pip install codecov  # testing coverage tool
-   $ pip install coveralls  # testing coverage tool
-   $ pip install prospector  # linter
-   $ pip install sphinx  # documentation generator
-   $ pip install sphinx_rtd_theme  # HTML doc theme
+   $ pip install coverage           # testing coverage tool
+   $ pip install codecov            # testing coverage tool
+   $ pip install coveralls          # testing coverage tool
+   $ pip install prospector         # linter
+   $ pip install sphinx             # documentation generator
+   $ pip install sphinx_rtd_theme   # HTML doc theme
    $ pip install tox
-   $ sudo apt-get install ruby  # apt-get, yum, ...
-   $ sudo gem install wwtd  # travis-ci locally
+   $ sudo apt install ruby          # apt, yum, ...
+   $ sudo gem install wwtd          # travis-ci locally
 
 
 Run all tests at once
@@ -84,9 +84,7 @@ Now you can generate an HTML report:
 
 .. code-block:: shell
 
-   $ coverage combine
-   $ coverage report
-   $ coverage html
+   $ coverage combine && coverage report && coverage html
 
 To see the HTML report open the generated *htmlcov/index.html*
 file with your browser.

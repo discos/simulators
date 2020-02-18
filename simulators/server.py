@@ -65,13 +65,13 @@ class BaseHandler(BaseRequestHandler):
 class ListenHandler(BaseHandler):
 
     def setup(self):
-        """This method gets called as soon as a client connects to the server.
+        """Method that gets called as soon as a client connects to the server.
         """
         logging.info('Got connection from %s', self.client_address)
         self.custom_msg = b''
 
     def handle(self):
-        """This method gets called right after the `setup` method ends its
+        """Method that gets called right after the `setup` method ends its
         execution. It handles incoming messages, whether they are received via
         a TCP or a UDP socket. It passes down the `System` class the received
         messages one byte at a time in order for the `System.parse()` method to
@@ -92,6 +92,12 @@ class ListenHandler(BaseHandler):
                 self._handle(msg)
 
     def _handle(self, msg):
+        """Handles a single message. If the connection with the client was
+        established as a TCP connection, the `msg` parameter is usually a
+        single byte that gets passed down to the relative `System`. Instead,
+        if the communication is connection-less (UDP), the `msg` parameter
+        contains the whole message, but each byte gets processed separately.
+        """
         for byte in msg:
             try:
                 response = self.system.parse(byte)
@@ -131,11 +137,11 @@ class ListenHandler(BaseHandler):
 class SendHandler(BaseHandler):
 
     def setup(self):
-        """This method gets called whenever a client connects to the server."""
+        """Method that gets called whenever a client connects to the server."""
         logging.info('Got connection from %s', self.client_address)
 
     def handle(self):
-        """This method gets called right after the `setup` method ends its
+        """Method that gets called right after the `setup` method ends its
         execution. It handles messages that the server has to periodically send
         to its connected client(s). It also constantly listens for custom
         commands that do not belong to a specific `System` class, but are
@@ -184,14 +190,14 @@ class SendHandler(BaseHandler):
 
 class Server(ThreadingMixIn):
     """This class inherits from the ThreadingMixIn class.
-    It can instance a server for the given address(es). The server can be a TCP
-    or a UDP server, depending on which `server_type` argument is provided.
-    Also, the server could be a listening server, if param `l_address` is
-    provided, or a sending server, if param `s_address` is provided. If both
-    addresses are provided, the server acts as both as a listening server and
-    a sending server. Be aware that if the server both listens and send to its
-    clients, `l_address` and `s_address` must have at least different ports,
-    if not different ips.
+    It can instance a server for the given address(es). The server can either
+    be a TCP or a UDP server, depending on which `server_type` argument is
+    provided. Also, the server could be a listening server, if param
+    `l_address` is provided, or a sending server, if param `s_address` is
+    provided. If both addresses are provided, the server acts as both as a
+    listening server and a sending server. Be aware that if the server both
+    listens and send to its clients, `l_address` and `s_address` must not share
+    the same endpoint (IP address and/or port should be different).
 
     :param system: the desired simulator system module
     :param server_type: the type of threading server to be used
@@ -238,10 +244,9 @@ class Server(ThreadingMixIn):
         self.RequestHandlerClass.server = self
 
     def serve_forever(self, poll_interval=0.05):
-        """This method overrides the base class `serve_forever`
-        method. Before calling the base method, which would stay in a loop
-        until the process is stopped, it starts the eventual child server
-        as a daemon thread.
+        """Overrides the base class `serve_forever` method. Before calling the
+        base method, which would stay in a loop until the process is stopped,
+        it starts the eventual child server as a daemon thread.
 
         :param poll_interval: the interval used by the class to check for
             incoming shutdown requests
@@ -262,14 +267,14 @@ class Server(ThreadingMixIn):
             self.stop()
 
     def start(self):
-        """This method starts a daemon thread which calls the `serve_forever`
-        method. The server is therefore started as a daemon."""
+        """Starts a daemon thread which calls the `serve_forever` method. The
+        server is therefore started as a daemon."""
         server_thread = threading.Thread(target=self.serve_forever)
         server_thread.daemon = True
         server_thread.start()
 
     def stop(self):
-        """This method stops the server and its eventual child."""
+        """Stops the server and its eventual child."""
         if self.child_server:
             self.child_server.shutdown()
         self.shutdown()
@@ -292,8 +297,8 @@ class Simulator(object):
             self.system_module = system_module
 
     def start(self, daemon=False):
-        """This method starts a simulator by instancing
-        the servers listed in the given module.
+        """Starts a simulator by instancing the servers listed in the given
+        module.
 
         :param daemon: if true, the server processes are created as daemons,
             meaning that when this simulator object is destroyed, they get
@@ -326,8 +331,8 @@ class Simulator(object):
             print('\nSimulator stopped.')
 
     def stop(self):
-        """This method stops a simulator by sending the custom `$system_stop%`
-        command to all servers of the given simulator."""
+        """Stops a simulator by sending the custom `$system_stop%` command to
+        all servers of the given simulator."""
         for entry in self.system_module.servers:
             for address in entry[:2]:
                 if not address:

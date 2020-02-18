@@ -30,8 +30,7 @@ class System(ListeningSystem):
     :param min_usd_index: the index of the starting USD on the line
     :param max_usd_index: the index of the ending USD on the line
     :type min_usd_index: int
-    :type max_usd_index: int
-    """
+    :type max_usd_index: int"""
 
     functions = {
         0x01: "_soft_reset",
@@ -103,7 +102,7 @@ class System(ListeningSystem):
             self.positioning_thread.join()
 
     def _set_default(self):
-        """This method reset the received command string to its default value.
+        """Resets the received command string to its default value.
         It is called when a tail character is received or when a command is
         received malformed."""
         self.msg = b''
@@ -147,17 +146,18 @@ class System(ListeningSystem):
             return True
         else:
             if self.expected_bytes == 0:
-                return self._parser(self.msg)
+                return self._parse(self.msg)
             else:
                 self.expected_bytes -= 1
                 return True
 
-    def _parser(self, msg):
+    def _parse(self, msg):
         """While the `parse` method receives the incoming commands and checks
         for their correctness, this method performs the actual parsing and
         launches the execution of the desired command procedures.
 
-        :param msg: the whole received message that has to be parsed"""
+        :param msg: the whole received message that has to be parsed.
+        :type msg: str"""
         self._set_default()
 
         if utils.checksum(msg[:-1]) != msg[-1]:
@@ -205,16 +205,17 @@ class System(ListeningSystem):
             raise ValueError("Unknown command: " + hex(command))
 
     def _soft_reset(self, params):
-        """This method calls the desired USD's `soft_reset` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line. The possible response are `byte_ack` or `byte_nak`.
+        """Calls the desired USD's `soft_reset` method. If a broadcast command
+        is received it calls the said method for every USD of the line. The
+        possible response are `byte_ack` or `byte_nak`.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
             indicates which kind of response has to be returned to the client.
             In case the `byte_start` parameter equals '\xFC' the response
             should contain the address of the USD, if the `byte_start` equals
-            '\xFA', the said address should be omitted."""
+            '\xFA', the said address should be omitted.
+        :type params: list"""
         if params[2]:
             if params[0] is None:
                 return None
@@ -230,16 +231,17 @@ class System(ListeningSystem):
                 return self.byte_ack
 
     def _soft_trigger(self, params):
-        """This method calls the desired USD's `soft_trigger` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line. The possible response are `byte_ack` or `byte_nak`.
+        """Calls the desired USD's `soft_trigger` method. If a broadcast
+        command is received it calls the said method for every USD of the line.
+        The possible response are `byte_ack` or `byte_nak`.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
             indicates which kind of response has to be returned to the client.
             In case the `byte_start` parameter equals '\xFC' the response
             should contain the address of the USD, if the `byte_start` equals
-            '\xFA', the said address should be omitted."""
+            '\xFA', the said address should be omitted.
+        :type params: list"""
         if params[2]:
             if params[0] is None:
                 return None
@@ -255,16 +257,16 @@ class System(ListeningSystem):
                 return self.byte_ack
 
     def _get_version(self, params):
-        """This method calls the desired USD's `get_version` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line.
+        """Calls the desired USD's `get_version` method. If a broadcast command
+        is received it calls the said method for every USD of the line.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
             indicates which kind of response has to be returned to the client.
             In case the `byte_start` parameter equals '\xFC' the response
             should contain the address of the USD, if the `byte_start` equals
-            '\xFA', the said address should be omitted."""
+            '\xFA', the said address should be omitted.
+        :type params: list"""
         if params[0] is None:
             return None
         if params[2]:
@@ -285,16 +287,17 @@ class System(ListeningSystem):
             return retval + utils.checksum(retval)
 
     def _soft_stop(self, params):
-        """This method calls the desired USD's `soft_stop` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line. The possible response are `byte_ack` or `byte_nak`.
+        """Calls the desired USD's `soft_stop` method. If a broadcast command
+        is received it calls the said method for every USD of the line. The
+        possible response are `byte_ack` or `byte_nak`.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
             indicates which kind of response has to be returned to the client.
             In case the `byte_start` parameter equals '\xFC' the response
             should contain the address of the USD, if the `byte_start` equals
-            '\xFA', the said address should be omitted."""
+            '\xFA', the said address should be omitted.
+        :type params: list"""
         if params[2]:
             if params[0] is None:
                 return None
@@ -310,16 +313,17 @@ class System(ListeningSystem):
                 return self.byte_ack
 
     def _get_position(self, params):
-        """This method calls the desired USD's `get_position` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line. The response is the actual position of the driver.
+        """Calls the desired USD's `get_position` method. If a broadcast
+        command is received it calls the said method for every USD of the line.
+        The response is the actual position of the driver.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
             indicates which kind of response has to be returned to the client.
             In case the `byte_start` parameter equals '\xFC' the response
             should contain the address of the USD, if the `byte_start` equals
-            '\xFA', the said address should be omitted."""
+            '\xFA', the said address should be omitted.
+        :type params: list"""
         if params[0] is None:
             return None
         if params[2]:
@@ -345,16 +349,17 @@ class System(ListeningSystem):
             return retval + utils.checksum(retval)
 
     def _get_status(self, params):
-        """This method calls the desired USD's `get_status` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line. The response is the actual status of the driver.
+        """Calls the desired USD's `get_status` method. If a broadcast command
+        is received it calls the said method for every USD of the line. The
+        response is the actual status of the driver.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
             indicates which kind of response has to be returned to the client.
             In case the `byte_start` parameter equals '\xFC' the response
             should contain the address of the USD, if the `byte_start` equals
-            '\xFA', the said address should be omitted."""
+            '\xFA', the said address should be omitted.
+        :type params: list"""
         if params[0] is None:
             return None
         if params[2]:
@@ -375,16 +380,17 @@ class System(ListeningSystem):
             return retval + utils.checksum(retval)
 
     def _get_driver_type(self, params):
-        """This method calls the desired USD's `get_driver_type` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line. The response is the type of the driver.
+        """Calls the desired USD's `get_driver_type` method. If a broadcast
+        command is received it calls the said method for every USD of the line.
+        The response is the type of the driver.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
             indicates which kind of response has to be returned to the client.
             In case the `byte_start` parameter equals '\xFC' the response
             should contain the address of the USD, if the `byte_start` equals
-            '\xFA', the said address should be omitted."""
+            '\xFA', the said address should be omitted.
+        :type params: list"""
         if params[0] is None:
             return None
         if params[2]:
@@ -410,9 +416,9 @@ class System(ListeningSystem):
             return retval + utils.checksum(retval)
 
     def _set_min_frequency(self, params):
-        """This method calls the desired USD's `set_min_frequency` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line. The possible response are `byte_ack` or `byte_nak`.
+        """Calls the desired USD's `set_min_frequency` method. If a broadcast
+        command is received it calls the said method for every USD of the line.
+        The possible response are `byte_ack` or `byte_nak`.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
@@ -421,7 +427,7 @@ class System(ListeningSystem):
             should contain the address of the USD, if the `byte_start` equals
             '\xFA', the said address should be omitted. The last parameter is
             the desired frequency, received in the form of 2 consecutive bytes.
-            """
+        :type params: list"""
         if len(params[2]) != 2:
             if params[0] is None:
                 return None
@@ -443,9 +449,9 @@ class System(ListeningSystem):
                     return self.byte_nak
 
     def _set_max_frequency(self, params):
-        """This method calls the desired USD's `set_max_frequency` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line. The possible response are `byte_ack` or `byte_nak`.
+        """Calls the desired USD's `set_max_frequency` method. If a broadcast
+        command is received it calls the said method for every USD of the line.
+        The possible response are `byte_ack` or `byte_nak`.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
@@ -454,7 +460,7 @@ class System(ListeningSystem):
             should contain the address of the USD, if the `byte_start` equals
             '\xFA', the said address should be omitted. The last parameter is
             the desired frequency, received in the form of 2 consecutive bytes.
-            """
+        :type params: list"""
         if len(params[2]) != 2:
             if params[0] is None:
                 return None
@@ -476,9 +482,9 @@ class System(ListeningSystem):
                     return self.byte_nak
 
     def _set_slope_delayer(self, params):
-        """This method calls the desired USD's `set_slope_delayer` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line. The possible response are `byte_ack` or `byte_nak`.
+        """Calls the desired USD's `set_slope_delayer` method. If a broadcast
+        command is received it calls the said method for every USD of the line.
+        The possible response are `byte_ack` or `byte_nak`.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
@@ -486,7 +492,8 @@ class System(ListeningSystem):
             In case the `byte_start` parameter equals '\xFC' the response
             should contain the address of the USD, if the `byte_start` equals
             '\xFA', the said address should be omitted. The last parameter is
-            the desired slope delayer, received as a single byte."""
+            the desired slope delayer, received as a single byte.
+        :type params: list"""
         if len(params[2]) != 1:
             if params[0] is None:
                 return None
@@ -504,9 +511,9 @@ class System(ListeningSystem):
                 return self.byte_ack
 
     def _set_reference_position(self, params):
-        """This method calls the desired USD's `set_reference_position` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line. The possible response are `byte_ack` or `byte_nak`.
+        """Calls the desired USD's `set_reference_position` method. If a
+        broadcast command is received it calls the said method for every USD of
+        the line. The possible response are `byte_ack` or `byte_nak`.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
@@ -514,7 +521,8 @@ class System(ListeningSystem):
             In case the `byte_start` parameter equals '\xFC' the response
             should contain the address of the USD, if the `byte_start` equals
             '\xFA', the said address should be omitted. The last parameter is
-            the desired reference position, received as 4 consecutive bytes."""
+            the desired reference position, received as 4 consecutive bytes.
+        :type params: list"""
         if len(params[2]) != 4:
             if params[0] is None:
                 return None
@@ -535,9 +543,9 @@ class System(ListeningSystem):
                 return self.byte_ack
 
     def _set_io_pins(self, params):
-        """This method calls the desired USD's `set_io_pins` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line. The possible response are `byte_ack` or `byte_nak`.
+        """Calls the desired USD's `set_io_pins` method. If a broadcast command
+        is received it calls the said method for every USD of the line.
+        The possible response are `byte_ack` or `byte_nak`.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
@@ -545,7 +553,8 @@ class System(ListeningSystem):
             In case the `byte_start` parameter equals '\xFC' the response
             should contain the address of the USD, if the `byte_start` equals
             '\xFA', the said address should be omitted. The last parameter is
-            a byte containing the desired IO pins configuration."""
+            a byte containing the desired IO pins configuration.
+        :type params: list"""
         if len(params[2]) != 1:
             if params[0] is None:
                 return None
@@ -561,9 +570,9 @@ class System(ListeningSystem):
                 return self.byte_ack
 
     def _set_resolution(self, params):
-        """This method calls the desired USD's `set_resolution` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line. The possible response are `byte_ack` or `byte_nak`.
+        """Calls the desired USD's `set_resolution` method. If a broadcast
+        command is received it calls the said method for every USD of the line.
+        The possible response are `byte_ack` or `byte_nak`.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
@@ -571,7 +580,8 @@ class System(ListeningSystem):
             In case the `byte_start` parameter equals '\xFC' the response
             should contain the address of the USD, if the `byte_start` equals
             '\xFA', the said address should be omitted. The last parameter is
-            a byte containing the desired resolution configuration."""
+            a byte containing the desired resolution configuration.
+        :type params: list"""
         if len(params[2]) != 1:
             if params[0] is None:
                 return None
@@ -593,9 +603,9 @@ class System(ListeningSystem):
                 return self.byte_ack
 
     def _set_current_reduction(self, params):
-        """This method calls the desired USD's `set_current_reduction` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line. The possible response are `byte_ack` or `byte_nak`.
+        """Calls the desired USD's `set_current_reduction` method. If a
+        broadcast command is received it calls the said method for every USD of
+        the line. The possible response are `byte_ack` or `byte_nak`.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
@@ -604,7 +614,8 @@ class System(ListeningSystem):
             should contain the address of the USD, if the `byte_start` equals
             '\xFA', the said address should be omitted. The last parameter is
             a byte containing the desired configuration for the current
-            reduction of the USD after it moves to a given position."""
+            reduction of the USD after it moves to a given position.
+        :type params: list"""
         if len(params[2]) != 1:
             if params[0] is None:
                 return None
@@ -629,9 +640,9 @@ class System(ListeningSystem):
                 return self.byte_ack
 
     def _set_response_delay(self, params):
-        """This method calls the desired USD's `set_response_delay` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line. The possible response are `byte_ack` or `byte_nak`.
+        """Calls the desired USD's `set_response_delay` method. If a broadcast
+        command is received it calls the said method for every USD of the line.
+        The possible response are `byte_ack` or `byte_nak`.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
@@ -640,7 +651,8 @@ class System(ListeningSystem):
             should contain the address of the USD, if the `byte_start` equals
             '\xFA', the said address should be omitted. The last parameter is
             the desired delay multiplier that sets the delay after the given
-            USD sends its response, received as a single byte."""
+            USD sends its response, received as a single byte.
+        :type params: list"""
         if len(params[2]) != 1:
             if params[0] is None:
                 return None
@@ -656,10 +668,9 @@ class System(ListeningSystem):
                 return self.byte_ack
 
     def _set_delayed_execution(self, params):
-        """This method calls the desired USD's `set_delayed_execution`
-        method. If a broadcast command is received it calls the said method
-        for every USD of the line. The possible response are `byte_ack` or
-        `byte_nak`.
+        """Calls the desired USD's `set_delayed_execution` method. If a
+        broadcast command is received it calls the said method for every USD of
+        the line. The possible response are `byte_ack` or `byte_nak`.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
@@ -668,7 +679,8 @@ class System(ListeningSystem):
             should contain the address of the USD, if the `byte_start` equals
             '\xFA', the said address should be omitted. The last parameter is
             a byte containing the desired configuration for the delayed
-            execution."""
+            execution.
+        :type params: list"""
         if len(params[2]) != 1:
             if params[0] is None:
                 return None
@@ -684,9 +696,9 @@ class System(ListeningSystem):
                 return self.byte_ack
 
     def _set_absolute_position(self, params):
-        """This method calls the desired USD's `set_absolute_position` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line. The possible response are `byte_ack` or `byte_nak`.
+        """Calls the desired USD's `set_absolute_position` method. If a
+        broadcast command is received it calls the said method for every USD of
+        the line. The possible response are `byte_ack` or `byte_nak`.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
@@ -695,7 +707,8 @@ class System(ListeningSystem):
             should contain the address of the USD, if the `byte_start` equals
             '\xFA', the said address should be omitted. The last parameter is
             the desired absolute position to which the USD should move,
-            received as 4 consecutive bytes."""
+            received as 4 consecutive bytes.
+        :type params: list"""
         if len(params[2]) != 4:
             if params[0] is None:
                 return None
@@ -719,9 +732,9 @@ class System(ListeningSystem):
                     return self.byte_nak
 
     def _set_relative_position(self, params):
-        """This method calls the desired USD's `soft_reset` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line. The possible response are `byte_ack` or `byte_nak`.
+        """Calls the desired USD's `set_relative_position` method. If a
+        broadcast command is received it calls the said method for every USD of
+        the line. The possible response are `byte_ack` or `byte_nak`.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
@@ -730,7 +743,8 @@ class System(ListeningSystem):
             should contain the address of the USD, if the `byte_start` equals
             '\xFA', the said address should be omitted. The last parameter is
             the desired position relative to the current one, to which the USD
-            should move, received as 4 consecutive bytes."""
+            should move, received as 4 consecutive bytes.
+        :type params: list"""
         if len(params[2]) != 4:
             if params[0] is None:
                 return None
@@ -754,9 +768,9 @@ class System(ListeningSystem):
                     return self.byte_nak
 
     def _rotate(self, params):
-        """This method calls the desired USD's `soft_reset` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line. The possible response are `byte_ack` or `byte_nak`.
+        """Calls the desired USD's `rotate` method. If a broadcast command is
+        received it calls the said method for every USD of the line. The
+        possible response are `byte_ack` or `byte_nak`.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
@@ -765,7 +779,8 @@ class System(ListeningSystem):
             should contain the address of the USD, if the `byte_start` equals
             '\xFA', the said address should be omitted. The last parameter is
             a signed integer, which sign indicates the direction of the
-            rotation of the USD."""
+            rotation of the USD.
+        :type params: list"""
         if len(params[2]) != 1:
             if params[0] is None:
                 return None
@@ -787,9 +802,9 @@ class System(ListeningSystem):
                     return self.byte_nak
 
     def _set_velocity(self, params):
-        """This method calls the desired USD's `soft_reset` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line. The possible response are `byte_ack` or `byte_nak`.
+        """Calls the desired USD's `set_velocity` method. If a broadcast
+        command is received it calls the said method for every USD of the line.
+        The possible response are `byte_ack` or `byte_nak`.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
@@ -798,7 +813,8 @@ class System(ListeningSystem):
             should contain the address of the USD, if the `byte_start` equals
             '\xFA', the said address should be omitted. The last parameter is
             the desired rotation velocity of the USD, received as 3 consecutive
-            bytes."""
+            bytes.
+        :type params: list"""
         if len(params[2]) != 3:
             if params[0] is None:
                 return None
@@ -827,9 +843,8 @@ class System(ListeningSystem):
                         return self.byte_nak
 
     def _set_stop_io(self, params):
-        """This method calls the desired USD's `set_stop_io` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line.
+        """Calls the desired USD's `set_stop_io` method. If a broadcast command
+        is received it calls the said method for every USD of the line.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
@@ -838,7 +853,8 @@ class System(ListeningSystem):
             should contain the address of the USD, if the `byte_start` equals
             '\xFA', the said address should be omitted. The last parameter is
             a byte containing the desired configuration of the io pins able to
-            stop the USD movement in an arbitrary way."""
+            stop the USD movement in an arbitrary way.
+        :type params: list"""
         if len(params[2]) != 1:
             if params[0] is None:
                 return None
@@ -854,9 +870,8 @@ class System(ListeningSystem):
                 return self.byte_ack
 
     def _set_positioning_io(self, params):
-        """This method calls the desired USD's `set_positioning_io` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line.
+        """Calls the desired USD's `set_positioning_io` method. If a broadcast
+        command is received it calls the said method for every USD of the line.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
@@ -865,7 +880,8 @@ class System(ListeningSystem):
             should contain the address of the USD, if the `byte_start` equals
             '\xFA', the said address should be omitted. The last parameter is
             a byte containing the desired configuration of the io pins to set
-            whenever a USD ends its movement."""
+            whenever a USD ends its movement.
+        :type params: list"""
         if len(params[2]) != 1:
             if params[0] is None:
                 return None
@@ -881,9 +897,8 @@ class System(ListeningSystem):
                 return self.byte_ack
 
     def _set_home_io(self, params):
-        """This method calls the desired USD's `set_home_io` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line.
+        """Calls the desired USD's `set_home_io` method. If a broadcast command
+        is received it calls the said method for every USD of the line.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
@@ -893,7 +908,8 @@ class System(ListeningSystem):
             '\xFA', the said address should be omitted. The last parameter is
             a byte containing the desired configuration of the io pins able to
             stop the USD from moving and setting the current position as the
-            reference one."""
+            reference one.
+        :type params: list"""
         if len(params[2]) != 1:
             if params[0] is None:
                 return None
@@ -909,9 +925,8 @@ class System(ListeningSystem):
                 return self.byte_ack
 
     def _set_working_mode(self, params):
-        """This method calls the desired USD's `set_working_mode` method.
-        If a broadcast command is received it calls the said method for every
-        USD of the line.
+        """Calls the desired USD's `set_working_mode` method. If a broadcast
+        command is received it calls the said method for every USD of the line.
 
         :param params: a list of parameters containing the desired driver index
             (`None` for a broadcast command), and the `byte_start` which
@@ -920,7 +935,8 @@ class System(ListeningSystem):
             should contain the address of the USD, if the `byte_start` equals
             '\xFA', the said address should be omitted. The last parameter is
             a byte containing the desired configuration for the working mode of
-            the given USD."""
+            the given USD.
+        :type params: list"""
         if len(params[2]) != 2:
             if params[0] is None:
                 return None

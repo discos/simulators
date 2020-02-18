@@ -12,10 +12,10 @@ byte_start_fc = '\xFC'
 
 
 def _compose(address_on_response, usd_index, byte_command, params=None):
-    """This method composes the message according to the USDs communication
-    protocol. It merges the starting byte along with the desired USD index, the
-    desired command, its parameters and returns the whole command encoded as a
-    byte string.
+    """Composes the message according to the USDs communication protocol.
+    It merges the starting byte along with the desired USD index, the desired
+    command, its parameters and returns the whole command encoded as a byte
+    string.
 
     :param address_on_response: a boolean indicating whether the command should
         start with the '\xFC' byte (address_on_response=True) or with the
@@ -64,7 +64,7 @@ def _compose(address_on_response, usd_index, byte_command, params=None):
 
 
 def soft_reset(usd_index=None, address_on_response=True):
-    """This method returns the soft_reset command string.
+    """Returns the `soft_reset` command string.
 
     :param usd_index: the desired USD index along the line. For a broadcast
         command usd_index can be set to None.
@@ -83,7 +83,7 @@ def soft_reset(usd_index=None, address_on_response=True):
 
 
 def soft_trigger(usd_index=None, address_on_response=True):
-    """This method returns the soft_trigger command string.
+    """Returns the `soft_trigger` command string.
 
     :param usd_index: the desired USD index along the line. For a broadcast
         command usd_index can be set to None.
@@ -102,7 +102,7 @@ def soft_trigger(usd_index=None, address_on_response=True):
 
 
 def get_version(usd_index=None, address_on_response=True):
-    """This method returns the get_version command string.
+    """Returns the `get_version` command string.
 
     :param usd_index: the desired USD index along the line. For a broadcast
         command usd_index can be set to None.
@@ -121,7 +121,7 @@ def get_version(usd_index=None, address_on_response=True):
 
 
 def soft_stop(usd_index=None, address_on_response=True):
-    """This method returns the soft_stop command string.
+    """Returns the `soft_stop` command string.
 
     :param usd_index: the desired USD index along the line. For a broadcast
         command usd_index can be set to None.
@@ -140,7 +140,7 @@ def soft_stop(usd_index=None, address_on_response=True):
 
 
 def get_position(usd_index=None, address_on_response=True):
-    """This method returns the get_position command string.
+    """Returns the `get_position` command string.
 
     :param usd_index: the desired USD index along the line. For a broadcast
         command usd_index can be set to None.
@@ -159,7 +159,7 @@ def get_position(usd_index=None, address_on_response=True):
 
 
 def get_status(usd_index=None, address_on_response=True):
-    """This method returns the get_status command string.
+    """Returns the `get_status` command string.
 
     :param usd_index: the desired USD index along the line. For a broadcast
         command usd_index can be set to None.
@@ -178,7 +178,7 @@ def get_status(usd_index=None, address_on_response=True):
 
 
 def get_driver_type(usd_index=None, address_on_response=True):
-    """This method returns the get_driver_type command string.
+    """Returns the `get_driver_type` command string.
 
     :param usd_index: the desired USD index along the line. For a broadcast
         command usd_index can be set to None.
@@ -197,8 +197,8 @@ def get_driver_type(usd_index=None, address_on_response=True):
 
 
 def set_min_frequency(frequency, usd_index=None, address_on_response=True):
-    """This method returns the set_min_frequency command string, composed using
-    the given frequency parameter.
+    """Returns the `set_min_frequency` command string, composed using the given
+    frequency parameter.
 
     :param frequency: the frequency to which the minimum USD frequency should
         be set
@@ -227,8 +227,8 @@ def set_min_frequency(frequency, usd_index=None, address_on_response=True):
 
 
 def set_max_frequency(frequency, usd_index=None, address_on_response=True):
-    """This method returns the set_max_frequency command string, composed using
-    the given frequency parameter.
+    """Returns the `set_max_frequency` command string, composed using the given
+    frequency parameter.
 
     :param frequency: the frequency to which the maximum USD frequency should
         be set
@@ -257,8 +257,8 @@ def set_max_frequency(frequency, usd_index=None, address_on_response=True):
 
 
 def set_slope_multiplier(multiplier, usd_index=None, address_on_response=True):
-    """This method returns the set_slope_multiplier command string, composed
-    using the given multiplier parameter.
+    """Returns the `set_slope_multiplier` command string, composed using the
+    given multiplier parameter.
 
     :param multiplier: the slope multiplier to which the USD slope multiplier
         should be set
@@ -286,8 +286,8 @@ def set_slope_multiplier(multiplier, usd_index=None, address_on_response=True):
 
 
 def set_reference_position(position, usd_index=None, address_on_response=True):
-    """This method returns the set_reference_position command string, composed
-    using the given position parameter.
+    """Returns the `set_reference_position` command string, composed using the
+    given position parameter.
 
     :param position: the position to which the USD reference position should be
         set
@@ -320,8 +320,8 @@ def set_reference_position(position, usd_index=None, address_on_response=True):
 
 
 def set_io_pins(byte_value, usd_index=None, address_on_response=True):
-    """This method returns the set_io_pins command string, composed using the
-    given byte parameter.
+    """Returns the `set_io_pins` command string, composed using the given byte
+    parameter.
 
     :param byte_value: the byte to which the USD io pins should be set
     :param usd_index: the desired USD index along the line. For a broadcast
@@ -351,8 +351,8 @@ def set_io_pins(byte_value, usd_index=None, address_on_response=True):
 
 
 def set_resolution(resolution, usd_index=None, address_on_response=True):
-    """This method returns the set_resolution command string, composed using
-    the given resolution parameter.
+    """Returns the `set_resolution` command string, composed using the given
+    resolution parameter.
 
     :param resolution: the resolution to which the USD resolution should be set
     :param usd_index: the desired USD index along the line. For a broadcast
@@ -381,8 +381,8 @@ def set_resolution(resolution, usd_index=None, address_on_response=True):
 
 
 def reduce_current(byte_value, usd_index=None, address_on_response=True):
-    """This method returns the reduce_current command string, composed using
-    the given byte parameter.
+    """Returns the `reduce_current` command string, composed using the given
+    byte parameter.
 
     :param byte_value: the byte to which the USD byte for reduced current
         should be set
@@ -413,8 +413,8 @@ def reduce_current(byte_value, usd_index=None, address_on_response=True):
 
 
 def set_response_delay(delay, usd_index=None, address_on_response=True):
-    """This method returns the set_response_delay command string, composed
-    using the given delay parameter.
+    """Returns the `set_response_delay` command string, composed using the
+    given delay parameter.
 
     :param delay: the delay to which the USD delay should be set
     :param usd_index: the desired USD index along the line. For a broadcast
@@ -444,8 +444,8 @@ def toggle_delayed_execution(
         byte_value,
         usd_index=None,
         address_on_response=True):
-    """This method returns the toggle_delayed_execution command string,
-    composed using the given byte parameter.
+    """Returns the `toggle_delayed_execution` command string, composed using
+    the given byte parameter.
 
     :param byte_value: the byte to which the USD byte for delayed execution
         should be set
@@ -476,8 +476,8 @@ def toggle_delayed_execution(
 
 
 def set_absolute_position(position, usd_index=None, address_on_response=True):
-    """This method returns the set_absolute_position command string, composed
-    using the given position parameter.
+    """Returns the `set_absolute_position` command string, composed using the
+    given position parameter.
 
     :param position: the absolute position to which the USD should be
         positioned
@@ -510,8 +510,8 @@ def set_absolute_position(position, usd_index=None, address_on_response=True):
 
 
 def set_relative_position(position, usd_index=None, address_on_response=True):
-    """This method returns the set_relative_position command string, composed
-    using the given position parameter.
+    """Returns the `set_relative_position` command string, composed using the
+    given position parameter.
 
     :param position: the relative position to which the USD should be
         positioned
@@ -544,8 +544,8 @@ def set_relative_position(position, usd_index=None, address_on_response=True):
 
 
 def rotate(direction, usd_index=None, address_on_response=True):
-    """This method returns the rotate command string, composed using the given
-    direction parameter.
+    """Returns the `rotate` command string, composed using the given direction
+    parameter.
 
     :param direction: the direction to which the USD should start moving
     :param usd_index: the desired USD index along the line. For a broadcast
@@ -572,8 +572,8 @@ def rotate(direction, usd_index=None, address_on_response=True):
 
 
 def set_velocity(velocity, usd_index=None, address_on_response=True):
-    """This method returns the set_velocity command string, composed using the
-    given velocity parameter.
+    """Returns the `set_velocity` command string, composed using the given
+    velocity parameter.
 
     :param velocity: the velocity with which the USD should be moving
     :param usd_index: the desired USD index along the line. For a broadcast
@@ -601,8 +601,8 @@ def set_velocity(velocity, usd_index=None, address_on_response=True):
 
 
 def set_stop_io(byte_value, usd_index=None, address_on_response=True):
-    """This method returns the set_stop_io command string, composed using the
-    given byte parameter.
+    """Returns the `set_stop_io` command string, composed using the given byte
+    parameter.
 
     :param byte_value: the byte to which the USD byte for stop IO should be set
     :param usd_index: the desired USD index along the line. For a broadcast
@@ -632,8 +632,8 @@ def set_stop_io(byte_value, usd_index=None, address_on_response=True):
 
 
 def set_positioning_io(byte_value, usd_index=None, address_on_response=True):
-    """This method returns the set_positioning_io command string, composed
-    using the given byte parameter.
+    """Returns the `set_positioning_io` command string, composed using the
+    given byte parameter.
 
     :param byte_value: the byte to which the USD byte for positioning IO should
         be set
@@ -664,8 +664,8 @@ def set_positioning_io(byte_value, usd_index=None, address_on_response=True):
 
 
 def set_home_io(byte_value, usd_index=None, address_on_response=True):
-    """This method returns the set_home_io command string, composed using the
-    given byte parameter.
+    """Returns the `set_home_io` command string, composed using the given byte
+    parameter.
 
     :param byte_value: the byte to which the USD byte for home IO should be set
     :param usd_index: the desired USD index along the line. For a broadcast
@@ -695,8 +695,8 @@ def set_home_io(byte_value, usd_index=None, address_on_response=True):
 
 
 def set_working_mode(byte_value, usd_index=None, address_on_response=True):
-    """This method returns the set_working_mode command string, composed using
-    the given byte parameter.
+    """Returns the `set_working_mode` command string, composed using the given
+    byte parameter.
 
     :param byte_value: the byte to which the USD byte for working mode should
         be set

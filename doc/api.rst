@@ -162,8 +162,8 @@ System class
    :inherited-members:
 
 
-Useful Functions and Classes
-============================
+The Utils library
+=================
 
 .. module:: simulators.utils
 

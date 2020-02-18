@@ -4,8 +4,7 @@ from simulators import utils
 
 
 class USD(object):
-    """This class represents a single USD actuator driver. It is completely
-    handled by the active surface System class.
+    """USD actuator driver implementation.
 
     :param usd_index: the index of the USD on its line.
     :type usd_index: int
@@ -52,8 +51,8 @@ class USD(object):
         self.usd_index = usd_index
 
     def _set_default(self):
-        """This method is called whenever the USD is initialized or reset to
-        its default parameters."""
+        """Called at initialization or reset phases to restore default
+        parameters."""
         self.reference_position = 0
         self.current_position = 0
         self.position_queue = Queue()
@@ -95,8 +94,8 @@ class USD(object):
         self.standby = False
 
     def soft_reset(self):
-        """This method resets the USD to it default values. When a reset is
-        performed, the USD takes approximately 100ms to boot back up."""
+        """Resets the USD to it default values. When a reset is performed, the
+        USD takes approximately 100ms to boot back up."""
         t0 = time.time()
 
         self._set_default()
@@ -105,8 +104,8 @@ class USD(object):
         time.sleep(max(self.driver_reset_delay - elapsed_time, 0))
 
     def soft_trigger(self):
-        """This method implements the TRIGGER event for the delayed execution
-        of movements. Whenever this command is received, if there is at least
+        """Implements the TRIGGER event for the delayed execution of USD
+        movements. Whenever this command is received, if there is at least
         one position in the queue and the USD status is set to ready, the USD
         starts moving towards the desired position."""
         if self.ready is True:
@@ -120,7 +119,7 @@ class USD(object):
                 self.ready = False
 
     def get_version(self):
-        """This method returns the USD software version.
+        """Returns the USD software version.
 
         :return: the software version as [major, minor]
         :rtype: list"""
@@ -133,14 +132,14 @@ class USD(object):
         self.cmd_position = None
 
     def get_position(self):
-        """This method returns the USD current position.
+        """Returns the USD current position.
 
         :return: the current position
         :rtype: int"""
         return self.current_position
 
     def get_status(self):
-        """This method returns the USD current status.
+        """Returns the USD current status.
 
         :return: the current status
         :rtype: string
@@ -179,16 +178,16 @@ class USD(object):
         )
 
     def get_driver_type(self):
-        """This method returns the USD type.
+        """Returns the USD type.
 
         :return: the USD type. 0x20: USD50xxx, 0x21: USD60xxx
         :rtype: byte"""
         return self.driver_type
 
     def set_min_frequency(self, frequency):
-        """This method sets the minimum USD rotation frequency. If the desired
-        frequency is greater than the current maximum frequency, it is
-        considered wrong and the parser will return a `byte_nak`.
+        """Sets the minimum USD rotation frequency. If the desired frequency
+        is greater than the current maximum frequency, it is considered wrong
+        and the parser will return a `byte_nak`.
 
         :param frequency: the minimum frequency
         :type frequency: int between 20 and 10000
@@ -203,9 +202,9 @@ class USD(object):
         return True
 
     def set_max_frequency(self, frequency):
-        """This method sets the maximum USD rotation frequency. If the desired
-        frequency is lower than the current minimum frequency, it is considered
-        wrong and the parser will return a `byte_nak`.
+        """Sets the maximum USD rotation frequency. If the desired frequency is
+        lower than the current minimum frequency, it is considered wrong and
+        the parser will return a `byte_nak`.
 
         :param frequency: the maximum frequency
         :type frequency: int between 20 and 10000
@@ -219,26 +218,24 @@ class USD(object):
         self.max_frequency = frequency
         return True
 
-    def set_slope_delayer(self, factor):
-        """This method sets the USD acceleration slope delayer. It means that
-        the higher the `delayer` parameter, the slower the acceleration will
-        be.
+    def set_slope_delayer(self, delayer):
+        """Sets the USD acceleration slope delayer. It means that the higher
+        the `delayer` parameter, the slower the acceleration will be.
 
         :param delayer: the desired slope delayer
         :type delayer: int"""
-        self.slope_delayer = factor
+        self.slope_delayer = delayer
 
     def set_reference_position(self, position):
-        """This method sets the received position as the reference position
-        (zero position).
+        """Sets the received position as the reference position (zero pos).
 
         :param position: the absolute position to be set as reference
         :type position: int between -2147483648 and 2147483647"""
         self.reference_position = position
 
     def set_io_pins(self, param):
-        """This method sets the direction of the I/O pins and their values
-        whenever a pin is configured as outbound.
+        """Sets the direction of the I/O pins and their values whenever a pin
+        is configured as outbound.
 
         :param param: a byte containing the configuration of the I/O pins
         :type param: byte"""
@@ -263,8 +260,8 @@ class USD(object):
             self.io_val[2] = 0
 
     def set_resolution(self, resolution):
-        """This method sets the step resolution of the USD. The resolution
-        could be either automatic or fixed.
+        """Sets the step resolution of the USD. The resolution could be either
+        automatic or fixed.
 
         :param resolution: the USD resolution denominator. A resolution equal
             to `None` means the automatic change of resolution is enabled
@@ -277,8 +274,8 @@ class USD(object):
             self.resolution = self.resolutions.get(resolution)
 
     def set_current_reduction(self, standby_mode, standby_delay_multiplier):
-        """This method sets the delay after which and in which way the USD
-        current should be reduced.
+        """Sets the delay after which and in which way the USD current should
+        be reduced.
 
         :param standby_mode: the desired standby mode
         :param standby_delay_multiplier: the desired standby delay multiplier
@@ -288,7 +285,7 @@ class USD(object):
         self.standby_delay_multiplier = standby_delay_multiplier
 
     def set_response_delay(self, multiplier):
-        """This method sets the response delay multiplier of the USD.
+        """Sets the response delay multiplier of the USD.
 
         :param multiplier: the desired delay multiplier, each unit corresponds
             to 4096 microseconds
@@ -296,8 +293,7 @@ class USD(object):
         self.delay_multiplier = multiplier
 
     def set_delayed_execution(self, param):
-        """This method enables or disables the delayed execution of positioning
-        commands.
+        """Enables or disables the delayed execution of positioning commands.
 
         :param param: a byte containing information regarding the I/O lines and
             if the delayed positioning has to be enabled or disabled
@@ -329,14 +325,14 @@ class USD(object):
         self.position_queue = Queue()
 
     def set_absolute_position(self, position):
-        """This method receives an absolute position to which the USD will have
-            to move. If the positioning strategy is set to immediate and the
-            USD is not already moving, it will start moving towards the desired
-            position. In case the USD is already moving and the positioning
-            strategy is immediate, this command will fail, returning NAK. If
-            the poisioning strategy is set to delayed instead, the position
-            will be enqueued and the USD will wait until it receives a TRIGGER
-            event. It will then move to the first enqueued position.
+        """Receives an absolute position to which the USD will have to move.
+        If the positioning strategy is set to immediate and the USD is not
+        already moving, it will start moving towards the desired position.
+        In case the USD is already moving and the positioning strategy is
+        immediate, this command will fail, returning NAK. If the positioning
+        strategy is set to delayed instead, the position will be enqueued and
+        the USD will wait until it receives a TRIGGER event. It will then move
+        to the first enqueued position.
 
         :param position: the absolute position to move to, expressed in 1/128
             of step
@@ -357,15 +353,15 @@ class USD(object):
         return True
 
     def set_relative_position(self, position):
-        """This method receives a relative position to which the USD will have
-            to move in respect to its current position. If the positioning
-            strategy is set to immediate and the USD is not already moving, it
-            will start moving towards the resulting position. On the contrary,
-            if the USD is already moving and the positioning strategy is
-            immediate, this command will fail, returning NAK. If the poisioning
-            strategy is set to delayed, the resulting position will be enqueued
-            and the USD will wait until it receives a TRIGGER event. It will
-            then move to the first enqueued position.
+        """Receives a relative position to which the USD will have to move in
+        respect to its current position. If the positioning strategy is set to
+        immediate and the USD is not already moving, it will start moving
+        towards the resulting position. On the contrary, if the USD is already
+        moving and the positioning strategy is immediate, this command will
+        fail, returning NAK. If the positioning strategy is set to delayed, the
+        resulting position will be enqueued and the USD will wait until it
+        receives a TRIGGER event. It will then move to the first enqueued
+        position.
 
         :param position: the position relative to the current one, expressed in
             1/128 of step
@@ -386,8 +382,8 @@ class USD(object):
         return True
 
     def rotate(self, sign):
-        """This method starts moving the USD indefinitely. The direction of the
-        movement corresponds is given by the sign parameter. It accounts for
+        """Starts moving the USD indefinitely. The direction of the movement
+        corresponds is given by the sign parameter. It accounts for
         acceleration, minimum and maximum frequency.
 
         :param sign: the direction towards the USD will have to start moving
@@ -404,9 +400,9 @@ class USD(object):
             return True
 
     def set_velocity(self, velocity):
-        """This method starts moving the USD at a given frequency, bypassing
-        the acceleration ramp. This is useful whenever the USD has to behave as
-        a common servo driver. This command can be sent even when the USD is
+        """Starts moving the USD at a given frequency, bypassing the
+        acceleration ramp. This is useful whenever the USD has to behave as a
+        common servo driver. This command can be sent even when the USD is
         already moving. To stop the USD movement, use either a `stop` command
         or this same command, sending a zero as `velocity` parameter.
 
@@ -422,8 +418,8 @@ class USD(object):
         return True
 
     def set_stop_io(self, param):
-        """This method activates the execution of a hardware stop whenever the
-        I/O lines reach the desired (given) values.
+        """Sctivates the execution of a hardware stop whenever the I/O lines
+        reach the desired (given) values.
 
         :param param: a byte containing information regarding the I/O values
             and if the hardware stop has to be enabled or not
@@ -451,8 +447,8 @@ class USD(object):
             self.stop_io_level[2] = 0
 
     def set_positioning_io(self, param):
-        """This method sets the logical levels of the I/O lines that have to be
-        set whenever the USD reaches the desired position.
+        """Sets the logical levels of the I/O lines that have to be set
+        whenever the USD reaches the desired position.
 
         :param param: a byte containing information regarding the I/O values to
             set whenever a commanded movement is completed
@@ -480,10 +476,9 @@ class USD(object):
             self.pos_io_level[2] = 0
 
     def set_home_io(self, param):
-        """This method sets the logical levels of the I/O lines that are used
-        with the HOME function. The HOME function sets to 0 the actuator
-        internal quota and stops its movement whenever the I/O lines get to a
-        specific level.
+        """Sets the logical levels of the I/O lines that are used with the HOME
+        function. The HOME function sets to 0 the actuator internal quota and
+        stops its movement whenever the I/O lines get to a specific level.
 
         :param param: a byte containing information regarding the I/O values
             that triggers the HOME function of the USD.
@@ -509,8 +504,8 @@ class USD(object):
             self.home_io_level[2] = 0
 
     def set_working_mode(self, params):
-        """This method sets the working mode of the USD. For now, the only
-        tweakable parameter is the baud rate of the serial communication.
+        """Sets the working mode of the USD. For now, the only tweakable
+        parameter is the baud rate of the serial communication.
 
         :param params: a string containing two bytes. The first one contains
             information regarding the desired baud rate for the serial
@@ -523,9 +518,9 @@ class USD(object):
         #  params[1] is currently unused
 
     def calc_position(self, elapsed):
-        """This method calculates the current position of the USD considering
-        its current status and previously set parameters, along with the
-        elapsed time since last position calculation.
+        """Calculates the current position of the USD considering its current
+        status and previously set parameters, along with the elapsed time since
+        last position calculation.
 
         :param elapsed: the elapsed time in seconds since last position
             calculation

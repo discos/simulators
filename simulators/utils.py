@@ -16,6 +16,7 @@ def checksum(msg):
 
     :param msg: the message of which the checksum will be calculated and
         returned
+    :type msg: str
 
     >>> checksum('fooo')
     'L'
@@ -39,6 +40,8 @@ def binary_complement(bin_string, mask=''):
     :param mask: a binary string that will act as mask allowing to complement
         only bin_string's digits corresponding to mask's ones, leaving the
         bin_string's digits corresponding to mask's zeros as they are
+    :type bin_string: str
+    :type mask: str
 
     >>> binary_complement('11010110')
     '00101001'
@@ -82,6 +85,7 @@ def twos_to_int(binary_string):
     :param binary_string: the string containing only zeros and ones. It is
         mandatory to pad this value to the desired bits length before passing
         it to the method in order to avoid representation errors.
+    :type binary_string: str
 
     >>> twos_to_int('11111011')
     -5
@@ -112,6 +116,8 @@ def int_to_twos(val, n_bytes=4):
         complement
     :param n_bytes: the number of total bytes to use for the given signed
         integer conversion to two's complement
+    :type val: int
+    :type n_bytes: int
 
     >>> int_to_twos(5)
     '00000000000000000000000000000101'
@@ -146,6 +152,13 @@ def int_to_twos(val, n_bytes=4):
 def binary_to_bytes(binary_string, little_endian=True):
     """Converts a binary string in a string of bytes.
 
+    :param binary_string: the original binary string that has to be converted
+        to a byte string
+    :param little_endian: boolean indicating whether the returned string should
+        be formatted with little endian or big endian notation
+    :type binary_string: str
+    :type little_endian: bool
+
     >>> binary_to_bytes('0110100001100101011011000110110001101111', False)
     '\x68\x65\x6C\x6C\x6F'
     """
@@ -164,6 +177,8 @@ def bytes_to_int(byte_string, little_endian=True):
     :param byte_string: the signed integer represented as bytes
     :param little_endian: boolean indicating whether the byte_string param was
         received with little endian or big endian notation
+    :type byte_string: str
+    :type little_endian: bool
 
     >>> bytes_to_int(b'hello', False)
     448378203247
@@ -185,6 +200,8 @@ def bytes_to_binary(byte_string, little_endian=True):
     :param byte_string: the byte string to be converted to binary
     :param little_endian: boolean indicating whether the byte_string param was
         received with little endian or big endian notation
+    :type byte_string: str
+    :type little_endian: bool
 
     >>> bytes_to_binary(b'hi', little_endian=False)
     '0110100001101001'
@@ -206,6 +223,8 @@ def bytes_to_uint(byte_string, little_endian=True):
     :param byte_string: the unsigned integer represented as bytes
     :param little_endian: boolean indicating whether the byte_string param was
         received with little endian or big endian notation
+    :type byte_string: str
+    :little_endian: bool
 
     >>> bytes_to_uint(b'hi', little_endian=False)
     26729
@@ -224,6 +243,8 @@ def real_to_binary(num, precision=1):
     :param num: the floating-point number to be converted
     :param precision: integer indicating whether the floating-point precision
         to be adopted should be single (1) or double (2)
+    :type num: float
+    :type precision: int
 
     >>> real_to_binary(619.34000405413)
     '01000100000110101101010111000011'
@@ -260,6 +281,9 @@ def real_to_bytes(num, precision=1, little_endian=True):
         to be adopted should be single (1) or double (2)
     :param little_endian: boolean indicating whether the byte string should be
         returned with little endian or big endian notation
+    :type num: float
+    :type precision: int
+    :type little_endian: bool
 
     >>> [hex(ord(x)) for x in real_to_bytes(436.56, 1, False)]
     ['0x43', '0xda', '0x47', '0xae']
@@ -281,6 +305,9 @@ def bytes_to_real(bytes_real, precision=1, little_endian=True):
         to be adopted should be single (1) or double (2)
     :param little_endian: boolean indicating whether the bytes_real param was
         received with little endian or big endian notation
+    :type bytes_real: str
+    :type precision: int
+    :type little_endian: bool
 
     >>> round(bytes_to_real('\x44\x77\x2C\x31', 1, False), 2)
     988.69
@@ -310,6 +337,9 @@ def int_to_bytes(val, n_bytes=4, little_endian=True):
     :param n_bytes: the number of bytes to fit the given unsigned integer to
     :param little_endian: boolean indicating whether the byte string should be
         returned with little endian or big endian notation
+    :type val: int
+    :type n_bytes: int
+    :type little_endian: bool
 
     >>> [hex(ord(x)) for x in int_to_bytes(354, little_endian=False)]
     ['0x0', '0x0', '0x1', '0x62']
@@ -325,6 +355,9 @@ def uint_to_bytes(val, n_bytes=4, little_endian=True):
     :param n_bytes: the number of bytes to fit the given unsigned integer to
     :param little_endian: boolean indicating whether the byte string should be
         returned with little endian or big endian notation
+    :type val: int
+    :type n_bytes: int
+    :type little_endian: bool
 
     >>> [hex(ord(x)) for x in uint_to_bytes(657, little_endian=False)]
     ['0x0', '0x0', '0x2', '0x91']
@@ -348,6 +381,9 @@ def uint_to_bytes(val, n_bytes=4, little_endian=True):
 
 def sign(number):
     """Returns the sign (-1, 0, 1) of a given number (int or float) as an int.
+
+    :param number: the number from which the sign will be extracted
+    :type number: int
 
     >>> sign(5632)
     1
@@ -373,8 +409,9 @@ def mjd(date=None):
     For more informations about modified julian date check the following link:
     https://bowie.gsfc.nasa.gov/time/
 
-    :param date: the datetime object to calculate the equivalent modified
-        julian date. If None, the current time is used.
+    :param date: the object to calculate the equivalent modified julian date.
+        If None, the current time is used.
+    :type date: datetime
 
     >>> d = datetime(2018, 1, 20, 10, 30, 45, 100000)
     >>> mjd(d)
@@ -423,6 +460,7 @@ def mjd_to_date(original_mjd_date):
 
     :param original_mjd_date: a floating point number representing the modified
         julian date to be converted to a datetime object.
+    :type original_mjd_date: float
 
     >>> mjd_to_date(58138.43802199074)
     datetime.datetime(2018, 1, 20, 10, 30, 45, 100000)
@@ -487,8 +525,10 @@ def mjd_to_date(original_mjd_date):
 def day_microseconds(date=None):
     """Returns the microseconds elapsed since last midnight UTC.
 
-    :param date: the datetime object to calculate the total day amount of
-        microseconds. If None, the current time is used."""
+    :param date: the object to calculate the total day amount of microseconds.
+        If None, the current time is used.
+    :type date: datetime
+    """
     if not date:
         date = datetime.utcnow()
     elif not isinstance(date, datetime):
@@ -507,8 +547,10 @@ def day_microseconds(date=None):
 def day_milliseconds(date=None):
     """Returns the milliseconds elapsed since last midnight UTC.
 
-    :param date: the datetime object to calculate the total day amount of
-        milliseconds. If None, the current time is used."""
+    :param date: the object to calculate the total day amount of milliseconds.
+        If None, the current time is used.
+    :type date: datetime
+    """
     if not date:
         date = datetime.utcnow()
     elif not isinstance(date, datetime):
@@ -521,7 +563,9 @@ def day_percentage(date=None):
     """Returns the day percentage. 00:00 = 0.0, 23:59:999999 = 1.0
 
     :param date: the datetime or timedelta object of which will be calculated
-        the equivalent percentage. If None, the current datetime is used."""
+        the equivalent percentage. If None, the current datetime is used.
+    :type date: datetime or timedelta
+    """
     if not date:
         date = datetime.utcnow()
 
