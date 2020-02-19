@@ -37,33 +37,62 @@ class TestListeningServer(unittest.TestCase):
     def tearDown(self):
         time.sleep(0.1)
 
+    def test_wrong_greet_msg(self):
+        with self.assertRaises(ValueError):
+            get_response(
+                self.address,
+                greet_msg='Wrong greet message!',
+            )
+
     def test_proper_request(self):
-        response = get_response(self.address, msg='#command:a,b,c%')
+        response = get_response(
+            self.address,
+            greet_msg='This is a greeting message!',
+            msg='#command:a,b,c%'
+        )
         self.assertEqual(response, 'aabbcc')
 
     def test_wrong_request(self):
         """Wrong request but expected by the protocol"""
-        response = get_response(self.address, msg='#wrong_command:foo%')
+        response = get_response(
+            self.address,
+            greet_msg='This is a greeting message!',
+            msg='#wrong_command:foo%'
+        )
         self.assertRegexpMatches(response, 'you sent a wrong command')
 
     def test_value_error(self):
         """The message of ValueError in the logfile"""
-        get_response(self.address, msg='#valueerror:%', response=False)
+        get_response(
+            self.address,
+            greet_msg='This is a greeting message!',
+            msg='#valueerror:%', response=False
+        )
         self.assertTrue('unexpected value' in get_logs())
 
     def test_unexpected_error(self):
-        get_response(self.address, msg='#unexpected:%', response=False)
+        get_response(
+            self.address,
+            greet_msg='This is a greeting message!',
+            msg='#unexpected:%',
+            response=False
+        )
         self.assertTrue('unexpected exception' in get_logs())
 
     def test_custom_command_with_parameters(self):
         response = get_response(
             self.address,
+            greet_msg='This is a greeting message!',
             msg='$custom_command:a,b,c%'
         )
         self.assertRegexpMatches(response, 'ok_abc')
 
     def test_custom_command_without_parameters(self):
-        response = get_response(self.address, msg='$custom_command%')
+        response = get_response(
+            self.address,
+            greet_msg='This is a greeting message!',
+            msg='$custom_command%'
+        )
         self.assertRegexpMatches(response, 'no_params')
 
 
@@ -217,23 +246,36 @@ class TestDuplexServer(unittest.TestCase):
         time.sleep(0.1)
 
     def test_proper_request(self):
-        response = get_response(self.l_address, msg='#command:a,b,c%')
+        response = get_response(
+            self.l_address,
+            greet_msg='This is a greeting message!',
+            msg='#command:a,b,c%'
+        )
         self.assertEqual(response, 'aabbcc')
 
     def test_wrong_request(self):
         """Wrong request but expected by the protocol"""
-        response = get_response(self.l_address, msg='#wrong_command:foo%')
+        response = get_response(
+            self.l_address,
+            greet_msg='This is a greeting message!',
+            msg='#wrong_command:foo%'
+        )
         self.assertRegexpMatches(response, 'you sent a wrong command')
 
     def test_custom_command_with_parameters(self):
         response = get_response(
             self.l_address,
+            greet_msg='This is a greeting message!',
             msg='$custom_command:a,b,c%'
         )
         self.assertRegexpMatches(response, 'ok_abc')
 
     def test_custom_command_without_parameters(self):
-        response = get_response(self.l_address, msg='$custom_command%')
+        response = get_response(
+            self.l_address,
+            greet_msg='This is a greeting message!',
+            msg='$custom_command%'
+        )
         self.assertRegexpMatches(response, 'no_params')
 
     def test_get_message(self):
@@ -242,7 +284,11 @@ class TestDuplexServer(unittest.TestCase):
 
     def test_last_cmd(self):
         message = '#test:1,2,3%'
-        l_response = get_response(self.l_address, msg=message)
+        l_response = get_response(
+            self.l_address,
+            greet_msg='This is a greeting message!',
+            msg=message
+        )
         self.assertEqual(l_response, '112233')
         s_response = get_response(self.s_address)
         self.assertEqual(s_response, message[1:-1])
@@ -343,7 +389,11 @@ class TestSimulator(unittest.TestCase):
 
         self.simulator.start(daemon=True)
 
-        response = get_response(address, msg='#command:a,b,c%')
+        response = get_response(
+            address,
+            greet_msg='This is a greeting message!',
+            msg='#command:a,b,c%'
+        )
         self.assertEqual(response, 'aabbcc')
 
         self.simulator.stop()
@@ -368,7 +418,11 @@ class TestSimulator(unittest.TestCase):
 
         self.simulator.start(daemon=True)
 
-        l_response = get_response(l_addr, msg='#command:a,b,c%')
+        l_response = get_response(
+            l_addr,
+            greet_msg='This is a greeting message!',
+            msg='#command:a,b,c%'
+        )
         self.assertEqual(l_response, 'aabbcc')
         s_response = get_response(s_addr)
         self.assertEqual(s_response, 'command:a,b,c')
@@ -392,7 +446,11 @@ class TestSimulator(unittest.TestCase):
         t = Thread(target=simulator.start)
         t.start()
         time.sleep(0.1)
-        response = get_response(l_addr, msg='$system_stop%')
+        response = get_response(
+            l_addr,
+            greet_msg='This is a greeting message!',
+            msg='$system_stop%'
+        )
         self.assertEqual(response, '$server_shutdown%')
         response = get_response(s_addr, msg='$system_stop%')
         self.assertEqual(response, '$server_shutdown%')
@@ -413,7 +471,11 @@ class TestServerVarious(unittest.TestCase):
 
         def shutdown(self):
             time.sleep(0.01)
-            response = get_response(address, msg='$system_stop%')
+            response = get_response(
+                address,
+                greet_msg='This is a greeting message!',
+                msg='$system_stop%'
+            )
             self.assertEqual(response, '$server_shutdown%')
 
         t = Thread(target=shutdown, args=(self,))
@@ -440,7 +502,12 @@ class TestServerVarious(unittest.TestCase):
 
 
 def get_response(
-        server_address, msg=None, timeout=2.0, response=True, udp=False):
+        server_address,
+        greet_msg=None,
+        msg=None,
+        timeout=2.0,
+        response=True,
+        udp=False):
     retval = b''
     if udp:
         socket_type = socket.SOCK_DGRAM
@@ -451,6 +518,10 @@ def get_response(
     with socket_context(socket.AF_INET, socket_type) as sock:
         sock.settimeout(timeout)
         sock.connect(server_address)
+        if greet_msg:
+            greeting = sock.recv(len(greet_msg))
+            if greeting != greet_msg:
+                raise ValueError
         if isinstance(msg, str):
             sock.sendto(msg, server_address)
         if response:
@@ -489,6 +560,10 @@ class ListeningTestSystem(ListeningSystem):
             getattr(self, 'last_cmd')
         except AttributeError:
             self.last_cmd = Array(c_char, b'\x00' * 50)
+
+    @staticmethod
+    def system_greet():
+        return 'This is a greeting message!'
 
     def parse(self, byte):
         # Example of msg: #command_name:par1,par2,par3!
