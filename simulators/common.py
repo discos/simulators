@@ -14,6 +14,10 @@ class BaseSystem(object):
         to stop accepting requests and to shut down."""
         return '$server_shutdown%'
 
+    @staticmethod
+    def system_greet():
+        return None
+
 
 class ListeningSystem(BaseSystem):
     """Implements a server that waits for its client(s) to send a command, it

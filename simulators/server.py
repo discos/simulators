@@ -32,6 +32,11 @@ class BaseHandler(BaseRequestHandler):
 
     custom_header, custom_tail = ('$', '%')
 
+    def setup(self):
+        """Method that gets called whenever a client connects to the server."""
+        logging.info('Got connection from %s', self.client_address)
+        self.custom_msg = b''
+
     def _execute_custom_command(self, msg_body):
         """This method accepts a custom command (without the custom header and
         tail) formatted as `command_name:par1,par2,...,parN`. It then parses
@@ -65,10 +70,15 @@ class BaseHandler(BaseRequestHandler):
 class ListenHandler(BaseHandler):
 
     def setup(self):
-        """Method that gets called as soon as a client connects to the server.
-        """
-        logging.info('Got connection from %s', self.client_address)
-        self.custom_msg = b''
+        BaseHandler.setup(self)
+        self.socket = self.request
+        self.connection_oriented = True
+        if not isinstance(self.socket, tuple):  # TCP client
+            greet_msg = self.system.system_greet()
+            if greet_msg:
+                self.socket.sendto(greet_msg, self.client_address)
+        else:  # UDP client
+            self.connection_oriented = False
 
     def handle(self):
         """Method that gets called right after the `setup` method ends its
@@ -79,17 +89,19 @@ class ListenHandler(BaseHandler):
         It also constantly listens for custom commands that do not belong to a
         specific `System` class, but are useful additions to the simulators
         framework."""
-        self.socket = self.request
-        if isinstance(self.socket, tuple):  # UDP client
+        if not self.connection_oriented:  # UDP client
             msg, self.socket = self.socket
             msg += '\n'
             self._handle(msg)
         else:  # TCP client
             while True:
-                msg = self.socket.recv(1)
-                if not msg:
+                try:
+                    msg = self.socket.recv(1)
+                    if not msg:
+                        break
+                    self._handle(msg)
+                except IOError:
                     break
-                self._handle(msg)
 
     def _handle(self, msg):
         """Handles a single message. If the connection with the client was
@@ -135,10 +147,6 @@ class ListenHandler(BaseHandler):
 
 
 class SendHandler(BaseHandler):
-
-    def setup(self):
-        """Method that gets called whenever a client connects to the server."""
-        logging.info('Got connection from %s', self.client_address)
 
     def handle(self):
         """Method that gets called right after the `setup` method ends its
