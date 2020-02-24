@@ -1,5 +1,6 @@
 [run]
 concurrency = multiprocessing
+source = simulators
 
 [report]
 exclude_lines =
