@@ -137,7 +137,7 @@ class ListenHandler(BaseHandler):
                 elif response and isinstance(response, str):
                     try:
                         self.socket.sendto(response, self.client_address)
-                    except IOError:
+                    except IOError:  # pragma: no cover
                         # Something went wrong while sending the response,
                         # probably the client was stopped without closing
                         # the connection

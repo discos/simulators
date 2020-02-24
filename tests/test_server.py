@@ -66,7 +66,8 @@ class TestListeningServer(unittest.TestCase):
         get_response(
             self.address,
             greet_msg='This is a greeting message!',
-            msg='#valueerror:%', response=False
+            msg='#valueerror:%',
+            response=False
         )
         self.assertTrue('unexpected value' in get_logs())
 
@@ -78,6 +79,15 @@ class TestListeningServer(unittest.TestCase):
             response=False
         )
         self.assertTrue('unexpected exception' in get_logs())
+
+    def test_unexpected_response(self):
+        get_response(
+            self.address,
+            greet_msg='This is a greeting message!',
+            msg='#unexpected_response:%',
+            response=False
+        )
+        self.assertTrue('unexpected response: 0.0' in get_logs())
 
     def test_custom_command_with_parameters(self):
         response = get_response(
@@ -582,6 +592,8 @@ class ListeningTestSystem(ListeningSystem):
                     raise ValueError('unexpected value')
                 elif name == 'unexpected':
                     raise AttributeError('unexpected exception')
+                elif name == 'unexpected_response':
+                    return 0.0  # Nor boolean or str
                 params = params_str.split(',')
                 response = b''
                 for param in params:
