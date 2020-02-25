@@ -11,6 +11,9 @@ from datetime import datetime, timedelta
 from simulators.common import BaseSystem
 
 
+ACS_TO_UNIX_TIME = 10000000
+
+
 def checksum(msg):
     """Returns the checksum of a string message.
 

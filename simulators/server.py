@@ -111,39 +111,42 @@ class ListenHandler(BaseHandler):
         contains the whole message, but each byte gets processed separately.
         """
         for byte in msg:
-            try:
-                response = self.system.parse(byte)
-            except ValueError, ex:
-                logging.debug(ex)
-                continue
-            except Exception:
-                logging.debug('unexpected exception')
-                continue
-            if response is True:
-                # All custom command bytes should be different than the
-                # system header, otherwise the custom command will be cleared
-                self.custom_msg = b''
-                continue  # The system is still composing the message
-            elif response and isinstance(response, str):
-                try:
-                    self.socket.sendto(response, self.client_address)
-                except IOError:
-                    # Something went wrong while sending the response, probably
-                    # the client was stopped without closing the connection
-                    break
-            elif response is False:
-                # The system is still waiting for the header:
-                # check if the client is sending a custom command
-                if byte == self.custom_header:
-                    self.custom_msg = byte
-                elif self.custom_msg.startswith(self.custom_header):
-                    self.custom_msg += byte
-                    if byte == self.custom_tail:
-                        msg_body = self.custom_msg[1:-1]
-                        self.custom_msg = b''
-                        self._execute_custom_command(msg_body)
+            if byte == self.custom_header:
+                self.custom_msg = byte
+            elif self.custom_msg.startswith(self.custom_header):
+                self.custom_msg += byte
+                if byte == self.custom_tail:
+                    msg_body = self.custom_msg[1:-1]
+                    self.custom_msg = b''
+                    self._execute_custom_command(msg_body)
             else:
-                logging.debug('unexpected response: %s', response)
+                try:
+                    response = self.system.parse(byte)
+                except ValueError, ex:
+                    logging.debug(ex)
+                    continue
+                except Exception:
+                    logging.debug('unexpected exception')
+                    continue
+                if response is True:
+                    # All custom command bytes should be different than the
+                    # system header, otherwise the custom command will be
+                    # cleared
+                    self.custom_msg = b''
+                    continue  # The system is still composing the message
+                elif response and isinstance(response, str):
+                    try:
+                        self.socket.sendto(response, self.client_address)
+                    except IOError:  # pragma: no cover
+                        # Something went wrong while sending the response,
+                        # probably the client was stopped without closing
+                        # the connection
+                        break
+                elif response is False:
+                    # Apparently the sent byte was unexpected, do nothing
+                    pass
+                else:
+                    logging.debug('unexpected response: %s', response)
 
 
 class SendHandler(BaseHandler):
@@ -351,9 +354,22 @@ class Simulator(object):
                     socket_type = socket.SOCK_DGRAM
                 sockobj = socket.socket(socket.AF_INET, socket_type)
                 try:
-                    sockobj.settimeout(1)
+                    sockobj.settimeout(0.1)
                     sockobj.connect(address)
+                    try:
+                        while sockobj.recv(1024):
+                            pass
+                    except socket.timeout:
+                        pass
                     sockobj.sendto('$system_stop%', address)
+                    response = sockobj.recv(1024)
+                    if response != '$server_shutdown%':
+                        logging.warning(
+                            '%s %s %s',
+                            'The server did not answer with the',
+                            '$server_shutdown% string!',
+                            'The simulator might still be running!'
+                        )
                 except Exception, ex:  # pragma: no cover
                     logging.debug(ex)
                 finally:
