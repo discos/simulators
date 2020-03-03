@@ -212,7 +212,7 @@ class Server(ThreadingMixIn):
 
     :param system: the desired simulator system module
     :param server_type: the type of threading server to be used
-    :param args: the arguments to pass to the system instance constructor
+    :param kwargs: the arguments to pass to the system instance constructor
         method
     :param l_address: the address of the server that exposes the
         `System.parse()` method
@@ -221,12 +221,12 @@ class Server(ThreadingMixIn):
     :type system: System class that inherits from ListeningServer or/and
         SendingServer
     :type server_type: ThreadingTCPServer or ThreadingUDPServer
-    :type args: tuple
+    :type kwargs: dict
     :type l_address: (ip, port)
     :type s_address: (ip, port)
     """
     def __init__(
-            self, system, server_type, args, l_address=None, s_address=None):
+            self, system, server_type, kwargs, l_address=None, s_address=None):
         if server_type not in [ThreadingTCPServer, ThreadingUDPServer]:
             raise ValueError(
                 'Provide either the `ThreadingTCPServer` class '
@@ -236,7 +236,7 @@ class Server(ThreadingMixIn):
         self.server_type = server_type
         self.server_type.allow_reuse_address = True
         self.system = system
-        self.system_args = args
+        self.system_kwargs = kwargs
 
         self.child_server = None
         if l_address:
@@ -244,7 +244,7 @@ class Server(ThreadingMixIn):
             self.server_type.__init__(self, l_address, ListenHandler)
             if s_address:
                 self.child_server = Server(
-                    system, self.server_type, args, None, s_address
+                    system, self.server_type, kwargs, None, s_address
                 )
         elif s_address:
             self.address = s_address
@@ -264,9 +264,9 @@ class Server(ThreadingMixIn):
         :type poll_interval: float
         """
         if isinstance(self.system, types.ModuleType):
-            self.system = self.system.System(*self.system_args)
+            self.system = self.system.System(**self.system_kwargs)
         elif isinstance(self.system, abc.ABCMeta):
-            self.system = self.system(*self.system_args)
+            self.system = self.system(**self.system_kwargs)
         if not self.RequestHandlerClass.system:
             self.RequestHandlerClass.system = self.system
         if self.child_server:
@@ -298,7 +298,7 @@ class Simulator(object):
     :param system_module: the module that implements the System class.
     :type system_module: module that implements the System class, string
     """
-    def __init__(self, system_module):
+    def __init__(self, system_module, **kwargs):
         if not isinstance(system_module, types.ModuleType):
             self.system_module = importlib.import_module(
                 'simulators.%s'
@@ -306,6 +306,8 @@ class Simulator(object):
             )
         else:
             self.system_module = system_module
+        self.kwargs = kwargs
+        self.simulator_name = self.system_module.__name__.split('.')[-1]
 
     def start(self, daemon=False):
         """Starts a simulator by instancing the servers listed in the given
@@ -319,27 +321,24 @@ class Simulator(object):
         :type daemon: bool
         """
         processes = []
-        for l_addr, s_addr, server_type, args in self.system_module.servers:
+        for l_addr, s_addr, server_type, kwargs in self.system_module.servers:
+            kwargs.update(self.kwargs)
             s = Server(
-                self.system_module, server_type, args, l_addr, s_addr
+                self.system_module, server_type, kwargs, l_addr, s_addr
             )
             p = Process(target=s.serve_forever)
             p.daemon = daemon
             processes.append(p)
             p.start()
-            if not daemon:
-                if l_addr:
-                    print('Server %s up and running.' % (l_addr,))
-                if s_addr:
-                    print('Server %s up and running.' % (s_addr,))
+        print("Simulator '%s' up and running." % self.simulator_name)
 
         if not daemon:
             try:
                 for p in processes:
                     p.join()
             except KeyboardInterrupt:
+                print('')  # Skip the line displaying the SIGINT character
                 self.stop()
-            print('\nSimulator stopped.')
 
     def stop(self):
         """Stops a simulator by sending the custom `$system_stop%` command to
@@ -374,3 +373,4 @@ class Simulator(object):
                     logging.debug(ex)
                 finally:
                     sockobj.close()
+        print("Simulator '%s' stopped." % self.simulator_name)

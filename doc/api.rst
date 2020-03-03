@@ -205,4 +205,6 @@ The Utils library
 
 .. autofunction:: day_percentage
 
-.. autofunction:: get_systems
+.. autofunction:: get_multitype_systems
+
+.. autofunction:: list_simulators

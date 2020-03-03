@@ -345,6 +345,10 @@ class TestUtils(unittest.TestCase):
         with self.assertRaises(ValueError):
             utils.day_percentage('dummy')
 
+    def test_list_simulators(self):
+        simulators = utils.list_simulators()
+        self.assertIsInstance(simulators, list)
+
 
 if __name__ == '__main__':
     unittest.main()

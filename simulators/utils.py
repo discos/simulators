@@ -582,25 +582,60 @@ def day_percentage(date=None):
     return microseconds / 86400000000.
 
 
-def get_systems():
+def get_multitype_systems(path):
     """Returns a list of `.py` packages containing a `System` class. The path
     in which this method looks is the same path of the module that calls this
     very method. It is meant to be called by a module containing a
     `MultiTypeSystem` class."""
-    module = inspect.getmodule(inspect.stack()[1][0])
-    module_path = module.__file__.rsplit('/', 1)[0] + '/'
+    path = os.path.abspath(path)
+    if os.path.isfile(path):
+        path = os.path.dirname(path)
     systems = {}
-    for f in os.listdir(os.path.dirname(module_path)):
-        if f[-3:] == '.py' and f != '__init__.py':
-            mod = importlib.import_module(
-                '%s.%s' % (module.__name__, f[:-3])
-            )
-            for _, obj in inspect.getmembers(mod):
-                if (inspect.isclass(obj)
-                        and obj is not BaseSystem
-                        and issubclass(obj, BaseSystem)
-                        and BaseSystem not in obj.__bases__):
-                    systems[mod.__name__.rsplit('.', 1)[1]] = mod
+
+    def scan_dir(directory):
+        systems = {}
+        for element in os.listdir(directory):
+            f = os.path.join(directory, element)
+            if os.path.isfile(f):
+                if f[-3:] == '.py' and '__init__' not in f:
+                    prefix = os.path.dirname(os.path.abspath(__file__)) + '/'
+                    mod = f.replace(prefix, '')
+                    mod = mod.replace('.py', '')
+                    mod = mod.replace('/', '.')
+                    mod = importlib.import_module('simulators.%s' % mod)
+                    for _, obj in inspect.getmembers(mod):
+                        if inspect.isclass(obj) and obj.__name__ == 'System':
+                            if issubclass(obj, BaseSystem):
+                                systems[mod.__name__.rsplit('.', 1)[1]] = mod
+        return systems
+    systems = scan_dir(path)
+    return systems
+
+
+def list_simulators(path=os.path.dirname(os.path.abspath(__file__))):
+    systems = []
+
+    def scan_dir(directory):
+        systems = []
+        for element in os.listdir(directory):
+            f = os.path.join(directory, element)
+            if os.path.isdir(f):
+                systems += scan_dir(f)
+            elif os.path.isfile(f):
+                if f.endswith('__init__.py'):
+                    prefix = path.rsplit('/', 1)[0] + '/'
+                    mod = f.replace(prefix, '')
+                    mod = mod.replace('.py', '')
+                    mod = mod.replace('/__init__', '')
+                    mod = mod.replace('/', '.')
+                    mod = importlib.import_module(mod)
+                    for _, obj in inspect.getmembers(mod):
+                        if inspect.isclass(obj):
+                            if obj.__name__ == 'System':
+                                systems.append(mod.__name__.rsplit('.', 1)[1])
+        return systems
+    systems = scan_dir(path)
+    systems.sort()
     return systems
 
 

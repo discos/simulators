@@ -81,7 +81,7 @@ class SendingSystem(BaseSystem):
 
 class MultiTypeSystem(object):
 
-    def __new__(cls, *args):
+    def __new__(cls, **kwargs):
         """This class acts as a 'class factory', it means that given the
         attributes `system_type` and `systems` (that must be set in inherited
         classes), creating an instance of `MultiTypeSystem` (or some other
@@ -95,4 +95,4 @@ class MultiTypeSystem(object):
         if cls.system_type not in cls.systems:
             raise ValueError('System type %s not found.' % cls.system_type)
 
-        return cls.systems[cls.system_type].System(*args)
+        return cls.systems[cls.system_type].System(**kwargs)

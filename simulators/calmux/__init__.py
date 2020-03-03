@@ -5,12 +5,12 @@ from simulators.common import ListeningSystem
 
 # Each system module (like active_surface.py, acu.py, etc.) has to
 # define a list called servers. This list contains tuples
-# (l_address, s_address, args). l_address is the tuple (ip, port) that
+# (l_address, s_address, kwargs). l_address is the tuple (ip, port) that
 # defines the listening node that exposes the parse method, s_address
 # is the tuple that defines the optional sending node that exposes the
-# subscribe and unsibscribe methods, while args is a tuple of optional
+# subscribe and unsibscribe methods, while kwargs is a dict of optional
 # extra arguments.
-servers = [(('0.0.0.0', 12500), (), ThreadingTCPServer, ())]
+servers = [(('0.0.0.0', 12500), (), ThreadingTCPServer, {})]
 
 
 class System(ListeningSystem):

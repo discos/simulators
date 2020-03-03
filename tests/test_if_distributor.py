@@ -1,15 +1,11 @@
 import unittest
-from simulators import if_distributor
+from simulators.if_distributor import System
 
 
 class TestIFDistributorDefaultConfiguration(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        reload(if_distributor)
-
     def setUp(self):
-        self.system = if_distributor.System()
+        self.system = System(system_type='IFD')
 
     def _send(self, message):
         for byte in message[:-1]:
@@ -192,13 +188,8 @@ class TestIFDistributorDefaultConfiguration(unittest.TestCase):
 
 class TestIFDistributor14Channels(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        reload(if_distributor)
-        if_distributor.system_type = 'IFD_14_channels'
-
     def setUp(self):
-        self.system = if_distributor.System()
+        self.system = System(system_type='IFD_14_channels')
 
     def test_get_header(self):
         """Return True when the first byte is the header."""
@@ -404,14 +395,9 @@ class TestIFDistributor14Channels(unittest.TestCase):
 
 class TestIFDistributorUnknownType(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        reload(if_distributor)
-        if_distributor.system_type = 'unknown'
-
     def test_unknown_type(self):
         with self.assertRaises(ValueError):
-            self.system = if_distributor.System()
+            self.system = System(system_type='unknown')
 
 
 if __name__ == '__main__':

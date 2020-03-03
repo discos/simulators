@@ -323,27 +323,29 @@ defined as follows::
 
     class MultiTypeSystem(object):
 
-        def __new__(self, *args):
+        def __new__(self, **kwargs):
             if cls.system_type not in cls.systems:
                 raise ValueError(...)
 
-            return cls.systems[cls.system_type].System(*args)
+            return cls.systems[cls.system_type].System(**kwargs)
 
 The inherited ``System`` classes must override the ``__new__`` method as
 follows::
 
     class System(MultiTypeSystem):
 
-        def __new__(cls, *args):
+        def __new__(cls, **kwargs):
             cls.system = systems
-            cls.system_type = system_type
-            return MultiTypeSystem.__new__(cls, *args)
+            cls.system_type = kwargs.pop('system_type')
+            return MultiTypeSystem.__new__(cls, **kwargs)
 
 where ``systems`` is the list of available systems for that particular module
-(that can automatically be retrieved calling the ``utils.get_systems()``
-function) and ``system_type`` is the variable storing the desired system type
-name, this is the variable to override in order to ask for a different system
-type. If you want to see additional informations about inheriting the
+(that can be retrieved calling the ``utils.get_multitype_systems(__file__)``
+function) and ``system_type`` is the keyworded argument that indicates the
+desired system type name. In order to instantiate a system of this kind, it is
+mandatory to pass the ``system_type`` argument as a keyworded argument. If the
+given ``system_type`` argument refers to an unknown system type, an exception
+is raised. If you want to see additional informations about inheriting the
 ``MultiTypeSystem`` class take a look at the
 :download:`if_distributor <../simulators/if_distributor/__init__.py>` module.
 
