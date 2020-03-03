@@ -57,13 +57,18 @@ if args.action == 'list':
 kwargs = {}
 
 if args.type:
+    if not args.system:
+        parser.error(
+            "The '--type' argument only has to be used "
+            + "in conjunction with the '--system' argument."
+        )
     try:
         systems = getattr(args.system, 'systems')
     except AttributeError:
         parser.error(
             ('System %s has no configurations other than the default one. '
             % args.system.__name__.rsplit('.', 1)[1])
-            + "Omit the '--type' flag to start the simulator properly."
+            + "Omit the '--type' argument to start the simulator properly."
         )
     if args.type not in systems:
         parser.error(
