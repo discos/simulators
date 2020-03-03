@@ -7,7 +7,7 @@ from simulators.common import ListeningSystem
 from simulators.mscu.servo import Servo
 from simulators.mscu.parameters import headers, closers, app_nr
 
-servers = [(('0.0.0.0', 10000), (), ThreadingTCPServer, ())]
+servers = [(('0.0.0.0', 10000), (), ThreadingTCPServer, {})]
 
 
 class System(ListeningSystem):

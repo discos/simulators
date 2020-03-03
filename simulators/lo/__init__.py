@@ -4,9 +4,9 @@ from SocketServer import ThreadingTCPServer
 from simulators.common import ListeningSystem
 
 servers = [
-    (('0.0.0.0', 12700), (), ThreadingTCPServer, ()),
-    (('0.0.0.0', 12701), (), ThreadingTCPServer, ()),
-    (('0.0.0.0', 12702), (), ThreadingTCPServer, ()),
+    (('0.0.0.0', 12700), (), ThreadingTCPServer, {}),
+    (('0.0.0.0', 12701), (), ThreadingTCPServer, {}),
+    (('0.0.0.0', 12702), (), ThreadingTCPServer, {}),
 ]
 
 

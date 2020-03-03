@@ -7,16 +7,16 @@ from simulators import utils
 from simulators.common import ListeningSystem
 from simulators.active_surface.usd import USD
 
-# Each system module (like active_surface.py, acu.py, etc.) has to
-# define a list called servers.s This list contains tuples
-# (l_address, s_address, args). l_address is the tuple (ip, port) that
-# defines the listening node that exposes the parse method, s_address
-# is the tuple that defines the optional sending node that exposes the
-# get_message method, while args is a tuple of optional extra arguments.
+
 servers = []
 for line in range(96):  # 96 servers
     l_address = ('0.0.0.0', 11000 + line)
-    servers.append((l_address, (), ThreadingTCPServer, (1, 17)))
+    servers.append((
+        l_address,
+        (),
+        ThreadingTCPServer,
+        {'min_usd_index': 1, 'max_usd_index': 17}
+    ))
 
 
 class System(ListeningSystem):

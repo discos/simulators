@@ -5,7 +5,7 @@ from simulators.backend.genericbackend import GenericBackend, BackendException
 from simulators.utils import ACS_TO_UNIX_TIME
 
 
-servers = [(('0.0.0.0', 12800), (), ThreadingTCPServer, ())]
+servers = [(('0.0.0.0', 12800), (), ThreadingTCPServer, {})]
 
 PROTOCOL_VERSION = '1.2'
 headers = ('!', '?')

@@ -13,15 +13,9 @@ from simulators.acu.pointing_status import PointingStatus
 from simulators.acu.facility_status import FacilityStatus
 
 
-# Each system module (like active_surface.py, acu.py, etc.) has to
-# define a list called servers.s This list contains tuples
-# (l_address, s_address, args). l_address is the tuple (ip, port) that
-# defines the listening node that exposes the parse method, s_address
-# is the tuple that defines the optional sending node that exposes the
-# get_message method, while args is a tuple of optional extra arguments.
 servers = []
 servers.append(
-    (('0.0.0.0', 13000), ('0.0.0.0', 13001), ThreadingTCPServer, ())
+    (('0.0.0.0', 13000), ('0.0.0.0', 13001), ThreadingTCPServer, {})
 )
 
 start_flag = b'\x1A\xCF\xFC\x1D'
