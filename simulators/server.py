@@ -343,7 +343,7 @@ class Simulator(object):
     def stop(self):
         """Stops a simulator by sending the custom `$system_stop%` command to
         all servers of the given simulator."""
-        for entry in self.system_module.servers:
+        def _send_stop(entry):
             for address in entry[:2]:
                 if not address:
                     continue
@@ -362,7 +362,7 @@ class Simulator(object):
                         pass
                     sockobj.sendto('$system_stop%', address)
                     response = sockobj.recv(1024)
-                    if response != '$server_shutdown%':
+                    if response != '$server_shutdown%':  # pragma: no cover
                         logging.warning(
                             '%s %s %s',
                             'The server did not answer with the',
@@ -373,4 +373,12 @@ class Simulator(object):
                     logging.debug(ex)
                 finally:
                     sockobj.close()
+                break
+        threads = []
+        for entry in self.system_module.servers:
+            t = threading.Thread(target=_send_stop, args=(entry,))
+            t.start()
+            threads.append(t)
+        for t in threads:
+            t.join()
         print("Simulator '%s' stopped." % self.simulator_name)
