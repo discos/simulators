@@ -58,8 +58,9 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'DISCOS Simulators'
-copyright = u'2017, Giuseppe Carboni, Marco Buttu'
-author = u'Giuseppe Carboni, Marco Buttu'
+copyright = u'2017, Marco Buttu, Giuseppe Carboni'
+author = u'Marco Buttu, Giuseppe Carboni'
+maintainer = u'Giuseppe Carboni'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -140,7 +141,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'DISCOSSimulators.tex', u'DISCOS Simulators Documentation',
-     u'Giuseppe Carboni, Marco Buttu', 'manual'),
+     u'Marco Buttu, Giuseppe Carboni', 'manual'),
 ]
 
 
