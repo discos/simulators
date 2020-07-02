@@ -18,7 +18,7 @@ Common module
 
 
 BaseSystem class
-~~~~~~~~~~~~~~~~
+----------------
 
 .. autoclass:: BaseSystem
    :members:
@@ -26,9 +26,25 @@ BaseSystem class
 
 
 ListeningSystem class
-~~~~~~~~~~~~~~~~~~~~~
+---------------------
 
 .. autoclass:: ListeningSystem
+   :members:
+   :inherited-members:
+
+
+SendingSystem class
+-------------------
+
+.. autoclass:: SendingSystem
+   :members:
+   :inherited-members:
+
+
+MultiTypeSystem class
+---------------------
+
+.. autoclass:: MultiTypeSystem
    :members:
    :inherited-members:
 
@@ -40,7 +56,7 @@ Server module
 
 
 Handler classes
-~~~~~~~~~~~~~~~
+---------------
 
 .. autoclass:: BaseHandler
    :members:
@@ -58,106 +74,16 @@ Handler classes
 
 
 Server class
-~~~~~~~~~~~~
+------------
 
 .. autoclass:: Server
    :members:
 
 
 Simulator class
-~~~~~~~~~~~~~~~
+---------------
 
 .. autoclass:: Simulator
-   :members:
-   :inherited-members:
-
-
-Active Surface module
-=====================
-
-.. module:: simulators.active_surface
-
-
-System class
-~~~~~~~~~~~~
-
-.. autoclass:: System
-   :members:
-   :inherited-members:
-
-
-USD class
-~~~~~~~~~~~~
-
-.. autoclass:: USD
-   :members:
-   :inherited-members:
-
-
-ACU module
-==========
-
-.. module:: simulators.acu
-
-
-System class
-~~~~~~~~~~~~
-
-.. autoclass:: System
-   :members:
-   :inherited-members:
-
-
-GeneralStatus class
-~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: GeneralStatus
-   :members:
-   :inherited-members:
-
-
-SimpleAxisStatus class
-~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: simulators.acu.axis_status.SimpleAxisStatus
-   :members:
-   :inherited-members:
-
-
-MasterAxisStatus class
-~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: simulators.acu.axis_status.MasterAxisStatus
-   :members:
-   :inherited-members:
-
-
-MotorStatus class
-~~~~~~~~~~~~~~~~~
-
-.. autoclass:: simulators.acu.motor_status.MotorStatus
-   :members:
-   :inherited-members:
-
-
-PointingStatus class
-~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass:: PointingStatus
-   :members:
-   :inherited-members:
-
-
-IF Distributor module
-=====================
-
-.. module:: simulators.if_distributor
-
-
-System class
-~~~~~~~~~~~~
-
-.. autoclass:: System
    :members:
    :inherited-members:
 
@@ -205,6 +131,97 @@ The Utils library
 
 .. autofunction:: day_percentage
 
+.. _get_multitype_systems:
 .. autofunction:: get_multitype_systems
 
 .. autofunction:: list_simulators
+
+
+Active Surface module
+=====================
+
+.. module:: simulators.active_surface
+
+
+System class
+------------
+
+.. autoclass:: System
+   :members:
+   :inherited-members:
+
+
+USD class
+------------
+
+.. autoclass:: USD
+   :members:
+   :inherited-members:
+
+
+ACU module
+==========
+
+.. module:: simulators.acu
+
+
+System class
+------------
+
+.. autoclass:: System
+   :members:
+   :inherited-members:
+
+
+GeneralStatus class
+--------------------
+
+.. autoclass:: GeneralStatus
+   :members:
+   :inherited-members:
+
+
+SimpleAxisStatus class
+----------------------
+
+.. autoclass:: simulators.acu.axis_status.SimpleAxisStatus
+   :members:
+   :inherited-members:
+
+
+MasterAxisStatus class
+----------------------
+
+.. autoclass:: simulators.acu.axis_status.MasterAxisStatus
+   :members:
+   :inherited-members:
+
+
+MotorStatus class
+-----------------
+
+.. autoclass:: simulators.acu.motor_status.MotorStatus
+   :members:
+   :inherited-members:
+
+
+PointingStatus class
+--------------------
+
+.. autoclass:: PointingStatus
+   :members:
+   :inherited-members:
+
+
+IF Distributor module
+=====================
+
+.. module:: simulators.if_distributor
+
+
+System class
+------------
+
+.. autoclass:: System
+   :members:
+   :inherited-members:

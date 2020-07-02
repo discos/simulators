@@ -60,6 +60,7 @@ master_doc = 'index'
 project = u'DISCOS Simulators'
 copyright = u'2017, Marco Buttu, Giuseppe Carboni'
 author = u'Marco Buttu, Giuseppe Carboni'
+maintainer = u'Giuseppe Carboni'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
