@@ -410,7 +410,7 @@ def mjd(date=None):
     """Returns the modified julian date (MJD) of a given datetime object.
     If no datetime object is given, it returns the current MJD.
     For more informations about modified julian date check the following link:
-    https://bowie.gsfc.nasa.gov/time/
+    https://core2.gsfc.nasa.gov/time/
 
     :param date: the object to calculate the equivalent modified julian date.
         If None, the current time is used.
