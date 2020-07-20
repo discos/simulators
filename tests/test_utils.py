@@ -276,7 +276,11 @@ class TestUtils(unittest.TestCase):
     def test_datetime_to_mjd_and_back(self):
         date_datetime = datetime.now()
         date_mjd = utils.mjd(date_datetime)
-        self.assertEqual(date_datetime, utils.mjd_to_date(date_mjd))
+        self.assertAlmostEqual(
+            date_datetime,
+            utils.mjd_to_date(date_mjd),
+            delta=timedelta(microseconds=1)
+        )
 
     def test_mjd_to_datetime_and_back(self):
         date_mjd = 58412.4267483
