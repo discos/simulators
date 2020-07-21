@@ -71,10 +71,13 @@ if args.type:
             + "Omit the '--type' argument to start the simulator properly."
         )
     if args.type not in systems:
-        parser.error(
-            'Configuration %s for system %s not found.'
-            % (args.type, args.system.__name__.rsplit('.', 1)[1])
+        err_string = (
+            'Configuration %s for system %s not found.\n' %
+            (args.type, args.system.__name__.rsplit('.', 1)[1])
         )
+        err_string += 'Available configurations for chosen simulator:\n'
+        err_string += "'" + "', ".join(systems) + "'."
+        parser.error(err_string)
     kwargs['system_type'] = args.type
 
 if args.action == 'start':
@@ -98,15 +101,3 @@ elif args.action == 'stop':
             sim = importlib.import_module('simulators.%s' % sim)
             simulator = Simulator(sim, **kwargs)
             simulator.stop()
-        #ps = subprocess.Popen(
-        #    ['ps', 'aux'],
-        #    stdout=subprocess.PIPE
-        #).communicate()[0]
-        #processes = {}
-        #for proc in ps.split('\n'):
-        #    args = proc.split()
-        #    if not args:
-        #        continue
-        #    command = ' '.join(args[10:])
-        #    if '%s start -s %s' % (sys.argv[0], sim) in command:
-        #        os.kill(int(args[1]), signal.SIGINT)

@@ -410,7 +410,7 @@ def mjd(date=None):
     """Returns the modified julian date (MJD) of a given datetime object.
     If no datetime object is given, it returns the current MJD.
     For more informations about modified julian date check the following link:
-    https://bowie.gsfc.nasa.gov/time/
+    https://core2.gsfc.nasa.gov/time/
 
     :param date: the object to calculate the equivalent modified julian date.
         If None, the current time is used.
@@ -586,7 +586,12 @@ def get_multitype_systems(path):
     """Returns a list of `.py` packages containing a `System` class. The path
     in which this method looks is the same path of the module that calls this
     very method. It is meant to be called by a module containing a
-    `MultiTypeSystem` class."""
+    `MultiTypeSystem` class.
+
+    :param path: the path in which the function is going to recursively look
+        for `System` classes
+    :type path: str
+    """
     path = os.path.abspath(path)
     if os.path.isfile(path):
         path = os.path.dirname(path)
@@ -613,6 +618,12 @@ def get_multitype_systems(path):
 
 
 def list_simulators(path=os.path.dirname(os.path.abspath(__file__))):
+    """Returns the list of all available simulators in the package.
+
+    :param path: the path in which the function will recursively look for
+        simulators `System` classes
+    :type path: str
+    """
     systems = []
 
     def scan_dir(directory):

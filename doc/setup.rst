@@ -23,20 +23,19 @@ install its Python dependencies:
    $ pip install -r requirements.txt
 
 This command will automatically install all the required dependencies.
-Currently, the only required Python packages are `Numpy <http://www.numpy.org/>`__,
+Currently, the only required Python packages are `Numpy <http://www.numpy.org/>`__
 and `Scipy <https://www.scipy.org/>`__.
 
-After the requirements have been installed, it's time to install the package
-itself. In order to do so, it is sufficient to execute the following command
-inside the repository directory:
+After the requirements have been installed, it is time to install the package
+itself. In order to do so, just execute the following command inside the
+repository directory:
 
 .. code-block:: shell
 
    $ python setup.py install
 
 This command will install all the simulator libraries and scripts into your
-Python environment, and you will be able to use it and test it as soon as the
-previous command execution is completed.
+Python environment, and they will be immediately available for execution.
 
 
 .. note:: Now that you successfully installed the package, if you want to know

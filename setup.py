@@ -5,7 +5,7 @@ except ImportError:
 
 setup(
     name='discos-simulators',
-    version='0.1',
+    version='0.8',
     description='Simulators for the DISCOS project',
     packages=find_packages(),
     scripts=['scripts/discos-simulator'],

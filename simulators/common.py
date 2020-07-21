@@ -11,7 +11,7 @@ class BaseSystem(object):
     @staticmethod
     def system_stop():
         """Sends back to the server the message `$server_shutdown%` ordering it
-        to stop accepting requests and to shut down."""
+        to stop accepting requests, to close its socket and to shut down."""
         return '$server_shutdown%'
 
     @staticmethod
@@ -21,9 +21,7 @@ class BaseSystem(object):
 
 class ListeningSystem(BaseSystem):
     """Implements a server that waits for its client(s) to send a command, it
-    can then answer back when required. Unlike the `SendingSystem` described
-    below, it does not start any communication with any client right after the
-    connection is established."""
+    can then answer back when required."""
 
     @abc.abstractmethod
     def parse(self, byte):
@@ -83,13 +81,13 @@ class MultiTypeSystem(object):
 
     def __new__(cls, **kwargs):
         """This class acts as a 'class factory', it means that given the
-        attributes `system_type` and `systems` (that must be set in inherited
+        attributes `system_type` and `systems` (that must be defined in child
         classes), creating an instance of `MultiTypeSystem` (or some other
         class that inherits from this one) will actually create an object of
-        `system_type` type if it's found in the `systems` list. This class is
-        meant to be used in systems that have multiple simulator types in order
-        for the user to be able to choose the desired type at simulator
-        startup.
+        `system_type` type if it's defined in the `systems` list. This class is
+        meant to be used in systems that have multiple simulator types or
+        configuration in order for the user to be able to choose the desired
+        type when launching the simulator.
         """
 
         if cls.system_type not in cls.systems:
