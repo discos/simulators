@@ -16,6 +16,9 @@ class BaseSystem(object):
 
     @staticmethod
     def system_greet():
+        """Override this method to define a greeting message to send to the
+        clients as soon as they connect.
+        :return: the greeting message to sent to connected clients."""
         return None
 
 
@@ -78,18 +81,18 @@ class SendingSystem(BaseSystem):
 
 
 class MultiTypeSystem(object):
+    """This class acts as a 'class factory', it means that given the
+    attributes `system_type` and `systems` (that must be defined in child
+    classes), creating an instance of `MultiTypeSystem` (or some other
+    class that inherits from this one) will actually create an object of
+    `system_type` type if it's defined in the `systems` list. This class is
+    meant to be used in systems that have multiple simulator types or
+    configuration in order for the user to be able to choose the desired
+    type when launching the simulator."""
 
     def __new__(cls, **kwargs):
-        """This class acts as a 'class factory', it means that given the
-        attributes `system_type` and `systems` (that must be defined in child
-        classes), creating an instance of `MultiTypeSystem` (or some other
-        class that inherits from this one) will actually create an object of
-        `system_type` type if it's defined in the `systems` list. This class is
-        meant to be used in systems that have multiple simulator types or
-        configuration in order for the user to be able to choose the desired
-        type when launching the simulator.
-        """
-
+        """Checks if the desired configuration is available and returns its
+        correspondent class type."""
         if cls.system_type not in cls.systems:
             raise ValueError('System type %s not found.' % cls.system_type)
 
