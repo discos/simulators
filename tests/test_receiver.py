@@ -1,7 +1,8 @@
 import unittest
 from datetime import datetime, timedelta
-from simulators.receiver import System, VERSION
-from simulators.receiver import CMD_SOH, CMD_STX, CMD_ETX, CMD_EOT
+from simulators.receiver import System
+from simulators.receiver.DEFINITIONS import CMD_SOH, CMD_STX, CMD_ETX, CMD_EOT
+from simulators.receiver.DEFINITIONS import VERSION
 
 
 def checksum(msg):
@@ -519,7 +520,7 @@ class TestReceiver(unittest.TestCase):
 
     def test_ext_get_port_wrong_data_type(self):
         command = CMD_SOH + '\x01\x01\x4C\x00\x03'
-        data_type = '\x10'  # Unknown data type
+        data_type = '\x1B'  # Unknown data type
         port_type = '\x00'
         port_number = '\x00'
         command += data_type + port_type + port_number
@@ -606,7 +607,7 @@ class TestReceiver(unittest.TestCase):
 
     def test_ext_set_port_wrong_data_type(self):
         command = CMD_SOH + '\x01\x01\x4D\x00\x04'
-        data_type = '\x10'  # Unknown data type
+        data_type = '\x1B'  # Unknown data type
         port_type = '\x00'
         port_number = '\x00'
         port_setting = '\x00'
@@ -696,7 +697,7 @@ class TestReceiver(unittest.TestCase):
 
     def test_ext_get_data_wrong_data_type(self):
         command = CMD_SOH + '\x01\x01\x4E\x00\x03'
-        data_type = '\x10'  # Unknown data type
+        data_type = '\x1B'  # Unknown data type
         port_type = '\x00'
         port_number = '\x00'
         command += data_type + port_type + port_number
@@ -783,7 +784,7 @@ class TestReceiver(unittest.TestCase):
 
     def test_ext_set_data_wrong_data_type(self):
         command = CMD_SOH + '\x01\x01\x4F\x00\x04'
-        data_type = '\x10'  # Unknown data type
+        data_type = '\x1B'  # Unknown data type
         port_type = '\x00'
         port_number = '\x00'
         port_setting = '\x00'
