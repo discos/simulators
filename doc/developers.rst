@@ -4,6 +4,15 @@
 Developers documentation
 ************************
 
+.. topic:: Preface
+
+   If you want to know how to write a brand new simulator, we advise you to
+   read this section. You will also find some useful information in order to
+   run some tests and how to contribute to this project. If you only want to
+   know how to run a simulator, you can skip this section and head directly to
+   the :ref:`user` chapter instead.
+
+
 How to implement a simulator
 ============================
 To implement a simulator, you need to create a module that
@@ -51,7 +60,7 @@ and returns:
 If the system has nothing to send to the client, as in the case of broadcast
 requests, ``System.parse()`` must return ``True``.
 When the simulator is lead to behave unexpectedly, a ``ValueError`` has to be
-raised, it will be captured and logged by the father server process.
+raised, it will be captured and logged by the parent server process.
 
 The ``SendingSystem`` class and the ``System.subscribe()`` and ``System.unsubscribe()`` methods
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -102,7 +111,7 @@ The ``servers`` list
 --------------------
 
 The ``servers`` list defines all the instances that should be running when the
-given simulator gets started. Each element of the ``servers`` list is a tuple,
+given simulator starts. Each element of the ``servers`` list is a tuple,
 composed of the following items:
 
 * the server listening address, ``l_address``
@@ -134,23 +143,23 @@ second one with address ``('192.168.100.10', 5001)``.  In that case we have to
 define the ``servers`` list as follows::
 
     servers = [
-        ('192.168.100.10', 5000), (), ThreadingTCPServer, {}),
-        ('192.168.100.10', 5001), (), ThreadingTCPServer, {}),
+        (('192.168.100.10', 5000), (), ThreadingTCPServer, {}),
+        (('192.168.100.10', 5001), (), ThreadingTCPServer, {}),
     ]
 
 If our ``System`` class takes some extra arguments, two integers, for instance,
 we have to pass them via the ``kwargs`` dictionary.  For instance::
 
     servers = [
-        ('192.168.100.10', 5000), (), ThreadingTCPServer, {'arg1': 10, 'arg2': 20}),
-        ('192.168.100.10', 5001), (), ThreadingTCPServer, {'arg1': 4, 'arg2': 5}),
+        (('192.168.100.10', 5000), (), ThreadingTCPServer, {'arg1': 10, 'arg2': 20}),
+        (('192.168.100.10', 5001), (), ThreadingTCPServer, {'arg1': 4, 'arg2': 5}),
     ]
 
 If the system we want to simulate has instead a single listening UDP server, we
 have to define the ``servers`` list as follows::
 
     servers = [
-        ('192.168.100.10', 5000), (), ThreadingUDPServer, {}),
+        (('192.168.100.10', 5000), (), ThreadingUDPServer, {}),
     ]
 
 If the system we want to simulate has instead 3 sending TCP servers and no
@@ -170,13 +179,13 @@ each server list entry must be defined as follows::
         (('192.168.100.10', 6000), ('192.168.100.10', 6001), ThreadingTCPServer, {}),
     ]
 
-If you want to see another example, have a look at the
+If you want to see another example, take a look at the
 :download:`active surface <../simulators/active_surface/__init__.py>` module.
 The active surface system is composed of 96 listening TCP servers, and in fact
 its ``servers`` list in defined in the following way::
 
     servers = []
-    for line in range(96):  # 96 servers
+    for line in range(96):                              # 96 servers
         l_address = ('0.0.0.0', 11000 + line)           # Compose the address
         servers.append((
             l_address,
@@ -188,12 +197,12 @@ its ``servers`` list in defined in the following way::
 The ``MultiTypeSystem`` class
 -----------------------------
 
-Some simulators might have multiple implementations, having therefore multiple
-``System`` classes that behave differently from one another. In order to keep
-different ``System`` classes under the same simulator name, we wrote another
-class, called ``MultiTypeSystem``, that acts as a ``class factory``. It works
-by receiving the name of the configuration of the system we want to launch as
-``system_type`` keyword argument. The class is defined in
+Some simulators might have multiple different implementations, having therefore
+multiple ``System`` classes that behave differently from one another. In order
+to keep different ``System`` classes under the same simulator name, we wrote
+another class, called ``MultiTypeSystem``, that acts as a ``class factory``.
+It works by receiving the name of the configuration of the system we want to
+launch as ``system_type`` keyword argument. The class is defined in
 :download:`common.py <../simulators/common.py>`, as follows::
 
     class MultiTypeSystem(object):
@@ -267,6 +276,15 @@ To avoid name clashing, do not head other methods with ``system_``,
 so use this convention only for custom commands.
 
 
+Useful functions
+----------------
+
+In order to make it faster to write and implement new simulator's methods,
+which sometimes require converting data from a format to another, a library of
+useful functions called ``Utils`` has been written and comes within the simulators
+package. Its API is described in the :ref:`api` section.
+
+
 Testing environment
 ===================
 In the continuous deployment workflow, the tests are executed more than
@@ -306,7 +324,7 @@ You can run all tests by executing this single command:
 
    $ wwtd
 
-The ``wwtd`` program (``What Whould Travis Do``) reads the *.travis.yml*
+The ``wwtd`` program (``What Would Travis Do``) reads the *.travis.yml*
 file and executes the tests accordingly.  You can also run the tests
 manually, one by one, as described in the following sections.
 
@@ -363,9 +381,7 @@ We want to test different things:
 * the HTML must be generated properly
 
 To test the docstring examples, we use the Python standard library
-``doctest`` module.  If you do not know what we are speaking about,
-take 10 minutes to read this brief doctest `tutorial
-<https://pymotw.com/2/doctest/>`__.  After that, move to the
+``doctest`` module. Simply move to the
 project's root directory and execute the following command:
 
 .. code-block:: shell

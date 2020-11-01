@@ -111,6 +111,25 @@ class ListenHandler(BaseHandler):
         contains the whole message, but each byte gets processed separately.
         """
         for byte in msg:
+            try:
+                response = self.system.parse(byte)
+            except ValueError, ex:
+                logging.debug(ex)
+            except Exception:
+                logging.debug('unexpected exception')
+            if isinstance(response, bool):
+                pass
+            elif response and isinstance(response, str):
+                try:
+                    self.socket.sendto(response, self.client_address)
+                except IOError:  # pragma: no cover
+                    # Something went wrong while sending the response,
+                    # probably the client was stopped without closing
+                    # the connection
+                    break
+            else:
+                logging.debug('unexpected response: %s', response)
+
             if byte == self.custom_header:
                 self.custom_msg = byte
             elif self.custom_msg.startswith(self.custom_header):
@@ -119,34 +138,6 @@ class ListenHandler(BaseHandler):
                     msg_body = self.custom_msg[1:-1]
                     self.custom_msg = b''
                     self._execute_custom_command(msg_body)
-            else:
-                try:
-                    response = self.system.parse(byte)
-                except ValueError, ex:
-                    logging.debug(ex)
-                    continue
-                except Exception:
-                    logging.debug('unexpected exception')
-                    continue
-                if response is True:
-                    # All custom command bytes should be different than the
-                    # system header, otherwise the custom command will be
-                    # cleared
-                    self.custom_msg = b''
-                    continue  # The system is still composing the message
-                elif response and isinstance(response, str):
-                    try:
-                        self.socket.sendto(response, self.client_address)
-                    except IOError:  # pragma: no cover
-                        # Something went wrong while sending the response,
-                        # probably the client was stopped without closing
-                        # the connection
-                        break
-                elif response is False:
-                    # Apparently the sent byte was unexpected, do nothing
-                    pass
-                else:
-                    logging.debug('unexpected response: %s', response)
 
 
 class SendHandler(BaseHandler):
