@@ -1,5 +1,7 @@
 import itertools
+from random import random
 from datetime import datetime, timedelta
+from simulators import utils
 from simulators.receiver import DEFINITIONS as DEF
 
 
@@ -274,8 +276,16 @@ class Dewar(Slave):
             elif ord(port_number) not in DEF.PORT_NUMBERS:
                 retval = DEF.CMD_ERR_PORT_NUMBER
             elif (port_type == DEF.PORT_TYPE_AD24 and
-                    data_type == DEF.DATA_TYPE_AD24):
-                data += list(itertools.chain.from_iterable(self.AD_PORTS))
+                    data_type == DEF.DATA_TYPE_F32):
+                # Generate random temperature values between 0K and 5K
+                for port in range(len(self.AD_PORTS)):
+                    p = []
+                    p[:0] = utils.real_to_bytes(random() * 5)
+                    self.AD_PORTS[port] = p
+                data += ''.join(
+                    list(itertools.chain.from_iterable(self.AD_PORTS))
+                )
+                retval = DEF.CMD_ACK
             else:
                 key = (data_type, port_type, port_number)
                 data += self.port_settings.get(key, '\x00')

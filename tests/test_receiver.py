@@ -1,8 +1,10 @@
 import unittest
 from datetime import datetime, timedelta
 from simulators.receiver import System
+from simulators.receiver.slaves import Slave, Dewar
 from simulators.receiver.DEFINITIONS import CMD_SOH, CMD_STX, CMD_ETX, CMD_EOT
 from simulators.receiver.DEFINITIONS import VERSION
+from simulators.receiver.DEFINITIONS import DATA_TYPE_F32, PORT_TYPE_AD24
 
 
 def checksum(msg):
@@ -12,10 +14,13 @@ def checksum(msg):
     return chr(chksum)
 
 
-class TestReceiver(unittest.TestCase):
+class TestProtocol(unittest.TestCase):
 
     def setUp(self):
-        self.system = System()
+        self.system = System(
+            slave_type=Slave,
+            max_index=0x1F
+        )
 
     def test_wrong_header(self):
         self.assertFalse(self.system.parse(CMD_EOT))
@@ -841,6 +846,121 @@ class TestReceiver(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = CMD_STX + '\x01\x01\x6F\x00\x00'
+        self.assertEqual(answer, expected_answer)
+
+
+class TestDewar(unittest.TestCase):
+
+    def setUp(self):
+        self.system = System(
+            slave_type=Dewar,
+            max_index=1
+        )
+
+    def test_ext_get_data(self):
+        command = CMD_SOH + '\x01\x01\x4E\x00\x03'
+        data_type = '\x00'
+        port_type = '\x00'
+        port_number = '\x00'
+        command += data_type + port_type + port_number
+        command += checksum(command) + CMD_ETX
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = CMD_STX + '\x01\x01\x4E\x00\x00'
+        expected_answer += '\x01\x00'
+        expected_answer += checksum(expected_answer)
+        expected_answer += CMD_EOT
+        self.assertEqual(answer, expected_answer)
+
+    def test_ext_get_temperature_data(self):
+        command = CMD_SOH + '\x01\x01\x4E\x00\x03'
+        data_type = DATA_TYPE_F32
+        port_type = PORT_TYPE_AD24
+        port_number = '\x00'
+        command += data_type + port_type + port_number
+        command += checksum(command) + CMD_ETX
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = CMD_STX + '\x01\x01\x4E\x00\x00'
+        expected_answer += '\x20' + '\x00' * 32
+        expected_answer += checksum(expected_answer)
+        expected_answer += CMD_EOT
+        # Temperature is generated randomly
+        # we only test the start and the end of the answer
+        self.assertEqual(answer[:7], expected_answer[:7])
+        self.assertEqual(answer[-1:], expected_answer[-1:])
+
+    def test_ext_get_data_wrong_format(self):
+        command = CMD_SOH + '\x01\x01\x4E\x00\x01'
+        data_type = '\x00'
+        command += data_type
+        command += checksum(command) + CMD_ETX
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = CMD_STX + '\x01\x01\x4E\x00\x03'
+        expected_answer += checksum(expected_answer)
+        expected_answer += CMD_EOT
+        self.assertEqual(answer, expected_answer)
+
+    def test_ext_get_data_wrong_data_type(self):
+        command = CMD_SOH + '\x01\x01\x4E\x00\x03'
+        data_type = '\x1B'  # Unknown data type
+        port_type = '\x00'
+        port_number = '\x00'
+        command += data_type + port_type + port_number
+        command += checksum(command) + CMD_ETX
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = CMD_STX + '\x01\x01\x4E\x00\x09'
+        expected_answer += checksum(expected_answer)
+        expected_answer += CMD_EOT
+        self.assertEqual(answer, expected_answer)
+
+    def test_ext_get_data_wrong_port_type(self):
+        command = CMD_SOH + '\x01\x01\x4E\x00\x03'
+        data_type = '\x00'
+        port_type = '\x80'  # Out of range
+        port_number = '\x00'
+        command += data_type + port_type + port_number
+        command += checksum(command) + CMD_ETX
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = CMD_STX + '\x01\x01\x4E\x00\x0A'
+        expected_answer += checksum(expected_answer)
+        expected_answer += CMD_EOT
+        self.assertEqual(answer, expected_answer)
+
+    def test_ext_get_data_wrong_port_number(self):
+        command = CMD_SOH + '\x01\x01\x4E\x00\x03'
+        data_type = '\x00'
+        port_type = '\00'
+        port_number = '\x80'  # Out of range
+        command += data_type + port_type + port_number
+        command += checksum(command) + CMD_ETX
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = CMD_STX + '\x01\x01\x4E\x00\x0B'
+        expected_answer += checksum(expected_answer)
+        expected_answer += CMD_EOT
+        self.assertEqual(answer, expected_answer)
+
+    def test_abbr_get_data(self):
+        command = CMD_SOH + '\x01\x01\x6E\x00\x03'
+        data_type = '\x00'
+        port_type = '\x00'
+        port_number = '\x00'
+        command += data_type + port_type + port_number
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = CMD_STX + '\x01\x01\x6E\x00\x00'
+        expected_answer += '\x01\x00'
         self.assertEqual(answer, expected_answer)
 
 

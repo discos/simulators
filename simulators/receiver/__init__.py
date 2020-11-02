@@ -1,17 +1,31 @@
 from SocketServer import ThreadingTCPServer
 from simulators.common import ListeningSystem
 from simulators.receiver import DEFINITIONS as DEF
-from simulators.receiver.slaves import Slave
+from simulators.receiver.slaves import Slave, Dewar, LNA
 
 
-servers = [(('0.0.0.0', 12900), (), ThreadingTCPServer, {})]
+servers = []
+servers.append((
+    ('0.0.0.0', 12900),
+    (),
+    ThreadingTCPServer,
+    {'slave_type': Dewar, 'min_index': 1, 'max_index': 1}
+))
+servers.append((
+    ('0.0.0.0', 12901),
+    (),
+    ThreadingTCPServer,
+    {'slave_type': LNA, 'min_index': 1, 'max_index': 1}
+))
 
 
 class System(ListeningSystem):
 
-    def __init__(self):
+    def __init__(self, slave_type=Slave, min_index=1, max_index=1):
+        max_index += 1
+        rng = range(min_index, max_index)
         self.slaves = {
-            chr(address): Slave(chr(address)) for address in range(0x01, 0x20)
+            chr(address): slave_type(chr(address)) for address in rng
         }
         self._set_default()
 
