@@ -1,5 +1,3 @@
-import itertools
-from random import random
 from datetime import datetime, timedelta
 from simulators import utils
 from simulators.receiver import DEFINITIONS as DEF
@@ -8,7 +6,6 @@ from simulators.receiver import DEFINITIONS as DEF
 class Slave(object):
 
     def __init__(self, address):
-        self.AD_PORTS = [[0] * 4] * 8
         self.address = address
         self.port_settings = {}
         self.frame_size = chr(126)
@@ -261,6 +258,7 @@ class Slave(object):
 class Dewar(Slave):
 
     def __init__(self, address):
+        self.AD_PORTS = [['\x00'] * 4] * 8
         Slave.__init__(self, address)
 
     def get_data(self, cmd_id, extended, params):
@@ -277,14 +275,7 @@ class Dewar(Slave):
                 retval = DEF.CMD_ERR_PORT_NUMBER
             elif (port_type == DEF.PORT_TYPE_AD24 and
                     data_type == DEF.DATA_TYPE_F32):
-                # Generate random temperature values between 0K and 5K
-                for port in range(len(self.AD_PORTS)):
-                    p = []
-                    p[:0] = utils.real_to_bytes(random() * 5)
-                    self.AD_PORTS[port] = p
-                data += ''.join(
-                    list(itertools.chain.from_iterable(self.AD_PORTS))
-                )
+                data += '\x00' * 4 * 8
                 retval = DEF.CMD_ACK
             else:
                 key = (data_type, port_type, port_number)
@@ -298,30 +289,35 @@ class Dewar(Slave):
         return [retval, data]
 
 
-class LNA(Slave):
+class Feed(object):
 
-    def __init__(self, address, feeds=1):
-        # The following STAGES values represents:
+    def __init__(self):
+        # The following lists represent:
         # Drain Voltage, left
         # Drain Current, left
         # Gate Voltage, left
         # Drain Voltage, right
         # Drain Current, right
         # Gate Voltage, right
-        self.STAGES = [[0, 0, 0, 0, 0, 0]] * 5
-        # Prova assegnazione valori
-        self.STAGES = []
-        for i in range(5):
-            stage = [
-                i * 6,
-                i * 6 + 1,
-                i * 6 + 2,
-                i * 6 + 3,
-                i * 6 + 4,
-                i * 6 + 5
-            ]
-            self.STAGES.append(stage)
-        self.feeds = feeds
+        # For each one of the 5 stages
+
+        self.VDL = [0] * 5
+        self.IDL = [0] * 5
+        self.VGL = [0] * 5
+        self.VDR = [0] * 5
+        self.IDR = [0] * 5
+        self.VGR = [0] * 5
+
+
+class LNA(Slave):
+
+    def __init__(self, address, feeds=1):
+        self.feeds = [Feed()] * feeds
+
+        self.AD = 0
+        self.EN = 0
+        self.L_ON = 0
+        self.R_ON = 0
         Slave.__init__(self, address)
 
     def get_data(self, cmd_id, extended, params):
@@ -337,8 +333,49 @@ class LNA(Slave):
             elif ord(port_number) not in DEF.PORT_NUMBERS:
                 retval = DEF.CMD_ERR_PORT_NUMBER
             elif (port_type == DEF.PORT_TYPE_AD24 and
-                    data_type == DEF.DATA_TYPE_AD24):
-                data += list(itertools.chain.from_iterable(self.AD_PORTS))
+                    data_type == DEF.DATA_TYPE_F32):
+                data = ''
+                STAGE = int(self.AD / 3)
+                VALUE = int(self.AD % 3)
+                EN = max(self.EN - 1, 0)
+                if self.EN > 2:
+                    EN += 6
+                for i in range(4):
+                    index = EN + 2 * i
+                    try:
+                        if VALUE == 0:
+                            # VD
+                            data += utils.real_to_bytes(
+                                self.feeds[index].VDL[STAGE],
+                                little_endian=False
+                            )
+                            data += utils.real_to_bytes(
+                                self.feeds[index].VDR[STAGE],
+                                little_endian=False
+                            )
+                        elif VALUE == 1:
+                            # ID
+                            data += utils.real_to_bytes(
+                                self.feeds[index].IDL[STAGE],
+                                little_endian=False
+                            )
+                            data += utils.real_to_bytes(
+                                self.feeds[index].IDR[STAGE],
+                                little_endian=False
+                            )
+                        elif VALUE == 2:
+                            # VG
+                            data += utils.real_to_bytes(
+                                self.feeds[index].VGL[STAGE],
+                                little_endian=False
+                            )
+                            data += utils.real_to_bytes(
+                                self.feeds[index].VGR[STAGE],
+                                little_endian=False
+                            )
+                    except IndexError:
+                        data += '\x00' * 8
+                retval = DEF.CMD_ACK
             else:
                 key = (data_type, port_type, port_number)
                 data += self.port_settings.get(key, '\x00')
@@ -351,10 +388,12 @@ class LNA(Slave):
         return [retval, data]
 
     def set_data(self, cmd_id, extended, params):
-        if len(params) != 4:
+        retval = DEF.CMD_ACK
+        if len(params) < 4:
             retval = DEF.CMD_ERR_FORM
         else:
-            data_type, port_type, port_number, port_setting = params
+            data_type, port_type, port_number = params[:3]
+            port_setting = params[3:]
             if data_type not in DEF.DATA_TYPES:
                 retval = DEF.CMD_ERR_DATA_TYPE
             elif port_type not in DEF.PORT_TYPES:
@@ -362,13 +401,29 @@ class LNA(Slave):
             elif ord(port_number) not in DEF.PORT_NUMBERS:
                 retval = DEF.CMD_ERR_PORT_NUMBER
             else:
-                if (port_type == DEF.PORT_TYPE_DIO and
-                        data_type == DEF.DATA_TYPE_U08):
-                    pass
-
-                key = (data_type, port_type, port_number)
-                self.port_settings[key] = port_setting
-                retval = DEF.CMD_ACK
+                if port_type == DEF.PORT_TYPE_DIO:
+                    if data_type == DEF.DATA_TYPE_U08:
+                        if len(port_setting) != 1:
+                            retval = DEF.CMD_ERR_DATA
+                    elif data_type == DEF.DATA_TYPE_U16:
+                        if len(port_setting) != 2:
+                            retval = DEF.CMD_ERR_DATA
+                    else:
+                        retval = DEF.CMD_ERR_DATA
+                    if retval == DEF.CMD_ACK:
+                        port_setting = utils.bytes_to_binary(
+                            port_setting,
+                            little_endian=False
+                        )
+                        self.AD = int(port_setting[:4], 2)
+                        self.EN = int(port_setting[4:8], 2)
+                        if data_type == DEF.DATA_TYPE_U16:
+                            self.L_ON = int(port_setting[8], 2)
+                            self.R_ON = int(port_setting[9], 2)
+                else:
+                    key = (data_type, port_type, port_number)
+                    self.port_settings[key] = port_setting
+                    retval = DEF.CMD_ACK
         self._set_last_cmd(
             DEF.CMD_EXT_SET_DATA if extended else DEF.CMD_ABBR_SET_DATA,
             cmd_id,

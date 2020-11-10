@@ -15,17 +15,17 @@ servers.append((
     ('0.0.0.0', 12901),
     (),
     ThreadingTCPServer,
-    {'slave_type': LNA, 'min_index': 1, 'max_index': 1}
+    {'slave_type': LNA, 'min_index': 1, 'max_index': 1, 'feeds': 1}
 ))
 
 
 class System(ListeningSystem):
 
-    def __init__(self, slave_type=Slave, min_index=1, max_index=1):
+    def __init__(self, slave_type=Slave, min_index=1, max_index=1, **kwargs):
         max_index += 1
         rng = range(min_index, max_index)
         self.slaves = {
-            chr(address): slave_type(chr(address)) for address in rng
+            chr(address): slave_type(chr(address), **kwargs) for address in rng
         }
         self._set_default()
 
