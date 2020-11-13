@@ -111,6 +111,11 @@ class System(ListeningSystem):
         total_answer = ''
         # Iterate through the desired slaves
         for slave_address in slaves:
+            slave = self.slaves.get(slave_address)
+            if not slave:
+                # Slave is not present, we should not answer
+                continue
+
             # Parse the command and call the appropriate slave method
             answer = ''
             answer += DEF.CMD_STX
@@ -118,11 +123,6 @@ class System(ListeningSystem):
             answer += slave_address
             answer += command
             answer += cmd_id
-
-            slave = self.slaves.get(slave_address)
-            if not slave:
-                # Slave is not present, we should not answer
-                continue
 
             if command not in DEF.ACCEPTED_COMMANDS:
                 # Unknown command. We send back a short error answer

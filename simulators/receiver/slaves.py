@@ -174,7 +174,7 @@ class Slave(object):
                 retval = DEF.CMD_ERR_DATA_TYPE
             elif port_type not in DEF.PORT_TYPES:
                 retval = DEF.CMD_ERR_PORT_TYPE
-            elif ord(port_number) not in DEF.PORT_NUMBERS:
+            elif port_number not in DEF.PORT_NUMBERS:
                 retval = DEF.CMD_ERR_PORT_NUMBER
             else:
                 key = (data_type, port_type, port_number)
@@ -196,7 +196,7 @@ class Slave(object):
                 retval = DEF.CMD_ERR_DATA_TYPE
             elif port_type not in DEF.PORT_TYPES:
                 retval = DEF.CMD_ERR_PORT_TYPE
-            elif ord(port_number) not in DEF.PORT_NUMBERS:
+            elif port_number not in DEF.PORT_NUMBERS:
                 retval = DEF.CMD_ERR_PORT_NUMBER
             else:
                 key = (data_type, port_type, port_number)
@@ -219,7 +219,7 @@ class Slave(object):
                 retval = DEF.CMD_ERR_DATA_TYPE
             elif port_type not in DEF.PORT_TYPES:
                 retval = DEF.CMD_ERR_PORT_TYPE
-            elif ord(port_number) not in DEF.PORT_NUMBERS:
+            elif port_number not in DEF.PORT_NUMBERS:
                 retval = DEF.CMD_ERR_PORT_NUMBER
             else:
                 key = (data_type, port_type, port_number)
@@ -233,15 +233,16 @@ class Slave(object):
         return [retval, data]
 
     def set_data(self, cmd_id, extended, params):
-        if len(params) != 4:
+        if len(params) < 4:
             retval = DEF.CMD_ERR_FORM
         else:
-            data_type, port_type, port_number, port_setting = params
+            data_type, port_type, port_number = params[:3]
+            port_setting = params[3:]
             if data_type not in DEF.DATA_TYPES:
                 retval = DEF.CMD_ERR_DATA_TYPE
             elif port_type not in DEF.PORT_TYPES:
                 retval = DEF.CMD_ERR_PORT_TYPE
-            elif ord(port_number) not in DEF.PORT_NUMBERS:
+            elif port_number not in DEF.PORT_NUMBERS:
                 retval = DEF.CMD_ERR_PORT_NUMBER
             else:
                 key = (data_type, port_type, port_number)
@@ -259,9 +260,25 @@ class Dewar(Slave):
 
     def __init__(self, address):
         self.AD_PORTS = [['\x00'] * 4] * 8
+
+        # The following variables are stored in the DIO port
+        self.LO_selector = 0        # bit 0, 0: LO1, 1: LO2
+        self.vacuum_sensor = 1      # bit 4, 0: off, 1: on
+        self.vacuum_pump = 1        # bit 5, 0: off, 1: on
+        self.vacuum_pump_fault = 0  # bit 6, 0: ok, 1: fault
+        self.vacuum_valve = 1       # bit 7, 0: off, 1: on
+        self.cool_head = 1          # bit 8, 0: off, 1: on
+        self.calibration = 0        # bit 11, 0: off, 1: on
+        self.ext_calibration = 0    # bit 12, 0: off, 1: on
+        self.single_dish = 0        # bit 13, 0: on, 1: off
+        self.vlbi = 1               # bit 14, 0: on, 1: off
+        self.LO_2_locked = 0        # bit 18, r/o
+        self.is_remote = 1          # bit 25, r/o
+
         Slave.__init__(self, address)
 
     def get_data(self, cmd_id, extended, params):
+        retval = DEF.CMD_ACK
         data = ''
         if len(params) != 3:
             retval = DEF.CMD_ERR_FORM
@@ -271,12 +288,66 @@ class Dewar(Slave):
                 retval = DEF.CMD_ERR_DATA_TYPE
             elif port_type not in DEF.PORT_TYPES:
                 retval = DEF.CMD_ERR_PORT_TYPE
-            elif ord(port_number) not in DEF.PORT_NUMBERS:
+            elif port_number not in DEF.PORT_NUMBERS:
                 retval = DEF.CMD_ERR_PORT_NUMBER
             elif (port_type == DEF.PORT_TYPE_AD24 and
                     data_type == DEF.DATA_TYPE_F32):
                 data += '\x00' * 4 * 8
                 retval = DEF.CMD_ACK
+            elif (port_type == DEF.PORT_TYPE_DIO and
+                    data_type == DEF.DATA_TYPE_B01):
+                if port_number == DEF.PORT_NUMBER_00:
+                    # LO selector
+                    value = self.LO_selector
+                elif port_number == DEF.PORT_NUMBER_04:
+                    # Vacuum sensor
+                    value = self.vacuum_sensor
+                elif port_number == DEF.PORT_NUMBER_05:
+                    # Vacuum pump
+                    value = self.vacuum_pump
+                elif port_number == DEF.PORT_NUMBER_06:
+                    # Vacuum pump fault
+                    value = self.vacuum_pump_fault
+                elif port_number == DEF.PORT_NUMBER_07:
+                    # Vacuum valve
+                    value = self.vacuum_valve
+                elif port_number == DEF.PORT_NUMBER_08:
+                    # Cool head
+                    value = self.cool_head
+                elif port_number == DEF.PORT_NUMBER_11:
+                    # Calibration
+                    value = self.calibration
+                elif port_number == DEF.PORT_NUMBER_12:
+                    # External calibration
+                    value = self.calibration
+                elif port_number == DEF.PORT_NUMBER_13:
+                    # Single dish mode
+                    value = self.single_dish
+                elif port_number == DEF.PORT_NUMBER_14:
+                    # VLBI mode
+                    value = self.vlbi
+                elif port_number == DEF.PORT_NUMBER_16:
+                    # LO1 selected
+                    value = 1 if self.LO_selector == 0 else 0
+                elif port_number == DEF.PORT_NUMBER_17:
+                    # LO2 selected
+                    value = 1 if self.LO_selector == 1 else 0
+                elif port_number == DEF.PORT_NUMBER_18:
+                    # LO2 locked
+                    value = 1 if self.LO_selector == 1 else 0
+                elif port_number == DEF.PORT_NUMBER_24:
+                    # Cool head on
+                    value = self.cool_head
+                elif port_number == DEF.PORT_NUMBER_26:
+                    # Is remote on
+                    value = self.is_remote
+                elif port_number == DEF.PORT_NUMBER_29:
+                    # Is single dish mode
+                    value = 1 if self.single_dish == 0 else 0
+                elif port_number == DEF.PORT_NUMBER_30:
+                    # Is VLBI mode
+                    value = 1 if self.vlbi == 0 else 0
+                data += chr(value)
             else:
                 key = (data_type, port_type, port_number)
                 data += self.port_settings.get(key, '\x00')
@@ -287,6 +358,65 @@ class Dewar(Slave):
             retval
         )
         return [retval, data]
+
+    def set_data(self, cmd_id, extended, params):
+        retval = DEF.CMD_ACK
+        if len(params) < 4:
+            retval = DEF.CMD_ERR_FORM
+        else:
+            data_type, port_type, port_number = params[:3]
+            port_setting = params[3:]
+            if data_type not in DEF.DATA_TYPES:
+                retval = DEF.CMD_ERR_DATA_TYPE
+            elif port_type not in DEF.PORT_TYPES:
+                retval = DEF.CMD_ERR_PORT_TYPE
+            elif port_number not in DEF.PORT_NUMBERS:
+                retval = DEF.CMD_ERR_PORT_NUMBER
+            else:
+                while (data_type == DEF.DATA_TYPE_B01 and
+                        port_type == DEF.PORT_TYPE_DIO):
+                    if len(port_setting) != 1:
+                        retval = DEF.CMD_ERR_DATA
+                        break
+                    value = ord(port_setting)
+                    if value not in [0, 1]:
+                        retval = DEF.CMD_ERR_DATA
+                        break
+                    if port_number == DEF.PORT_NUMBER_00:
+                        # LO selector
+                        self.LO_selector = value
+                        self.LO2_locked = 1 if value == 1 else 0
+                    elif port_number == DEF.PORT_NUMBER_04:
+                        # Vacuum sensor
+                        self.vacuum_sensor = value
+                    elif port_number == DEF.PORT_NUMBER_05:
+                        # Vacuum pump
+                        self.vacuum_pump = value
+                    elif port_number == DEF.PORT_NUMBER_07:
+                        # Vacuum valve
+                        self.vacuum_valve = value
+                    elif port_number == DEF.PORT_NUMBER_08:
+                        # Cool head
+                        self.cool_head = value
+                    elif port_number == DEF.PORT_NUMBER_11:
+                        # Calibration
+                        self.calibration = value
+                    elif port_number == DEF.PORT_NUMBER_12:
+                        # External calibration
+                        self.calibration = value
+                    elif port_number == DEF.PORT_NUMBER_13:
+                        # Single dish mode
+                        self.single_dish = value
+                    elif port_number == DEF.PORT_NUMBER_14:
+                        # VLBI mode
+                        self.vlbi = value
+                    break
+        self._set_last_cmd(
+            DEF.CMD_EXT_SET_DATA if extended else DEF.CMD_ABBR_SET_DATA,
+            cmd_id,
+            retval
+        )
+        return retval
 
 
 class Feed(object):
@@ -330,11 +460,10 @@ class LNA(Slave):
                 retval = DEF.CMD_ERR_DATA_TYPE
             elif port_type not in DEF.PORT_TYPES:
                 retval = DEF.CMD_ERR_PORT_TYPE
-            elif ord(port_number) not in DEF.PORT_NUMBERS:
+            elif port_number not in DEF.PORT_NUMBERS:
                 retval = DEF.CMD_ERR_PORT_NUMBER
             elif (port_type == DEF.PORT_TYPE_AD24 and
                     data_type == DEF.DATA_TYPE_F32):
-                data = ''
                 STAGE = int(self.AD / 3)
                 VALUE = int(self.AD % 3)
                 EN = max(self.EN - 1, 0)
@@ -398,32 +527,39 @@ class LNA(Slave):
                 retval = DEF.CMD_ERR_DATA_TYPE
             elif port_type not in DEF.PORT_TYPES:
                 retval = DEF.CMD_ERR_PORT_TYPE
-            elif ord(port_number) not in DEF.PORT_NUMBERS:
+            elif port_number not in DEF.PORT_NUMBERS:
                 retval = DEF.CMD_ERR_PORT_NUMBER
             else:
                 if port_type == DEF.PORT_TYPE_DIO:
                     if data_type == DEF.DATA_TYPE_U08:
                         if len(port_setting) != 1:
                             retval = DEF.CMD_ERR_DATA
+                        else:
+                            port_setting = utils.bytes_to_binary(
+                                port_setting,
+                                little_endian=False
+                            )
+                            self.AD = int(port_setting[:4], 2)
+                            self.EN = int(port_setting[4:8], 2)
                     elif data_type == DEF.DATA_TYPE_U16:
                         if len(port_setting) != 2:
                             retval = DEF.CMD_ERR_DATA
+                        else:
+                            port_setting = utils.bytes_to_binary(
+                                port_setting,
+                                little_endian=False
+                            )
+                            self.AD = int(port_setting[:4], 2)
+                            self.EN = int(port_setting[4:8], 2)
+                            if data_type == DEF.DATA_TYPE_U16:
+                                self.L_ON = int(port_setting[8], 2)
+                                self.R_ON = int(port_setting[9], 2)
                     else:
-                        retval = DEF.CMD_ERR_DATA
-                    if retval == DEF.CMD_ACK:
-                        port_setting = utils.bytes_to_binary(
-                            port_setting,
-                            little_endian=False
-                        )
-                        self.AD = int(port_setting[:4], 2)
-                        self.EN = int(port_setting[4:8], 2)
-                        if data_type == DEF.DATA_TYPE_U16:
-                            self.L_ON = int(port_setting[8], 2)
-                            self.R_ON = int(port_setting[9], 2)
+                        key = (data_type, port_type, port_number)
+                        self.port_settings[key] = port_setting
                 else:
                     key = (data_type, port_type, port_number)
                     self.port_settings[key] = port_setting
-                    retval = DEF.CMD_ACK
         self._set_last_cmd(
             DEF.CMD_EXT_SET_DATA if extended else DEF.CMD_ABBR_SET_DATA,
             cmd_id,
