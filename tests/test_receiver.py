@@ -504,7 +504,9 @@ class TestProtocol(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4C\x00\x00'
-        expected_answer += '\x01\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -577,7 +579,9 @@ class TestProtocol(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x6C\x00\x00'
-        expected_answer += '\x01\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'
         self.assertEqual(answer, expected_answer)
 
     def test_ext_set_port(self):
@@ -681,7 +685,9 @@ class TestProtocol(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x01\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -754,7 +760,9 @@ class TestProtocol(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x6E\x00\x00'
-        expected_answer += '\x01\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'
         self.assertEqual(answer, expected_answer)
 
     def test_ext_set_data(self):
@@ -867,7 +875,9 @@ class TestDewar(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x01\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -883,7 +893,9 @@ class TestDewar(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x20' + '\x00' * 32
+        expected_answer += '\x23'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00' * 32
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         # Temperature is generated randomly
@@ -959,7 +971,9 @@ class TestDewar(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x6E\x00\x00'
-        expected_answer += '\x01\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'
         self.assertEqual(answer, expected_answer)
 
     def test_ext_set_data(self):
@@ -1097,7 +1111,9 @@ class TestDewar(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x01\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'  # LO1 selected
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1129,7 +1145,9 @@ class TestDewar(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x01\x01'  # Vacuum sensor on
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x01'  # Vacuum sensor on
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1161,7 +1179,9 @@ class TestDewar(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x01\x01'  # Vacuum pump on
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x01'  # Vacuum pump on
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1193,7 +1213,9 @@ class TestDewar(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x01\x00'  # 0: no fault
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'  # No fault
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1209,7 +1231,9 @@ class TestDewar(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x01\x01'  # Vacuum valve on
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x01'  # Vacuum valve on
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1241,7 +1265,9 @@ class TestDewar(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x01\x01'  # Cool head on
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x01'  # Cool head on
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1273,7 +1299,9 @@ class TestDewar(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x01\x00'  # Calibration off
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'  # Calibration off
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1305,7 +1333,9 @@ class TestDewar(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x01\x00'  # Ext calibration off
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'  # Ext calibration off
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1337,7 +1367,9 @@ class TestDewar(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x01\x00'  # Single dish on
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'  # Single dish on
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1369,7 +1401,9 @@ class TestDewar(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x01\x01'  # VLBI off
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x01'  # VLBI off
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1401,7 +1435,9 @@ class TestDewar(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x01\x01'  # LO1 selected
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x01'  # LO1 selected
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1417,7 +1453,9 @@ class TestDewar(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x01\x00'  # LO2 not selected
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'  # LO2 not selected
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1433,7 +1471,9 @@ class TestDewar(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x01\x00'  # LO2 not locked
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'  # LO2 not locked
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1449,7 +1489,9 @@ class TestDewar(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x01\x01'  # Cool head on
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x01'  # Cool head on
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1465,7 +1507,9 @@ class TestDewar(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x01\x01'  # Remote on
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x01'  # Remote on
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1481,7 +1525,9 @@ class TestDewar(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x01\x01'  # Single dish mode on
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x01'  # Single dish mode on
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1497,7 +1543,9 @@ class TestDewar(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x01\x00'  # VLBI mode off
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'  # VLBI mode off
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1525,7 +1573,9 @@ class TestLNA(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x01\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1541,7 +1591,9 @@ class TestLNA(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x20' + '\x00' * 32
+        expected_answer += '\x23'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00' * 32
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1614,7 +1666,9 @@ class TestLNA(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x6E\x00\x00'
-        expected_answer += '\x01\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'
         self.assertEqual(answer, expected_answer)
 
     def test_ext_set_data(self):
@@ -1828,8 +1882,8 @@ class TestLNA(unittest.TestCase):
                     self.assertTrue(self.system.parse(byte))
                 answer = self.system.parse(command[-1])
                 expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-                expected_answer += '\x20'
-                self.assertEqual(len(answer), 41)
+                expected_answer += '\x23'
+                self.assertEqual(len(answer), 44)
                 self.assertEqual(answer[:7], expected_answer)
                 self.assertEqual(answer[-1:], DEF.CMD_EOT)
 
@@ -1874,8 +1928,8 @@ class TestLNA(unittest.TestCase):
                     self.assertTrue(self.system.parse(byte))
                 answer = self.system.parse(command[-1])
                 expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-                expected_answer += '\x20'
-                self.assertEqual(len(answer), 41)
+                expected_answer += '\x23'
+                self.assertEqual(len(answer), 44)
                 self.assertEqual(answer[:7], expected_answer)
                 self.assertEqual(answer[-1:], DEF.CMD_EOT)
 
@@ -1920,8 +1974,8 @@ class TestLNA(unittest.TestCase):
                     self.assertTrue(self.system.parse(byte))
                 answer = self.system.parse(command[-1])
                 expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-                expected_answer += '\x20'
-                self.assertEqual(len(answer), 41)
+                expected_answer += '\x23'
+                self.assertEqual(len(answer), 44)
                 self.assertEqual(answer[:7], expected_answer)
                 self.assertEqual(answer[-1:], DEF.CMD_EOT)
 
@@ -1961,7 +2015,9 @@ class TestLNA(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
-        expected_answer += '\x20' + '\x00' * 32
+        expected_answer += '\x23'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00' * 32
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)

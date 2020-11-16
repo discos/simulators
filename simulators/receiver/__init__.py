@@ -175,6 +175,7 @@ class System(ListeningSystem):
                 ans, data = slave.get_port(cmd_id, is_extended, params)
                 answer += ans
                 if ans == DEF.CMD_ACK:
+                    data = params[:3] + data
                     answer += chr(len(data)) + data
             elif command in DEF.CMD_SET_PORT:
                 ans = slave.set_port(cmd_id, is_extended, params)
@@ -183,6 +184,7 @@ class System(ListeningSystem):
                 ans, data = slave.get_data(cmd_id, is_extended, params)
                 answer += ans
                 if ans == DEF.CMD_ACK:
+                    data = params[:3] + data
                     answer += chr(len(data)) + data
             elif command in DEF.CMD_SET_DATA:
                 ans = slave.set_data(cmd_id, is_extended, params)
