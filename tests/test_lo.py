@@ -83,14 +83,14 @@ class TestLocalOscillator(unittest.TestCase):
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1])
-        self.assertEqual(response, '%s\n' % frequency)
+        self.assertEqual(response, '%s\n' % (frequency * 1000000))
 
     def test_set_get_frequency(self, frequency=10):
         msg = 'FREQ %d MHZ;FREQ?\n' % frequency
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1])
-        self.assertEqual(response, '%d\n' % frequency)
+        self.assertEqual(response, '%d\n' % (frequency * 1000000))
 
     def test_read_status(self):
         msg = 'SYST:ERR?\n'

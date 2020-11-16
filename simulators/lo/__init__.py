@@ -24,7 +24,7 @@ class System(ListeningSystem):
 
     def __init__(self):
         self.power = 0
-        self.frequency = 0
+        self.frequency = 0.0
         self._set_default()
 
     def _set_default(self):
@@ -83,14 +83,14 @@ class System(ListeningSystem):
         elif params[1] != 'MHZ':
             return False
         try:
-            self.frequency = int(params[0])
+            self.frequency = float(params[0])
             return True
         except ValueError:
             return False
 
     def getFrequency(self, _):
         # 'FREQ?\n'
-        return str(self.frequency)
+        return str(int(self.frequency) * 1000000)
 
     def readStatus(self, _):
         # 'SYST:ERR?\n'
