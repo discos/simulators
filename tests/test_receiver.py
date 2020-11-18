@@ -1369,7 +1369,7 @@ class TestDewar(unittest.TestCase):
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
         expected_answer += '\x04'
         expected_answer += data_type + port_type + port_number
-        expected_answer += '\x00'  # Single dish on
+        expected_answer += '\x00'  # Single dish still not triggered
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1403,7 +1403,7 @@ class TestDewar(unittest.TestCase):
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
         expected_answer += '\x04'
         expected_answer += data_type + port_type + port_number
-        expected_answer += '\x01'  # VLBI off
+        expected_answer += '\x00'  # VLBI still not triggered
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1527,7 +1527,7 @@ class TestDewar(unittest.TestCase):
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
         expected_answer += '\x04'
         expected_answer += data_type + port_type + port_number
-        expected_answer += '\x01'  # Single dish mode on
+        expected_answer += '\x00'  # Single dish mode off by default
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -1545,7 +1545,7 @@ class TestDewar(unittest.TestCase):
         expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
         expected_answer += '\x04'
         expected_answer += data_type + port_type + port_number
-        expected_answer += '\x00'  # VLBI mode off
+        expected_answer += '\x00'  # VLBI mode off by default
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)

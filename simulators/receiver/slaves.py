@@ -271,9 +271,11 @@ class Dewar(Slave):
         self.calibration = 0        # bit 11, 0: off, 1: on
         self.ext_calibration = 0    # bit 12, 0: off, 1: on
         self.single_dish = 0        # bit 13, 0: on, 1: off
-        self.vlbi = 1               # bit 14, 0: on, 1: off
+        self.vlbi = 0               # bit 14, 0: on, 1: off
         self.LO_2_locked = 0        # bit 18, r/o
         self.is_remote = 1          # bit 25, r/o
+        self.is_single_dish = 0     # bit 29, r/o
+        self.is_vlbi = 0            # bit 30, r/o
 
         Slave.__init__(self, address)
 
@@ -343,10 +345,10 @@ class Dewar(Slave):
                     value = self.is_remote
                 elif port_number == DEF.PORT_NUMBER_29:
                     # Is single dish mode
-                    value = 1 if self.single_dish == 0 else 0
+                    value = self.is_single_dish
                 elif port_number == DEF.PORT_NUMBER_30:
                     # Is VLBI mode
-                    value = 1 if self.vlbi == 0 else 0
+                    value = self.is_vlbi
                 data += chr(value)
             else:
                 key = (data_type, port_type, port_number)
@@ -407,9 +409,15 @@ class Dewar(Slave):
                     elif port_number == DEF.PORT_NUMBER_13:
                         # Single dish mode
                         self.single_dish = value
+                        if value == 0:
+                            self.is_single_dish = 1
+                            self.is_vlbi = 0
                     elif port_number == DEF.PORT_NUMBER_14:
                         # VLBI mode
                         self.vlbi = value
+                        if value == 0:
+                            self.is_single_dish = 0
+                            self.is_vlbi = 1
                     break
         self._set_last_cmd(
             DEF.CMD_EXT_SET_DATA if extended else DEF.CMD_ABBR_SET_DATA,
