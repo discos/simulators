@@ -17,6 +17,18 @@ servers.append((
     ThreadingTCPServer,
     {'slave_type': LNA, 'min_index': 1, 'max_index': 1, 'feeds': 1}
 ))
+servers.append((
+    ('0.0.0.0', 12902),
+    (),
+    ThreadingTCPServer,
+    {'slave_type': Dewar, 'min_index': 1, 'max_index': 1}
+))
+servers.append((
+    ('0.0.0.0', 12903),
+    (),
+    ThreadingTCPServer,
+    {'slave_type': LNA, 'min_index': 1, 'max_index': 1, 'feeds': 7}
+))
 
 
 class System(ListeningSystem):
