@@ -475,7 +475,7 @@ class LNA(Slave):
                         value = int(self.AD % 3)
                         en = max(self.EN - 1, 0)
                         if self.EN > 2:
-                            en + 6
+                            en += 6
                         for i in range(4):
                             index = en + 2 * i
                             try:
