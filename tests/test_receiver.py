@@ -1703,12 +1703,13 @@ class TestLNA(unittest.TestCase):
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
 
-    def test_ext_set_DIO_16_data(self):
-        command = DEF.CMD_SOH + '\x01\x01\x4F\x00\x05'
-        data_type = DEF.DATA_TYPE_U16
+    def test_ext_set_DIO_B_data(self):
+        # This turns on left LNAs
+        command = DEF.CMD_SOH + '\x01\x01\x4F\x00\x04'
+        data_type = DEF.DATA_TYPE_B01
         port_type = DEF.PORT_TYPE_DIO
-        port_number = '\x00'
-        port_setting = '\xFF\x00'
+        port_number = DEF.PORT_NUMBER_08
+        port_setting = '\x01'
         command += data_type + port_type + port_number + port_setting
         command += checksum(command) + DEF.CMD_ETX
         for byte in command[:-1]:
@@ -1751,12 +1752,12 @@ class TestLNA(unittest.TestCase):
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
 
-    def test_ext_set_DIO_16_wrong_data(self):
-        command = DEF.CMD_SOH + '\x01\x01\x4F\x00\x04'
-        data_type = DEF.DATA_TYPE_U16
+    def test_ext_set_DIO_B_wrong_data(self):
+        command = DEF.CMD_SOH + '\x01\x01\x4F\x00\x05'
+        data_type = DEF.DATA_TYPE_B01
         port_type = DEF.PORT_TYPE_DIO
         port_number = '\x00'
-        port_setting = '\x00'
+        port_setting = '\x00\x00'
         command += data_type + port_type + port_number + port_setting
         command += checksum(command) + DEF.CMD_ETX
         for byte in command[:-1]:
