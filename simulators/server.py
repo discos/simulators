@@ -110,6 +110,7 @@ class ListenHandler(BaseHandler):
         if the communication is connection-less (UDP), the `msg` parameter
         contains the whole message, but each byte gets processed separately.
         """
+        response = None
         for byte in msg:
             try:
                 response = self.system.parse(byte)
