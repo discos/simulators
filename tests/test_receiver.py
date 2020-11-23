@@ -1691,7 +1691,7 @@ class TestLNA(unittest.TestCase):
         command = DEF.CMD_SOH + '\x01\x01\x4F\x00\x04'
         data_type = DEF.DATA_TYPE_U08
         port_type = DEF.PORT_TYPE_DIO
-        port_number = '\x00'
+        port_number = DEF.PORT_NUMBER_00_07
         port_setting = '\xFF'
         command += data_type + port_type + port_number + port_setting
         command += checksum(command) + DEF.CMD_ETX
@@ -1709,6 +1709,22 @@ class TestLNA(unittest.TestCase):
         data_type = DEF.DATA_TYPE_B01
         port_type = DEF.PORT_TYPE_DIO
         port_number = DEF.PORT_NUMBER_08
+        port_setting = '\x01'
+        command += data_type + port_type + port_number + port_setting
+        command += checksum(command) + DEF.CMD_ETX
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x4F\x00\x00'
+        expected_answer += checksum(expected_answer)
+        expected_answer += DEF.CMD_EOT
+        self.assertEqual(answer, expected_answer)
+
+        # This turns on right LNAs
+        command = DEF.CMD_SOH + '\x01\x01\x4F\x00\x04'
+        data_type = DEF.DATA_TYPE_B01
+        port_type = DEF.PORT_TYPE_DIO
+        port_number = DEF.PORT_NUMBER_09
         port_setting = '\x01'
         command += data_type + port_type + port_number + port_setting
         command += checksum(command) + DEF.CMD_ETX
@@ -1849,7 +1865,7 @@ class TestLNA(unittest.TestCase):
                 command = DEF.CMD_SOH + '\x01\x01\x4F\x00\x04'
                 data_type = DEF.DATA_TYPE_U08
                 port_type = DEF.PORT_TYPE_DIO
-                port_number = '\x00'
+                port_number = DEF.PORT_NUMBER_00_07
                 AD = stage * 3 + 0  # 0 is the offset for VD, 1 is ID, 2 is VG
                 # EN, feeds offset
                 # 1: 0, 2, 4, 6
@@ -1876,7 +1892,7 @@ class TestLNA(unittest.TestCase):
                 command = DEF.CMD_SOH + '\x01\x01\x4E\x00\x03'
                 data_type = DEF.DATA_TYPE_F32
                 port_type = DEF.PORT_TYPE_AD24
-                port_number = '\x00'
+                port_number = DEF.PORT_NUMBER_00_07
                 command += data_type + port_type + port_number
                 command += checksum(command) + DEF.CMD_ETX
                 for byte in command[:-1]:
@@ -1895,7 +1911,7 @@ class TestLNA(unittest.TestCase):
                 command = DEF.CMD_SOH + '\x01\x01\x4F\x00\x04'
                 data_type = DEF.DATA_TYPE_U08
                 port_type = DEF.PORT_TYPE_DIO
-                port_number = '\x00'
+                port_number = DEF.PORT_NUMBER_00_07
                 AD = stage * 3 + 1  # 0 is the offset for VD, 1 is ID, 2 is VG
                 # EN, feeds offset
                 # 1: 0, 2, 4, 6
@@ -1922,7 +1938,7 @@ class TestLNA(unittest.TestCase):
                 command = DEF.CMD_SOH + '\x01\x01\x4E\x00\x03'
                 data_type = DEF.DATA_TYPE_F32
                 port_type = DEF.PORT_TYPE_AD24
-                port_number = '\x00'
+                port_number = DEF.PORT_NUMBER_00_07
                 command += data_type + port_type + port_number
                 command += checksum(command) + DEF.CMD_ETX
                 for byte in command[:-1]:
@@ -1941,7 +1957,7 @@ class TestLNA(unittest.TestCase):
                 command = DEF.CMD_SOH + '\x01\x01\x4F\x00\x04'
                 data_type = DEF.DATA_TYPE_U08
                 port_type = DEF.PORT_TYPE_DIO
-                port_number = '\x00'
+                port_number = DEF.PORT_NUMBER_00_07
                 AD = stage * 3 + 2  # 0 is the offset for VD, 1 is ID, 2 is VG
                 # EN, feeds offset
                 # 1: 0, 2, 4, 6
@@ -1968,7 +1984,7 @@ class TestLNA(unittest.TestCase):
                 command = DEF.CMD_SOH + '\x01\x01\x4E\x00\x03'
                 data_type = DEF.DATA_TYPE_F32
                 port_type = DEF.PORT_TYPE_AD24
-                port_number = '\x00'
+                port_number = DEF.PORT_NUMBER_00_07
                 command += data_type + port_type + port_number
                 command += checksum(command) + DEF.CMD_ETX
                 for byte in command[:-1]:
@@ -1986,7 +2002,7 @@ class TestLNA(unittest.TestCase):
         command = DEF.CMD_SOH + '\x01\x01\x4F\x00\x04'
         data_type = DEF.DATA_TYPE_U08
         port_type = DEF.PORT_TYPE_DIO
-        port_number = '\x00'
+        port_number = DEF.PORT_NUMBER_00_07
         AD = stage * 3 + 0  # 0 is the offset for VD, 1 is ID, 2 is VG
         EN = 1  # feeds offset 1:0,2,4,6 2:1,3,5,7 3:8,10,12,14 4:9,11,13,15
         port_setting = bin(AD)[2:].zfill(4)
@@ -2009,7 +2025,7 @@ class TestLNA(unittest.TestCase):
         command = DEF.CMD_SOH + '\x01\x01\x4E\x00\x03'
         data_type = DEF.DATA_TYPE_F32
         port_type = DEF.PORT_TYPE_AD24
-        port_number = '\x00'
+        port_number = DEF.PORT_NUMBER_00_07
         command += data_type + port_type + port_number
         command += checksum(command) + DEF.CMD_ETX
         for byte in command[:-1]:
