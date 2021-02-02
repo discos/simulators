@@ -11,3 +11,7 @@
 .italic {
   font-style: italic;
 }
+
+.section {
+  text-align:justify;
+}

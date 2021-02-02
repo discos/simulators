@@ -85,10 +85,11 @@ class ListenHandler(BaseHandler):
         execution. It handles incoming messages, whether they are received via
         a TCP or a UDP socket. It passes down the `System` class the received
         messages one byte at a time in order for the `System.parse()` method to
-        work properly. It then returns the `System` response when necessary.
-        It also constantly listens for custom commands that do not belong to a
-        specific `System` class, but are useful additions to the simulators
-        framework."""
+        work properly. It then returns the `System` response when  received
+        from the `System` class. It also constantly listens for custom commands
+        that do not belong to a specific `System` class, but are useful
+        additions to the framework with the purpose of reproducing a specific
+        scenario (i.e. some error condition)."""
         if not self.connection_oriented:  # UDP client
             msg, self.socket = self.socket
             msg += '\n'
@@ -104,11 +105,13 @@ class ListenHandler(BaseHandler):
                     break
 
     def _handle(self, msg):
-        """Handles a single message. If the connection with the client was
-        established as a TCP connection, the `msg` parameter is usually a
-        single byte that gets passed down to the relative `System`. Instead,
-        if the communication is connection-less (UDP), the `msg` parameter
-        contains the whole message, but each byte gets processed separately.
+        """Handles a single message.
+
+        :param msg: the received message. Usually, in case of a TCP socket,
+            this is a single byte to be passed down to the `System.parse()`
+            method. In case of a connection-less communication (UDP socket),
+            this parameter contains a chunk of bytes, each one of them is then
+            processed on its own.
         """
         response = None
         for byte in msg:
@@ -148,7 +151,8 @@ class SendHandler(BaseHandler):
         execution. It handles messages that the server has to periodically send
         to its connected client(s). It also constantly listens for custom
         commands that do not belong to a specific `System` class, but are
-        useful additions to the simulators framework."""
+        useful additions to the framework with the purpose of reproducing a
+        specific scenario (i.e. some error condition)."""
         sampling_time = self.system.sampling_time
         message_queue = Queue(1)
 
@@ -209,7 +213,7 @@ class Server(ThreadingMixIn):
     :param l_address: the address of the server that exposes the
         `System.parse()` method
     :param s_address: the address of the server that exposes the
-        `System.get_message()` method
+        `System.subscribe()` and `System.unsubscribe()` methods
     :type system: System class that inherits from ListeningServer or/and
         SendingServer
     :type server_type: ThreadingTCPServer or ThreadingUDPServer

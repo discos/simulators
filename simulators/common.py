@@ -11,13 +11,16 @@ class BaseSystem(object):
     @staticmethod
     def system_stop():
         """Sends back to the server the message `$server_shutdown%` ordering it
-        to stop accepting requests, to close its socket and to shut down."""
+        to stop accepting requests, to close its socket and to shut down.
+
+        :return: a message telling the server to proceed with its shutdown."""
         return '$server_shutdown%'
 
     @staticmethod
     def system_greet():
         """Override this method to define a greeting message to send to the
         clients as soon as they connect.
+
         :return: the greeting message to sent to connected clients."""
         return None
 
@@ -92,7 +95,10 @@ class MultiTypeSystem(object):
 
     def __new__(cls, **kwargs):
         """Checks if the desired configuration is available and returns its
-        correspondent class type."""
+        correspondent class type.
+
+        :return: the System class correspoding to the one selected via command
+            line interface, or the default one."""
         if cls.system_type not in cls.systems:
             raise ValueError('System type %s not found.' % cls.system_type)
 
