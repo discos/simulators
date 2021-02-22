@@ -49,10 +49,10 @@ or::
 
 Some examples
 ~~~~~~~~~~~~~
-Suppose the system the reader wants to simulate has 2 listening TCP servers and
-no sending servers, the first one with address ``('192.168.100.10', 5000)`` and
-the second one with address ``('192.168.100.10', 5001)``. In this case we have
-to define the `servers` list as follows::
+Suppose the reader wants to simulate a system that has 2 listening TCP servers
+and no sending servers, the first one with address ``('192.168.100.10', 5000)``
+and the second one with address ``('192.168.100.10', 5001)``. In this case we
+have to define the `servers` list as follows::
 
     servers = [
         (('192.168.100.10', 5000), (), ThreadingTCPServer, {}),
@@ -114,13 +114,13 @@ custom command `$system_generate_error_x%`. It is also possible to define a
 method that accepts some parameters. In this case the custom command will have
 the form `$system_commandname:par1,par2,par3%`. Since every `Server` object is
 not limited to only a single connection, custom commands can be also sent by a
-different client tnat the main one. This allow the reproduction of error
+different client that the main one. This allow the reproduction of error
 scenarios even when the `DISCOS` control software is already connected to some
 simulator.
 
 In order to avoid name clashing for custom methods, it is sufficient to not
-head any other `System` method with the `system_` prefix, so use this
-convention only for custom commands.
+use the `system_` prefix for any other `System` method, so make sure to only
+use this convention for custom commands.
 
 
 Useful functions

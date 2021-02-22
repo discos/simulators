@@ -30,15 +30,16 @@ several hardware simulators of the three Italian radio telescopes
 Writing a simulator helps the developers in writing good code for the actual
 control software of the radio telescope, the :ref:`DISCOS<discos_cs>` control
 software. Being able to test the control software code without having to rely
-on the hardware represents a huge advantage in the development process, it
-provides a way to test each new addition or modification to the code, making
-sure that the control software keeps behaving as expected. Furthermore, the
-framework allows to test how the control software code reacts under expected
-error conditions, in fact, it provides an easy way to simulate unlikely
-scenarios that are very difficult or, in some cases, impossible to replicate by
-only using the hardware. This allows the developers to write more reliable and
-robust code, that is likely capable to allow the user to recover from an error
-condition without having to resort to a complete reboot of the system.
+on the hardware represents a huge advantage in the development and maintenance
+processes, it provides a way to test each new addition or modification to the
+code, making sure that the control software keeps behaving as expected.
+Furthermore, the framework allows to test how the control software code reacts
+under expected error conditions, in fact, it provides an easy way to simulate
+unlikely scenarios that are very difficult or, in some cases, impossible to
+replicate by only using the hardware. This allows the developers to write more
+reliable and robust code, that is likely capable to allow the user to recover
+from an error condition without having to resort to a complete reboot of the
+system.
 
 Having a fast way to write a simulator of a new incoming device, also allows to
 easily verify that the communication protocol on which the software developing

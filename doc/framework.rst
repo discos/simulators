@@ -12,7 +12,7 @@ The Framework
       from which classes it is composed, and how they interact with one
       another, in order to simulate a subsystem of a radio telescope.
 
-The framework is composed of two layers of architecture. The topmost layer is
+The framework architecture is composed of two layers. The topmost layer is
 in charge of handling network communications, it behaves as a server, listening
 for incoming connections from clients and relaying every received byte to the
 other layer of the framework, the simulation layer. This layer is where
@@ -111,8 +111,8 @@ The `ListenHandler` class
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 The `ListenHandler` class, as its name suggests, listens for incoming
 messages from any client, and relays these messages to the underlying
-simulator. If the simulator answers with a response message, this one gets sent
-back to the client.
+simulator. If the simulator answers with a response message, the message is
+then relayed back to the client.
 
 .. autoclass:: ListenHandler
    :members:
@@ -171,8 +171,8 @@ required methods and define the required attributes.
 
 The `ListeningSystem` class and the `parse` method
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-For a `System` class to be able to parse any command received by the server and
-relayed to it via the handler object, it must define a `parse` method.
+In order for any `System` class to be able to parse any command received by the
+server, a `parse` method has to be defined.
 This method takes one byte (string of one character, in Python 2.7) as argument
 and returns:
 
@@ -186,7 +186,7 @@ and returns:
 
 If the system has nothing to send to the client, as in the case of broadcast
 requests, `System.parse()` must return `True`.
-When the simulator is lead to behave unexpectedly, a `ValueError` has to be
+When the simulator is brought to behave unexpectedly, a `ValueError` has to be
 raised, it will be captured and logged by the parent server process.
 
 .. autoclass:: ListeningSystem
