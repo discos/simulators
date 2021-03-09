@@ -12,6 +12,13 @@ The Framework
       from which classes it is composed, and how they interact with one
       another, in order to simulate a subsystem of a radio telescope.
 
+The framework is written in
+`Python 2.7 <https://www.python.org/download/releases/2.7/>`__. This `Python`
+version was chosen to maintain compatibility with the `ACS` default `Python`
+version. By matching the two versions, all the simulators can be executed on
+the same machine where the `DISCOS` control software is running, no matter if
+it is a production, a development, a physical or a virtual machine.
+
 The framework architecture is composed of two layers. The topmost layer is
 in charge of handling network communications, it behaves as a server, listening
 for incoming connections from clients and relaying every received byte to the

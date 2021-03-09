@@ -83,18 +83,29 @@ called `continuous integration`. :cite:`duvall2007continuous`
 
 The `DISCOS` Control Software
 =============================
-Taken from the `DISCOS` official document:
+The following paragraph describes the `DISCOS` control software. These lines
+were taken from the official `DISCOS` documentation. :cite:`DISCOS`
 
 `"`:bi:`DISCOS` (:bi:`D`\ `evelopment of the` :bi:`I`\ `talian` :bi:`S`\
 `ingle-dish` :bi:`CO`\ `ntrol` :bi:`S`\ `ystem) is the control software
-produced for the Italian radio telescopes. It is a distributed system based
-on` :bi:`ACS` (:bi:`A`\ `LMA` :bi:`C`\ `ommon` :bi:`S`\ `oftware),
-commanding all the devices of the telescope and allowing the user to
-perform single-dish observations in the most common modes. As of today, the
-code specifically implemented for the telescopes (i.e. excluding the huge
-ACS framework) amounts to about 650000 lines. Even VLBI (or guest-backend)
-observations partly rely on DISCOS, as it must be used to perform the focus
-selection and the frontend setup."`:cite:`DISCOS`
+produced for the Italian radio telescopes. It is a distributed system based on`
+:bi:`ACS` (:bi:`A`\ `LMA` :bi:`C`\ `ommon` :bi:`S`\ `oftware)`
+:cite:`chiozzi2004alma` `commanding all the devices of the telescope and
+allowing the user to perform single-dish observations in the most common
+modes. As of today, the code specifically implemented for the telescopes
+(i.e. excluding the huge ACS framework) amounts to about 650000 lines. Even
+VLBI (or guest-backend) observations partly rely on DISCOS, as it must be used
+to perform the focus selection and the frontend setup."`
 
 
-Da inserire immagine di discos-console
+.. _console:
+
+.. figure:: images/console-1.png
+
+   The `DISCOS` console user interface.
+
+.. only:: html
+
+   .. figure:: images/console-2.png
+
+      The SRT Active Surface and Weather Client user interfaces.
