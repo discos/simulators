@@ -70,6 +70,8 @@ To stop the desired simulator:
 
    $ discos-simulator stop -s active_surface
 
+.. _multi:
+
 To run a specific configuration for a simulators, add the ``--type`` flag,
 followed by the desired configuration:
 

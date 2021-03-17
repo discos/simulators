@@ -240,11 +240,13 @@ it is sufficient to override this variable in the inheriting `System` class.
 The `MultiTypeSystem` class
 ---------------------------
 Some simulators might have multiple different implementations, having therefore
-multiple `System` classes that behave differently from one another. In order
-to keep different `System` classes under the same simulator name, another class
-called `MultiTypeSystem` was written, it acts as a `class factory`. This means
-that it works by receiving the name of the configuration of the system we want
-to launch as `system_type` keyword argument.
+multiple `System` classes that behave differently from one another. For
+example, among the already developed simulators, there are two different
+implementations of the `IF Distributor` simulator. In order to keep multiple
+different `System` classes under the same simulator name, another class called
+`MultiTypeSystem` was written, it acts as a `class factory`. This means that it
+works by receiving the name of the configuration of the system we want to
+launch as `system_type` keyword argument.
 
 
 .. autoclass:: MultiTypeSystem
@@ -277,3 +279,6 @@ directory and sub-directories will end up inside the `systems` list. For more
 information, take a look at the :ref:`function<get_multitype_systems>` in the
 :ref:`utils` section. The default system configuration can be defined as
 `system_type` inside the `kwargs` dictionary.
+
+To know how to launch a simulator of this kind, please, take a look at
+:ref:`this paragraph<multi>`.
