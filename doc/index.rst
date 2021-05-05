@@ -1,11 +1,14 @@
 DISCOS Simulators
 =================
-
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
-   setup.rst
-   developers.rst
+   intro.rst
+   framework.rst
    users.rst
-   api.rst
+   developers.rst
+   utils.rst
+
+.. bibliography:: bibliography.bib
+   :style: unsrt

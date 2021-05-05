@@ -203,8 +203,8 @@ class Server(ThreadingMixIn):
     `l_address` is provided, or a sending server, if param `s_address` is
     provided. If both addresses are provided, the server acts as both as a
     listening server and a sending server. Be aware that if the server both
-    listens and send to its clients, `l_address` and `s_address` must not share
-    the same endpoint (IP address and/or port should be different).
+    listens and sends to its clients, `l_address` and `s_address` must not
+    share the same endpoint (IP address and/or port should be different).
 
     :param system: the desired simulator system module
     :param server_type: the type of threading server to be used
