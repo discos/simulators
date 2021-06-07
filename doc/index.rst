@@ -4,11 +4,11 @@ DISCOS Simulators
    :maxdepth: 3
    :caption: Contents:
 
-   intro.rst
-   framework.rst
-   users.rst
-   developers.rst
-   utils.rst
+   content/intro.rst
+   content/framework.rst
+   content/users.rst
+   content/developers.rst
+   content/utils.rst
 
-.. bibliography:: bibliography.bib
+.. bibliography:: content/bibliography.bib
    :style: unsrt
