@@ -10,11 +10,12 @@ class BaseSystem(object):
 
     @staticmethod
     def system_stop():
-        """Sends back to the server the message `$server_shutdown%` ordering it
-        to stop accepting requests, to close its socket and to shut down.
+        """Sends back to the server the message `$server_shutdown%%%%%`
+        ordering it to stop accepting requests, to close its socket and to shut
+        down.
 
         :return: a message telling the server to proceed with its shutdown."""
-        return '$server_shutdown%'
+        return '$server_shutdown%%%%%'
 
     @staticmethod
     def system_greet():

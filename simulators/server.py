@@ -27,10 +27,10 @@ class BaseHandler(BaseRequestHandler):
     command.
 
     :Example:
-        A $system_stop% command will stop the server, a $error% command
+        A $system_stop%%%%% command will stop the server, a $error%%%%% command
         will configure the system in order to respond with errors, etc."""
 
-    custom_header, custom_tail = ('$', '%')
+    custom_header, custom_tail = ('$', '%%%%%')
 
     def setup(self):
         """Method that gets called whenever a client connects to the server."""
@@ -44,7 +44,7 @@ class BaseHandler(BaseRequestHandler):
         equivalent method, also handling unexpected exceptions.
 
         :param msg_body: the custom command message without the custom header
-            and tail (`$` and `%` respectively)
+            and tail (`$` and `%%%%%` respectively)
         :type msg_body: string"""
         if ':' in msg_body:
             name, params_str = msg_body.split(':')
@@ -59,7 +59,7 @@ class BaseHandler(BaseRequestHandler):
             response = method(*params)
             if isinstance(response, str):
                 self.socket.sendto(response, self.client_address)
-                if response == '$server_shutdown%':
+                if response == '$server_shutdown%%%%%':
                     self.server.stop()
         except AttributeError:
             logging.debug('command %s not supported', name)
@@ -138,8 +138,8 @@ class ListenHandler(BaseHandler):
                 self.custom_msg = byte
             elif self.custom_msg.startswith(self.custom_header):
                 self.custom_msg += byte
-                if byte == self.custom_tail:
-                    msg_body = self.custom_msg[1:-1]
+                if self.custom_msg.endswith(self.custom_tail):
+                    msg_body = self.custom_msg[1:-len(self.custom_tail)]
                     self.custom_msg = b''
                     self._execute_custom_command(msg_body)
 
@@ -177,7 +177,9 @@ class SendHandler(BaseHandler):
                     custom_msg.startswith(self.custom_header)
                     and custom_msg.endswith(self.custom_tail)
                 ):
-                    self._execute_custom_command(custom_msg[1:-1])
+                    self._execute_custom_command(
+                        custom_msg[1:-len(self.custom_tail)]
+                    )
             except IOError:
                 # No data received, just pass
                 pass
@@ -337,8 +339,8 @@ class Simulator(object):
                 self.stop()
 
     def stop(self):
-        """Stops a simulator by sending the custom `$system_stop%` command to
-        all servers of the given simulator."""
+        """Stops a simulator by sending the custom `$system_stop%%%%%` command
+        to all servers of the given simulator."""
         def _send_stop(entry):
             for address in entry[:2]:
                 if not address:
@@ -356,13 +358,13 @@ class Simulator(object):
                             pass
                     except socket.timeout:
                         pass
-                    sockobj.sendto('$system_stop%', address)
+                    sockobj.sendto('$system_stop%%%%%', address)
                     response = sockobj.recv(1024)
-                    if response != '$server_shutdown%':  # pragma: no cover
+                    if response != '$server_shutdown%%%%%':  # pragma: no cover
                         logging.warning(
                             '%s %s %s',
                             'The server did not answer with the',
-                            '$server_shutdown% string!',
+                            '$server_shutdown%%%%% string!',
                             'The simulator might still be running!'
                         )
                 except Exception, ex:  # pragma: no cover
