@@ -9,6 +9,8 @@ from __future__ import print_function
 import importlib
 import subprocess
 import sys
+import time
+import socket
 from argparse import ArgumentParser, ArgumentTypeError
 
 from simulators.server import Simulator
@@ -82,8 +84,15 @@ if args.type:
 
 if args.action == 'start':
     if args.system:
-        simulator = Simulator(args.system, **kwargs)
-        simulator.start()
+        try:
+            simulator = Simulator(args.system, **kwargs)
+            simulator.start()
+        except socket.error:
+            print(
+                "Cannot start simulator '%s', address already in use." %
+                args.system.__name__.rsplit('.', 1)[1]
+            )
+            sys.exit(1)
     else:
         for sim in AVAILABLE_SIMULATORS:
             subprocess.Popen([
@@ -92,6 +101,7 @@ if args.action == 'start':
                 '-s',
                 sim
             ])
+        time.sleep(3)
 elif args.action == 'stop':
     if args.system:
         simulator = Simulator(args.system, **kwargs)
