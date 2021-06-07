@@ -4,7 +4,7 @@ from SocketServer import ThreadingTCPServer
 from simulators.common import ListeningSystem
 
 
-servers = [(('0.0.0.0', 13000), (), ThreadingTCPServer, {})]
+servers = [(('0.0.0.0', 11500), (), ThreadingTCPServer, {})]
 
 
 class System(ListeningSystem):
@@ -15,8 +15,6 @@ class System(ListeningSystem):
     nak = b'nak\n'
 
     channels = 14
-    default_att = 7
-    default_filter = 1
 
     commands = {
         'T': '_T',
@@ -38,7 +36,11 @@ class System(ListeningSystem):
         '!': '_global',
         'W': '_W',
         'L': '_L',
-        'V': '_V'
+        'V': '_V',
+        'pause': '_pause',
+        'stop': '_stop',
+        'restore': '_restore',
+        'quit': '_quit',
     }
 
     params_types = {
@@ -49,48 +51,30 @@ class System(ListeningSystem):
 
     def __init__(self):
         # INT that represents the time offset from UTC UNIX time
+        self.boards = [Board()] * self.channels
+        self.zero = 0
+        self.calOn = 0
+        self.fastSwitch = 0
+        self.externalNoise = 0
         self.time_offset = 0
+        self.sample_rate = 1000
         self.msg = ''
-        self._set_default()
-
-    def _set_default(self):
-        self.attenuations = {
-            'B': [self.default_att] * self.channels,
-            'P': [self.default_att] * self.channels,
-            'G': [self.default_att] * self.channels,
-            'Z': [self.default_att] * self.channels
-        }
-        self.filters = {
-            'B': [1] * self.channels,
-            'P': [1] * self.channels,
-            'G': [1] * self.channels,
-            'Z': [1] * self.channels
-        }
-        self.noise_mark = 0
-        self.ext_noise_mark = 0
-        self.fifty_ohm = 0
 
     def parse(self, byte):
+        if byte in self.tail:
+            msg = self.msg
+            self.msg = ''
+            return self._execute(msg)
         self.msg += byte
-
-        if len(self.msg) == 1:
-            if byte in self.commands.keys():
-                return True
-            else:
-                self.msg = ''
-                return False
-        else:
-            if byte not in self.tail:
-                return True
-            else:
-                msg = self.msg[:-1]
-                self.msg = ''
-                return self._execute(msg)
+        return True
 
     def _execute(self, msg):
+        msg = msg.strip()
         args = [x.strip() for x in msg.split(' ')]
 
         cmd = self.commands.get(args[0])
+        if not cmd:
+            return False
         cmd = getattr(self, cmd)
 
         params = args[1:]
@@ -100,11 +84,12 @@ class System(ListeningSystem):
                 params_types = [params_types] * len(params)
             elif len(params) != len(params_types):
                 return self.nak
-            for index in xrange(len(params)):
+            for index in range(len(params)):
                 params[index] = params_types[index](params[index])
         except ValueError:
             return self.nak
-        return cmd(params)
+        response = cmd(params)
+        return response
 
     def _get_time(self):
         now = time.time()
@@ -120,14 +105,14 @@ class System(ListeningSystem):
         now = time.time()
         self.time_offset = now - new_time
         t = self._get_time()
-        response = '%d,%d,%d,%d,%d' % (params[0], params[1], t[0], t[1], t[2])
+        response = '%d, %d, %d, %d, %d' % (params[0], params[1], t[0], t[1], t[2])
         return response + '\x0D\x0A'
 
     def _E(self, params):
         if len(params) != 2:
             return self.nak
         t = self._get_time()
-        response = '%d,%d,%d,%d,%d' % (params[0], params[1], t[0], t[1], t[2])
+        response = '%d, %d, %d, %d, %d' % (params[0], params[1], t[0], t[1], t[2])
         return response + '\x0D\x0A'
 
     def _I(self, params):
@@ -137,8 +122,11 @@ class System(ListeningSystem):
             return self.nak
         elif params[2] not in range(1, 5):
             return self.nak
-        self.attenuations[params[0]] = [params[1]] * self.channels
-        self.filters[params[0]] = [params[2]] * self.channels
+
+        for board in self.boards:
+            board.I = params[0]
+            board.A = params[1]
+            board.F = params[2]
         return self.ack
 
     def _A(self, params):
@@ -151,13 +139,27 @@ class System(ListeningSystem):
         elif params[3] not in range(1, 5):
             return 'nak %d\n' % params[0]
 
-        self.attenuations[params[1]][params[0]] = params[2]
-        self.filters[params[1]][params[0]] = params[3]
+        self.boards[params[0]].I = params[1]
+        self.boards[params[0]].A = params[2]
+        self.boards[params[0]].F = params[3]
         return self.ack
 
     def _status(self, params):
-        # epoca_cpu_sec, epoca_cpu_microsec, epoca_fpga, sample_rate[ms], marca_sync, tpzero_sync, I, Att, BW_0, BW
-        pass
+        t = self._get_time()
+        # epoca_cpu_sec, epoca_cpu_microsec, epoca_fpga, status_word, sample_rate[ms], marca_sync, tpzero_sync, I0, Att0, BW0, etc
+        response = '%d %d %d %d%d%d%d %d 0 0' % (
+            t[0],
+            t[1],
+            t[2],
+            self.zero,
+            self.calOn,
+            self.fastSwitch,
+            self.externalNoise,
+            self.sample_rate
+        )
+        for board in self.boards:
+            response += ' %s %d %d' % (board.I, board.A, board.B)
+        return response + '\x0D\x0A'
 
     def _G(self, params):
         if len(params) != 2:
@@ -170,7 +172,7 @@ class System(ListeningSystem):
             return self.nak
         elif params[0] not in [0, 1]:
             return self.nak
-        self.noise_mark = params[0]
+        self.calOn = params[0]
         return self.ack
 
     def _M(self, params):
@@ -178,7 +180,7 @@ class System(ListeningSystem):
             return self.nak
         elif params[0] not in [0, 1]:
             return self.nak
-        self.ext_noise_mark = params[0]
+        self.externalNoise = params[0]
         return self.ack
 
     def _Z(self, params):
@@ -186,7 +188,11 @@ class System(ListeningSystem):
             return self.nak
         elif params[0] not in [0, 1]:
             return self.nak
-        self.fifty_ohm = params[0]
+        for board in self.boards:
+            if params[0] == 1:
+                board.I = 'Z'
+            elif params[0] == 0:
+                board.I = None
         return self.ack
 
     def _S(self, params):
@@ -224,3 +230,82 @@ class System(ListeningSystem):
 
     def _V(self, params):
         pass
+
+    def _pause(self, params):
+        pass
+
+    def _stop(self, params):
+        return self.ack
+
+    def _restore(self, params):
+        pass
+
+    def _quit(self, params):
+        pass
+
+
+class Board(object):
+
+    sources = {
+        'P': 'PRIM',
+        'B': 'BWG',
+        'G': 'GREG',
+        'Z': '50_OHM'
+    }
+
+    bandwidths = {
+        1: 330,
+        2: 830,
+        3: 1250,
+        4: 2350
+    }
+
+    def __init__(self):
+        self._input = 'PRIM'
+        self._previous_input = 'PRIM'
+        self._attenuation = 7
+        self._filter = 1
+
+    @property
+    def I(self):
+        return self._input
+
+    @I.setter
+    def I(self, source):
+        if source in self.sources.values():
+            self._previous_input = self._input
+            self._input = source
+        elif source in self.sources.keys():
+            self._previous_input = self._input
+            self._input = self.sources.get(source)            
+        elif not source and self._input == '50_OHM':
+            self._input = self._previous_input
+        else:
+            return False
+        return True
+
+    @property
+    def A(self):
+        return self.attenuation
+
+    @A.setter
+    def A(self, attenuation):
+        if attenuation not in range(16):
+            return False
+        self.attenuation = attenuation
+        return True
+
+    @property
+    def F(self):
+        return self._filter
+
+    @F.setter
+    def F(self, f):
+        if f not in range(1, 5):
+            return False
+        self._filter = f
+        return True
+
+    @property
+    def B(self):
+        return self.bandwidths.get(self._filter)

@@ -10,10 +10,11 @@ class TestTotalPower(unittest.TestCase):
     def tearDown(self):
         del self.system
 
-    def test_unknown_header(self):
+    def test_unknown_command(self):
         msg = '%\n'
-        for byte in msg:
-            self.assertFalse(self.system.parse(byte))
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertFalse(self.system.parse(msg[-1]))
 
     def test_T(self):
         msg = 'T 0 0\n'
