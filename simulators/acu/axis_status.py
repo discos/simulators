@@ -1746,7 +1746,7 @@ class MasterAxisStatus(SimpleAxisStatus):
             if next_pos and self.axis_state == 3 and not self.stowed:
 
                 if self.ptState == 2:
-                    self.p_Soll = self.next_pos + self.p_Offset
+                    self.p_Soll = next_pos + self.p_Offset
                     self.v_Soll = int(round(rate * 1000000))
 
                     if p_Ist != self.p_Soll:
