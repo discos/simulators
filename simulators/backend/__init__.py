@@ -2,10 +2,13 @@ from SocketServer import ThreadingTCPServer
 from simulators.common import ListeningSystem
 from simulators.backend import grammar
 from simulators.backend.genericbackend import GenericBackend, BackendException
+from simulators.backend.sardara import Sardara
 from simulators.utils import ACS_TO_UNIX_TIME
 
 
-servers = [(('0.0.0.0', 12800), (), ThreadingTCPServer, {})]
+servers = [
+    (('0.0.0.0', 12800), (), ThreadingTCPServer, {'backend_type': Sardara})
+]
 
 PROTOCOL_VERSION = '1.2'
 headers = ('!', '?')
@@ -32,8 +35,8 @@ class System(ListeningSystem):
         'convert-data': 'do_convert_data',  # New in version 1.2
     }
 
-    def __init__(self):
-        self.backend = GenericBackend()
+    def __init__(self, backend_type=GenericBackend):
+        self.backend = backend_type()
         self._set_default()
 
     def __del__(self):
