@@ -93,7 +93,7 @@ class TestTotalPower(unittest.TestCase):
         self.assertEqual(self.system.parse(msg[-1]), 'nak\n')
 
     def test_A(self):
-        msg = 'A 0 B 0 4\n'
+        msg = 'A 1 B 0 4\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
@@ -105,25 +105,25 @@ class TestTotalPower(unittest.TestCase):
         self.assertEqual(self.system.parse(msg[-1]), 'nak 20\n')
 
     def test_A_wrong_input(self):
-        msg = 'A 0 I 0 4\n'
+        msg = 'A 1 I 0 4\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(msg[-1]), 'nak 0\n')
+        self.assertEqual(self.system.parse(msg[-1]), 'nak 1\n')
 
     def test_A_wrong_attenuation(self):
-        msg = 'A 0 B 20 4\n'
+        msg = 'A 1 B 20 4\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(msg[-1]), 'nak 0\n')
+        self.assertEqual(self.system.parse(msg[-1]), 'nak 1\n')
 
     def test_A_wrong_filter(self):
-        msg = 'A 0 B 0 5\n'
+        msg = 'A 1 B 0 5\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(msg[-1]), 'nak 0\n')
+        self.assertEqual(self.system.parse(msg[-1]), 'nak 1\n')
 
     def test_A_too_few_params(self):
-        msg = 'A 0 B 0\n'
+        msg = 'A 1 B 0\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.parse(msg[-1]), 'nak\n')
