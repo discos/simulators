@@ -130,7 +130,8 @@ class System(ListeningSystem):
         return self.ack
 
     def _A(self, params):
-        if params[0] not in range(self.channels):
+        board = params[0] - 1
+        if board not in range(self.channels):
             return 'nak %d\n' % params[0]
         if params[1] not in ['B', 'P', 'G', 'Z']:
             return 'nak %d\n' % params[0]
@@ -139,9 +140,9 @@ class System(ListeningSystem):
         elif params[3] not in range(1, 5):
             return 'nak %d\n' % params[0]
 
-        self.boards[params[0]].I = params[1]
-        self.boards[params[0]].A = params[2]
-        self.boards[params[0]].F = params[3]
+        self.boards[board].I = params[1]
+        self.boards[board].A = params[2]
+        self.boards[board].F = params[3]
         return self.ack
 
     def _status(self, params):
