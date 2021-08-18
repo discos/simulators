@@ -33,7 +33,7 @@ class PointingStatus(object):
         self.relative_times = []
         self.azimuth_positions = []
         self.elevation_positions = []
-        self.last_relative_time = None
+        self.last_coordinates = None
         self.az_tck = None
         self.el_tck = None
 
@@ -181,16 +181,8 @@ class PointingStatus(object):
                     self.ptState = 4
                     self.azimuth.ptState = 4
                     self.elevation.ptState = 4
-                    if self.az_tck:
-                        self.azimuth.p_Bahn, _, _ = self.trajectory_calc(
-                            self.az_tck,
-                            self.last_relative_time
-                        )
-                    if self.el_tck:
-                        self.elevation.p_Bahn, _, _ = self.trajectory_calc(
-                            self.el_tck,
-                            self.last_relative_time
-                        )
+                    self.azimuth.p_Bahn = self.last_coordinates[0]
+                    self.elevation.p_Bahn = self.last_coordinates[1]
                     self.relative_times = []
                     self.azimuth_positions = []
                     self.elevation_positions = []
@@ -496,9 +488,12 @@ class PointingStatus(object):
 
         self.lock.acquire()
         self.relative_times = deepcopy(relative_times)
-        self.last_relative_time = self.relative_times[-1]
         self.azimuth_positions = deepcopy(azimuth_positions)
         self.elevation_positions = deepcopy(elevation_positions)
+        self.last_coordinates = (
+            int(round(1000000 * self.azimuth_positions[-1])),
+            int(round(1000000 * self.elevation_positions[-1]))
+        )
         self.lock.release()
 
         self.az_tck = interpolate.splrep(
