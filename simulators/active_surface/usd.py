@@ -12,9 +12,9 @@ class USD(object):
 
     driver_reset_delay = 0.1  # 100 milliseconds
     standby_delay_step = 0.004096  # 4096 microseconds
-    min_position = -2147483648
-    max_position = 2147483647
-    out_of_scale_position = 2147483650  # Greater than any accepted position
+    min_position = -21000 * 128
+    max_position = 21000 * 128
+    out_of_scale_position = max_position + 1  # Greater than any accepted position
 
     # Resolution denominator, i.e.:
     # 0 -> 1/1, full step
