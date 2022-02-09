@@ -40,7 +40,8 @@ class System(ListeningSystem):
         '#GETVD': '_getvd',
         '#GETID': '_getid',
         '#GETREF': '_getref',
-        '#GETEMP': '_getemp'
+        '#GETEMP': '_getemp',
+        '#NAME?': '_name'
     }
 
     params = {
@@ -65,7 +66,8 @@ class System(ListeningSystem):
         '#GETVD': 1,
         '#GETID': 1,
         '#GETREF': 1,
-        '#GETEMP': 1
+        '#GETEMP': 1,
+        '#NAME?': 0
     }
 
     errors = {
@@ -85,11 +87,21 @@ class System(ListeningSystem):
         1013: 'ERROR_THIRD_ARG_NOT_PRESENT',
         1014: 'ERROR_THIRD_ARG_OUT_OF_RANGE',
         1015: 'ERROR_TOO_MANY_ARGS',
+        1016: 'ERROR_IP_NOT_VALID',
+        1017: 'ERROR_SUBNETMASK_NOT_VALID',
+        1018: 'ERROR_GATEWAY_NOT_VALID',
+        1019: 'ERROR_ORDER_ON_MEMORY_INVALID',
+        1020: 'ERROR_SPEED_SLOPE_VALUE_INVALID',
+        1021: 'ERROR_ON_SWITCH_READ_MODE',
+        1022: 'ERROR_COMMAND_NOT_VALID_IN_READ_MODE',
+        1023: 'ERROR_NAME_BOARD_TOO_SHORT_OR_TOO_LONG',
+        2000: 'ERROR_CHECKSUM'
     }
 
     def __init__(self):
         self.VD = 10 * [0]
         self.VG = 10 * [0]
+        self.name = 'GAIASIMBOARD'
         self.msg = b''
 
     def parse(self, byte):
@@ -240,3 +252,6 @@ class System(ListeningSystem):
         x = args[0]
         # temp tra 30 e 36
         return '%d%c' % (x, self.tail)
+
+    def _name(self, _):
+        return self.name + self.tail
