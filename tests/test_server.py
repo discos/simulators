@@ -127,7 +127,11 @@ class TestListeningUDPServer(unittest.TestCase):
         time.sleep(0.1)
 
     def test_proper_request(self):
-        response = get_response(self.address, msg='#command:a,b,c%%%%%', udp=True)
+        response = get_response(
+            self.address,
+            msg='#command:a,b,c%%%%%',
+            udp=True
+        )
         self.assertEqual(response, 'aabbcc')
 
     def test_wrong_request(self):
@@ -157,7 +161,11 @@ class TestListeningUDPServer(unittest.TestCase):
         self.assertRegexpMatches(response, 'ok_abc')
 
     def test_custom_command_without_parameters(self):
-        response = get_response(self.address, msg='$custom_command%%%%%', udp=True)
+        response = get_response(
+            self.address,
+            msg='$custom_command%%%%%',
+            udp=True
+        )
         self.assertRegexpMatches(response, 'no_params')
 
 
@@ -221,7 +229,12 @@ class TestSendingUDPServer(unittest.TestCase):
         self.assertEqual(response, 'message')
 
     def test_unknown_command(self):
-        get_response(self.address, msg='$unknown%%%%%', response=False, udp=True)
+        get_response(
+            self.address,
+            msg='$unknown%%%%%',
+            response=False,
+            udp=True
+        )
         self.assertTrue('command unknown not supported' in get_logs())
 
     def test_raise_exception(self):

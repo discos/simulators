@@ -84,7 +84,7 @@ class System(ListeningSystem):
                 params_types = [params_types] * len(params)
             elif len(params) != len(params_types):
                 return self.nak
-            for index in range(len(params)):
+            for index, _ in enumerate(params):
                 params[index] = params_types[index](params[index])
         except ValueError:
             return self.nak
@@ -105,14 +105,26 @@ class System(ListeningSystem):
         now = time.time()
         self.time_offset = now - new_time
         t = self._get_time()
-        response = '%d, %d, %d, %d, %d' % (params[0], params[1], t[0], t[1], t[2])
+        response = '%d, %d, %d, %d, %d' % (
+            params[0],
+            params[1],
+            t[0],
+            t[1],
+            t[2]
+        )
         return response + '\x0D\x0A'
 
     def _E(self, params):
         if len(params) != 2:
             return self.nak
         t = self._get_time()
-        response = '%d, %d, %d, %d, %d' % (params[0], params[1], t[0], t[1], t[2])
+        response = '%d, %d, %d, %d, %d' % (
+            params[0],
+            params[1],
+            t[0],
+            t[1],
+            t[2]
+        )
         return response + '\x0D\x0A'
 
     def _I(self, params):
@@ -145,9 +157,19 @@ class System(ListeningSystem):
         self.boards[board].F = params[3]
         return self.ack
 
-    def _status(self, params):
+    def _status(self, _):
         t = self._get_time()
-        # epoca_cpu_sec, epoca_cpu_microsec, epoca_fpga, status_word, sample_rate[ms], marca_sync, tpzero_sync, I0, Att0, BW0, etc
+        # epoca_cpu_sec,
+        # epoca_cpu_microsec,
+        # epoca_fpga,
+        # status_word,
+        # sample_rate[ms],
+        # marca_sync,
+        # tpzero_sync,
+        # I0,
+        # Att0,
+        # BW0,
+        # etc
         response = '%d %d %d %d%d%d%d %d 0 0' % (
             t[0],
             t[1],
@@ -235,7 +257,7 @@ class System(ListeningSystem):
     def _pause(self, params):
         pass
 
-    def _stop(self, params):
+    def _stop(self, _):
         return self.ack
 
     def _restore(self, params):
@@ -278,7 +300,7 @@ class Board(object):
             self._input = source
         elif source in self.sources.keys():
             self._previous_input = self._input
-            self._input = self.sources.get(source)            
+            self._input = self.sources.get(source)
         elif not source and self._input == '50_OHM':
             self._input = self._previous_input
         else:
