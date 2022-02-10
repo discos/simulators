@@ -1,3 +1,4 @@
+from random import randint
 from SocketServer import ThreadingUDPServer
 from simulators.common import ListeningSystem
 
@@ -236,10 +237,9 @@ class System(ListeningSystem):
         x = args[0]
         return '%d%c' % (self.VD[x-1], self.tail)
 
-    def _getid(self, args):
-        x = args[0]
+    def _getid(self, _):
         # corrente tra 0 e XmA
-        return '%d%c' % (x, self.tail)
+        return '0%c' % self.tail
 
     def _getref(self, args):
         x = args[0]
@@ -248,10 +248,8 @@ class System(ListeningSystem):
         elif x == 2:
             return '5' + self.tail
 
-    def _getemp(self, args):
-        x = args[0]
-        # temp tra 30 e 36
-        return '%d%c' % (x, self.tail)
+    def _getemp(self, _):
+        return '%d%c' % (randint(30, 36), self.tail)
 
     def _name(self, _):
         return self.name + self.tail
