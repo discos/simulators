@@ -16,6 +16,8 @@ class System(ListeningSystem):
 
     ack = b'ack\n'
     nak = b'nak\n'
+
+    firmware_string = 'fpga 29.12.2009 simulator, firmware rev.48'
     
     commands = {
         'T': '_T',
@@ -233,22 +235,21 @@ class System(ListeningSystem):
         return self.ack
 
     def _R(self, params):
-        # epoca_32bit sample_counter (sempre a 0) status ch0 ch1 ch2 ...... ch13 <CR>
+        # epoca_32bit sample_counter (always 0) status ch0 [...] ch13<CR><LF>
         t = self._get_time()
-        response = '%d 0 994e 2505767 2530689 204004 201015 2507571 996801 989562 1001140 997876 0 0 0 0' % (
-            t[0]
-        )
+        response = '%d 0 994e ' % t[0]
+        response += ' '.join(['%d' % randint(0, 1000000) for _ in range(self.channels)])
         return response + '\x0D\x0A'
 
     def _X(self, params):
         if len(params) != 5:
             return self.nak
 
-        #self.sample_rate = params[0] # sample rate
-        #self.calOnPeriod = params[1] # cal_on_period
-        #self.zeroPeriod = params[2] # tpzero_period
-        self.data_address = params[3] # data_storage_server_address
-        self.data_port = params[4] # data_storage_server_port
+        self.sample_rate = params[0]    # sample rate
+        # self.calOnPeriod = params[1]  # cal_on_period
+        # self.zeroPeriod = params[2]   # tpzero_period
+        self.data_address = params[3]   # data_storage_server_address
+        self.data_port = params[4]      # data_storage_server_port
         
         self.data_flag = True
         return self.ack
@@ -283,7 +284,7 @@ class System(ListeningSystem):
                 self.l_par = 1
 
     def _V(self, params):
-        return "fpga 29.12.2009 firmware rev.48"
+        return self.firmware_string
 
     def _pause(self, params):
         self.data_flag = True
@@ -294,11 +295,11 @@ class System(ListeningSystem):
         
     def send_socket_data(self):     
          while True:
-              rand_data = random.uniform(938.,942.) # based on FITS data
+              rand_data = random.uniform(938.,942.)  # based on FITS data
               if self.data_flag:
                    break
               self.data_socket.send(b'%e' % rand_data)
-              time.sleep(0.001)
+              time.sleep(self.sample_rate)
          self.data_socket.close()
          
     def _resume(self, params):
@@ -307,7 +308,7 @@ class System(ListeningSystem):
             self.data_socket = socket.socket()
             self.data_socket.connect((self.data_address, self.data_port))
             th_data = threading.Thread(target=self.send_socket_data)
-            th_data.daemon =  True
+            th_data.daemon = True
             th_data.start()
             
           except Exception as e:
