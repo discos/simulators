@@ -2,7 +2,8 @@ import time
 from math import modf
 from SocketServer import ThreadingTCPServer
 from simulators.common import ListeningSystem
-import socket, random
+from random import randint
+import socket
 import threading
 
 # SRT TotalPower simulator, 14 channels
@@ -300,7 +301,7 @@ class System(ListeningSystem):
             counter += 1
             # Signal strength, 200 noise floor, 2000 strong signal
             values = [
-                '%d' % random.randint(200, 2000) * self.sample_period \
+                '%d' % randint(200, 2000) * self.sample_period \
                 for _ in range(self.channels)
             ]
             packet += ' '.join(values)
@@ -393,3 +394,4 @@ class Board(object):
     @property
     def B(self):
         return self.bandwidths.get(self._filter)
+
