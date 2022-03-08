@@ -170,6 +170,76 @@ class TestGaia(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.parse(command[-1]), expected_answer)
 
+    def test_args_not_valid(self):
+        expected_answer = 'ERROR(1000)[ERROR_ARGS_NOT_VALID](4552524f525f415247535f4e4f545f56414c4944)\n'
+        command = '\n'
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(command[-1]), expected_answer)
+
+    def test_no_args(self):
+        expected_answer = 'ERROR(1004)[ERROR_NO_ARGS](4552524f525f4e4f5f41524753)\n'
+        command = '#SETD\n'
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(command[-1]), expected_answer)
+
+    def test_unknown_command(self):
+        expected_answer = 'ERROR(1001)[ERROR_COMMAND_UNKNOWN](4552524f525f434f4d4d414e445f554e4b4e4f574e)\n'
+        command = '#UNKNOWN\n'
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(command[-1]), expected_answer)
+
+    def test_too_many_args(self):
+        expected_answer = 'ERROR(1015)[ERROR_TOO_MANY_ARGS](4552524f525f544f4f5f4d414e595f41524753)\n'
+        command = '#SETD 1 1 1\n'
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(command[-1]), expected_answer)
+
+    def test_no_args(self):
+        expected_answer = 'ERROR(1004)[ERROR_NO_ARGS](4552524f525f4e4f5f41524753)\n'
+        command = '#GETEMP\n'
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(command[-1]), expected_answer)
+
+    def test_first_arg_not_integer(self):
+        expected_answer = 'ERROR(1002)[ERROR_FIRST_ARG_NOT_NUMBER](4552524f525f46495253545f4152475f4e4f545f4e554d424552)\n'
+        command = '#GETEMP A\n'
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(command[-1]), expected_answer)
+
+    def test_first_arg_out_of_range(self):
+        expected_answer = 'ERROR(1003)[ERROR_FIRST_ARG_OUT_OF_RANGE](4552524f525f46495253545f4152475f4f55545f4f465f52414e4745)\n'
+        command = '#GETEMP 100\n'
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(command[-1]), expected_answer)
+
+    def test_second_arg_missing(self):
+        expected_answer = 'ERROR(1008)[ERROR_SECOND_ARG_NOT_PRESENT](4552524f525f5345434f4e445f4152475f4e4f545f50524553454e54)\n'
+        command = '#SETD 1\n'
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(command[-1]), expected_answer)
+
+    def test_second_arg_not_integer(self):
+        expected_answer = 'ERROR(1009)[ERROR_SECOND_ARG_NOT_NUMBER](4552524f525f5345434f4e445f4152475f4e4f545f4e554d424552)\n'
+        command = '#SETD 1 A\n'
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(command[-1]), expected_answer)
+
+    def test_second_arg_out_of_range(self):
+        expected_answer = 'ERROR(1010)[ERROR_SECOND_ARG_OUT_OF_RANGE](4552524f525f5345434f4e445f4152475f4f55545f4f465f52414e4745)\n'
+        command = '#SETD 1 5000\n'
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(command[-1]), expected_answer)
+
 
 if __name__ == '__main__':
     unittest.main()

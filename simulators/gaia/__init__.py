@@ -18,6 +18,7 @@ class System(ListeningSystem):
     tail = '\n'
     firmware_string = 'GAIA Simulator Rev. 1.0.0 / 2022.02.08.1'
     channels = range(1, 11)
+    name = 'GAIASIMBOARD'
 
     commands = {
         '*IDN?': '_idn',
@@ -102,7 +103,6 @@ class System(ListeningSystem):
     def __init__(self):
         self.VD = 10 * [0]
         self.VG = 10 * [0]
-        self.name = 'GAIASIMBOARD'
         self.msg = b''
 
     def parse(self, byte):
@@ -121,7 +121,7 @@ class System(ListeningSystem):
         """
         args = msg.split()
         if not args:
-            return
+            return self._error(1000)
         cmd = self.commands.get(args[0])
         if not cmd:
             return self._error(1001)
