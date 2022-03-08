@@ -2,10 +2,10 @@ import time
 from math import modf
 from SocketServer import ThreadingTCPServer
 from simulators.common import ListeningSystem
-
+import socket, random
+import threading
 
 servers = [(('0.0.0.0', 11500), (), ThreadingTCPServer, {})]
-
 
 class System(ListeningSystem):
 
@@ -14,8 +14,8 @@ class System(ListeningSystem):
     ack = b'ack\n'
     nak = b'nak\n'
 
-    channels = 14
-
+    channels = 4 # changed for totalpower (instead of 14)
+    
     commands = {
         'T': '_T',
         'E': '_E',
@@ -39,14 +39,15 @@ class System(ListeningSystem):
         'V': '_V',
         'pause': '_pause',
         'stop': '_stop',
-        'restore': '_restore',
+        'resume': '_resume',
         'quit': '_quit',
     }
 
     params_types = {
         'I': [str, int, int],
         'A': [int, str, int, int],
-        'C': [str]
+        'C': [str],
+        'X': [int, int, int, str, int]
     }
 
     def __init__(self):
@@ -54,10 +55,15 @@ class System(ListeningSystem):
         self.boards = [Board()] * self.channels
         self.zero = 0
         self.calOn = 0
+        self.zeroPeriod = 0
+        self.calOnPeriod = 0
         self.fastSwitch = 0
         self.externalNoise = 0
         self.time_offset = 0
         self.sample_rate = 1000
+        self.data_address = ""
+        self.data_port = 0
+        self.data_flag = False
         self.msg = ''
 
     def parse(self, byte):
@@ -225,46 +231,91 @@ class System(ListeningSystem):
         return self.ack
 
     def _R(self, params):
-        pass
+    	# epoca_32bit sample_counter (sempre a 0) status ch0 ch1 ch2 ...... ch13 <CR>
+        t = self._get_time()
+        response = '%d 0 994e 2505767 2530689 204004 201015 2507571 996801 989562 1001140 997876 0 0 0 0' % (
+            t[0]
+        )
+        return response + '\x0D\x0A'
 
     def _X(self, params):
-        pass
+    	
+        if len(params) != 5:
+            return self.nak
+            
+        #self.sample_rate = params[0] # sample rate
+        #self.calOnPeriod = params[1] # cal_on_period
+        #self.zeroPeriod = params[2] # tpzero_period
+        self.data_address = params[3] # data_storage_server_address
+        self.data_port = params[4] # data_storage_server_port
+        
+        self.data_flag = True
+        return self.ack
 
     def _K(self, params):
         pass
-
+            
     def _C(self, params):
-        pass
+        return str(params[0])
 
     def _J(self, params):
-        pass
+        return self.address
 
     def _O(self, params):
-        pass
+        if len(params) == 2:
+            self.address = params[1]
+        return self.ack
 
     def _global(self, params):
+        # set global carrier
         pass
 
     def _W(self, params):
+        # save carrier configuration
         pass
 
     def _L(self, params):
-        pass
+        if len(params) == 1:
+    	      if params[0] == 0:
+    	          self.l_par = 0
+    	      else:
+                self.l_par = 1
 
     def _V(self, params):
-        pass
+        return "fpga 29.12.2009 firmware rev.48"
 
     def _pause(self, params):
-        pass
+        self.data_flag = True
+        return self.ack
 
     def _stop(self, _):
         return self.ack
-
-    def _restore(self, params):
-        pass
+        
+    def send_socket_data(self):     
+	     while True:
+		      rand_data = random.uniform(938.,942.) # based on FITS data
+		      if self.data_flag:
+			       break
+		      self.data_socket.send(b'%e' % rand_data)
+		      time.sleep(0.001)
+	     self.data_socket.close()
+	     
+    def _resume(self, params):
+    	  self.data_flag = False
+    	  try:
+            self.data_socket = socket.socket()
+            self.data_socket.connect((self.data_address, self.data_port))
+            th_data = threading.Thread(target=self.send_socket_data)
+            th_data.daemon =  True
+            th_data.start()
+            
+    	  except Exception as e:
+        	   self.data_socket.close()
+        
+    	  return self.ack
 
     def _quit(self, params):
-        pass
+        return self.ack
 
 
 class Board(object):
