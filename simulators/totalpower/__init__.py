@@ -54,7 +54,6 @@ class System(ListeningSystem):
     }
 
     def __init__(self, channels=14):
-        # INT that represents the time offset from UTC UNIX time
         self.channels = channels
         self.boards = [Board()] * self.channels
         self.zero = 0
@@ -64,7 +63,7 @@ class System(ListeningSystem):
         self.fastSwitch = 0
         self.externalNoise = 0
         self.time_offset = 0
-        self.sample_rate = 1000
+        self.sample_period = 1000  # milliseconds
         self.data_address = ""
         self.data_port = 0
         self.data_flag = False
@@ -173,7 +172,7 @@ class System(ListeningSystem):
         # epoca_cpu_microsec,
         # epoca_fpga,
         # status_word,
-        # sample_rate[ms],
+        # sample_period[ms],
         # marca_sync,
         # tpzero_sync,
         # I0,
@@ -188,7 +187,7 @@ class System(ListeningSystem):
             self.calOn,
             self.fastSwitch,
             self.externalNoise,
-            self.sample_rate
+            self.sample_period
         )
         for board in self.boards:
             response += ' %s %d %d' % (board.I, board.A, board.B)
@@ -231,13 +230,12 @@ class System(ListeningSystem):
     def _S(self, params):
         if len(params) != 1:
             return self.nak
-        self.sample_rate = params[0]
+        self.sample_period = params[0]
         return self.ack
 
     def _R(self, params):
         # epoca_32bit sample_counter (always 0) status ch0 [...] ch13<CR><LF>
-        t = self._get_time()
-        response = '%d 0 994e ' % t[0]
+        response = '%d 0 994e ' % self._get_time()[0]
         response += ' '.join(['%d' % randint(0, 1000000) for _ in range(self.channels)])
         return response + '\x0D\x0A'
 
@@ -245,7 +243,7 @@ class System(ListeningSystem):
         if len(params) != 5:
             return self.nak
 
-        self.sample_rate = params[0]    # sample rate
+        self.sample_period = params[0]  # sample period (originally called sample_rate)
         # self.calOnPeriod = params[1]  # cal_on_period
         # self.zeroPeriod = params[2]   # tpzero_period
         self.data_address = params[3]   # data_storage_server_address
@@ -293,28 +291,38 @@ class System(ListeningSystem):
     def _stop(self, _):
         return self.ack
         
-    def send_socket_data(self):     
-         while True:
-              rand_data = random.uniform(938.,942.)  # based on FITS data
-              if self.data_flag:
-                   break
-              self.data_socket.send(b'%e' % rand_data)
-              time.sleep(self.sample_rate)
+    def _send_socket_data(self):     
+        counter = 0
+        while True:
+            if self.data_flag:
+                break
+            packet = '%d %d 994e ' % (self._get_time()[0], counter)
+            counter += 1
+            # Signal strength, 200 noise floor, 2000 strong signal
+            values = [
+                '%d' % random.randint(200, 2000) * self.sample_period \
+                for _ in range(self.channels)
+            ]
+            packet += ' '.join(values)
+            packet += '\x0D\x0A'
+
+            self.data_socket.send(packet)
+            time.sleep(self.sample_period)
+
          self.data_socket.close()
          
     def _resume(self, params):
-          self.data_flag = False
-          try:
+        self.data_flag = False
+        try:
             self.data_socket = socket.socket()
             self.data_socket.connect((self.data_address, self.data_port))
-            th_data = threading.Thread(target=self.send_socket_data)
+            th_data = threading.Thread(target=self._send_socket_data)
             th_data.daemon = True
             th_data.start()
-            
-          except Exception as e:
-               self.data_socket.close()
-        
-          return self.ack
+        except Exception as e:
+            self.data_socket.close()
+
+        return self.ack
 
     def _quit(self, params):
         return self.ack
