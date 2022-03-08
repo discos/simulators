@@ -309,7 +309,7 @@ class System(ListeningSystem):
             self.data_socket.send(packet)
             time.sleep(self.sample_period)
 
-         self.data_socket.close()
+        self.data_socket.close()
          
     def _resume(self, params):
         self.data_flag = False
