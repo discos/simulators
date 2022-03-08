@@ -255,7 +255,7 @@ class System(ListeningSystem):
 
     def _K(self, params):
         pass
-            
+
     def _C(self, params):
         return str(params[0])
 
