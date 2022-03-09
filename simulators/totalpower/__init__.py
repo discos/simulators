@@ -6,10 +6,12 @@ from random import randint
 import socket
 import threading
 
-# SRT TotalPower simulator, 14 channels
-servers = [(('0.0.0.0', 11500), (), ThreadingTCPServer, {"channels": 14})]
-# Medicina TotalPower simulator, 4 channels
-servers = [(('0.0.0.0', 11501), (), ThreadingTCPServer, {"channels": 4})]
+servers = [
+    # SRT TotalPower simulator, 14 channels
+    (('0.0.0.0', 11500), (), ThreadingTCPServer, {"channels": 14}),
+    # Medicina TotalPower simulator, 4 channels
+    (('0.0.0.0', 11501), (), ThreadingTCPServer, {"channels": 4})
+]
 
 class System(ListeningSystem):
 
