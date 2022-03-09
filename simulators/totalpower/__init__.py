@@ -1,10 +1,11 @@
 import time
-from math import modf
-from SocketServer import ThreadingTCPServer
-from simulators.common import ListeningSystem
-from random import randint
 import socket
 import threading
+from math import modf
+from random import randint
+from SocketServer import ThreadingTCPServer
+from simulators.common import ListeningSystem
+
 
 servers = [
     # SRT TotalPower simulator, 14 channels
@@ -12,6 +13,7 @@ servers = [
     # Medicina TotalPower simulator, 4 channels
     (('0.0.0.0', 11501), (), ThreadingTCPServer, {"channels": 4})
 ]
+
 
 class System(ListeningSystem):
 
@@ -58,7 +60,7 @@ class System(ListeningSystem):
 
     def __init__(self, channels=14):
         self.channels = channels
-        self.boards = [Board()] * self.channels
+        self.boards = [Board() for _ in range(self.channels)]
         self.zero = 0
         self.calOn = 0
         self.zeroPeriod = 0
@@ -341,10 +343,10 @@ class Board(object):
     }
 
     bandwidths = {
-        1: 330,
-        2: 830,
-        3: 1250,
-        4: 2350
+        1: 2000,
+        2: 1250,
+        3: 730,
+        4: 300
     }
 
     def __init__(self):
@@ -373,13 +375,13 @@ class Board(object):
 
     @property
     def A(self):
-        return self.attenuation
+        return self._attenuation
 
     @A.setter
     def A(self, attenuation):
         if attenuation not in range(16):
             return False
-        self.attenuation = attenuation
+        self._attenuation = attenuation
         return True
 
     @property
