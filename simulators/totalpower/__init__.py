@@ -5,6 +5,7 @@ from math import modf
 from random import randint
 from SocketServer import ThreadingTCPServer
 from simulators.common import ListeningSystem
+from simulators.utils import uint_to_bytes
 
 
 servers = [
@@ -294,6 +295,7 @@ class System(ListeningSystem):
         return self.ack
 
     def _stop(self, _):
+        self.data_flag = True
         return self.ack
         
     def _send_socket_data(self):     
@@ -301,18 +303,20 @@ class System(ListeningSystem):
         while True:
             if self.data_flag:
                 break
-            packet = '%d %d 994e ' % (self._get_time()[0], counter)
+            packet = uint_to_bytes(self._get_time[0], little_endian=False)
+            packet += uint_to_bytes(
+                counter, n_bytes=2, little_endian=False
+            )
             counter += 1
+            packet += '\x99\x4e'  # Flag, STILL TO BE COMPOSED
             # Signal strength, 200 noise floor, 2000 strong signal
-            values = [
-                '%d' % randint(200, 2000) * self.sample_period \
-                for _ in range(self.channels)
-            ]
-            packet += ' '.join(values)
-            packet += '\x0D\x0A'
+            for _ in range(self.channels):
+                packet += uint_to_bytes(
+                    randint(200, 2000) * self.sample_period, little_endian=False
+                )
 
             self.data_socket.send(packet)
-            time.sleep(self.sample_period)
+            time.sleep(float(self.sample_period) / 1000)
 
         self.data_socket.close()
          
