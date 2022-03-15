@@ -1,11 +1,13 @@
 import time
 import socket
-import threading
+from threading import Thread
+from multiprocessing import Value
+from ctypes import c_bool
 from math import modf
 from random import randint
 from SocketServer import ThreadingTCPServer
 from simulators.common import ListeningSystem
-from simulators.utils import uint_to_bytes
+from simulators.utils import uint_to_bytes, binary_to_bytes, bytes_to_binary
 
 
 servers = [
@@ -62,18 +64,32 @@ class System(ListeningSystem):
     def __init__(self, channels=14):
         self.channels = channels
         self.boards = [Board() for _ in range(self.channels)]
+
+        # Status bits
         self.zero = 0
         self.calOn = 0
         self.zeroPeriod = 0
         self.calOnPeriod = 0
         self.fastSwitch = 0
         self.externalNoise = 0
+        self.toggle = 0
+
         self.time_offset = 0
         self.sample_period = 1000  # milliseconds
         self.data_address = ""
         self.data_port = 0
-        self.data_flag = False
+        self.data_socket = socket.socket()
+        self.data_pause = Value(c_bool, True)
+        self.data_stop = Value(c_bool, False)
+        self.data_thread = None
         self.msg = ''
+
+    def __del__(self):
+        self.data_stop.value = True
+        if self.data_thread and self.data_thread.is_alive():
+            # Wait for the data thread to terminate
+            self.data_thread.join()
+        self.data_socket.close()
 
     def parse(self, byte):
         if byte in self.tail:
@@ -85,6 +101,7 @@ class System(ListeningSystem):
 
     def _execute(self, msg):
         msg = msg.strip()
+        print msg
         args = [x.strip() for x in msg.split(' ')]
 
         cmd = self.commands.get(args[0])
@@ -174,26 +191,14 @@ class System(ListeningSystem):
 
     def _status(self, _):
         t = self._get_time()
-        # epoca_cpu_sec,
-        # epoca_cpu_microsec,
-        # epoca_fpga,
-        # status_word,
-        # sample_period[ms],
-        # marca_sync,
-        # tpzero_sync,
-        # I0,
-        # Att0,
-        # BW0,
-        # etc
-        response = '%d %d %d %d%d%d%d %d 0 0' % (
+        response = '%d %d %d %s %d %d %d' % (
             t[0],
             t[1],
             t[2],
-            self.zero,
-            self.calOn,
-            self.fastSwitch,
-            self.externalNoise,
-            self.sample_period
+            self._get_status(ascii_format=True),
+            self.sample_period,
+            self.calOnPeriod,
+            self.zeroPeriod
         )
         for board in self.boards:
             response += ' %s %d %d' % (board.I, board.A, board.B)
@@ -239,32 +244,41 @@ class System(ListeningSystem):
         self.sample_period = params[0]
         return self.ack
 
-    def _R(self, params):
-        # epoca_32bit sample_counter (always 0) status ch0 [...] ch13<CR><LF>
-        response = '%d 0 994e ' % self._get_time()[0]
-        response += ' '.join(['%d' % randint(0, 1000000) for _ in range(self.channels)])
+    def _R(self, _):
+        response = '%d 0 0 ' % self._get_time()[0]
+        response += ' '.join(
+            ['%d' % randint(0, 1000000) for _ in range(self.channels)]
+        )
         return response + '\x0D\x0A'
 
     def _X(self, params):
         if len(params) != 5:
             return self.nak
 
-        self.sample_period = params[0]  # sample period (originally called sample_rate)
-        # self.calOnPeriod = params[1]  # cal_on_period
-        # self.zeroPeriod = params[2]   # tpzero_period
+        self.sample_period = params[0]  # sample period (orig. sample_rate)
+        self.calOnPeriod = params[1]    # cal_on_period
+        self.zeroPeriod = params[2]     # tpzero_period
         self.data_address = params[3]   # data_storage_server_address
         self.data_port = params[4]      # data_storage_server_port
         
-        self.data_flag = True
+        self.data_pause.value = True
+        self.data_socket = socket.socket()
+        self.data_socket.connect((self.data_address, self.data_port))
+        self.data_thread = Thread(
+            target=self._send_socket_data,
+            args=(self.data_stop, self.data_pause)
+        )
+        self.data_thread.daemon = True
+        self.data_thread.start()
         return self.ack
 
-    def _K(self, params):
+    def _K(self, _):
         pass
 
     def _C(self, params):
         return str(params[0])
 
-    def _J(self, params):
+    def _J(self, _):
         return self.address
 
     def _O(self, params):
@@ -272,11 +286,11 @@ class System(ListeningSystem):
             self.address = params[1]
         return self.ack
 
-    def _global(self, params):
+    def _global(self, _):
         # set global carrier
         pass
 
-    def _W(self, params):
+    def _W(self, _):
         # save carrier configuration
         pass
 
@@ -287,54 +301,100 @@ class System(ListeningSystem):
             else:
                 self.l_par = 1
 
-    def _V(self, params):
+    def _V(self, _):
         return self.firmware_string
 
-    def _pause(self, params):
-        self.data_flag = True
+    def _pause(self, _):
+        self.data_pause.value = True
         return self.ack
 
     def _stop(self, _):
-        self.data_flag = True
+        self.data_pause.value = True
+        self.data_stop.value = True
+        if self.data_thread:
+            self.data_thread.join()
+        self.data_stop.value = False
+        self.data_thread = None
+        self.data_socket.close()
         return self.ack
         
-    def _send_socket_data(self):     
-        counter = 0
+    def _send_socket_data(self, stop, pause):
+        packet = ''
+        packets_per_second = 1000 / self.sample_period
+        composed_packets = 0
+        sample_counter = 0
+        cycle = self.sample_period
         while True:
-            if self.data_flag:
-                break
-            packet = uint_to_bytes(self._get_time[0], little_endian=False)
-            packet += uint_to_bytes(
-                counter, n_bytes=2, little_endian=False
-            )
-            counter += 1
-            packet += '\x99\x4e'  # Flag, STILL TO BE COMPOSED
-            # Signal strength, 200 noise floor, 2000 strong signal
-            for _ in range(self.channels):
-                packet += uint_to_bytes(
-                    randint(200, 2000) * self.sample_period, little_endian=False
-                )
+            # No composed packets, either we just started or everything was
+            # already sent, we check if we need to pause or stop
+            if not composed_packets:
+                if stop.value:
+                    # End of current acquisition
+                    break
+                elif pause.value:
+                    # Waiting a resume command
+                    time.sleep(0.001)
+                    continue
 
-            self.data_socket.send(packet)
-            time.sleep(float(self.sample_period) / 1000)
+            if cycle == self.sample_period:
+                cycle = 0
+                packet += uint_to_bytes(self._get_time()[0])
+                packet += uint_to_bytes(sample_counter, n_bytes=2)
+                packet += self._get_status()
+                # Signal strength, 200 noise floor, 2000 strong signal
+                for _ in range(self.channels):
+                    packet += uint_to_bytes(
+                        randint(200, 2000) * self.sample_period
+                    )
+                sample_counter += 1
+                if sample_counter == 65536:
+                    sample_counter = 0
+                composed_packets += 1
+            cycle += 1
 
-        self.data_socket.close()
-         
-    def _resume(self, params):
-        self.data_flag = False
-        try:
-            self.data_socket = socket.socket()
-            self.data_socket.connect((self.data_address, self.data_port))
-            th_data = threading.Thread(target=self._send_socket_data)
-            th_data.daemon = True
-            th_data.start()
-        except Exception as e:
-            self.data_socket.close()
+            if composed_packets == packets_per_second:
+                # Send acquired packets
+                try:
+                    self.data_socket.sendall(packet)
+                except socket.error:
+                    # For some reason the socket is not connected. In order
+                    # to keep the thread running we simply ignore this
+                    pass
+                # Reset current packet state
+                packet = ''
+                composed_packets = 0
+                # Toggle the status bits
+                self.toggle = 0 if self.toggle else 1
 
+            # Cycle every millisecond
+            time.sleep(0.001)
+
+    def _resume(self, _):
+        self.data_pause.value = False
         return self.ack
 
-    def _quit(self, params):
+    def _quit(self, _):
         return self.ack
+
+    def _get_status(self, ascii_format=False):
+        # First byte alternates between \xA0 and \x90 each second of data
+        status = '\xA0' if self.toggle else '\x90'
+        status = bytes_to_binary(status)
+        # Next 2 bits are always set to 01
+        status += '01'
+        # Inputs set to 50 Ohm
+        status += str(self.zero)
+        # Calibration mark is ON
+        status += str(self.calOn)
+        # This bit alternates between 0 and 1 each second of data
+        status += str(self.toggle)
+        # Last 3 bits are always 1
+        status += '111'
+        status = binary_to_bytes(status)
+        if not ascii_format: 
+            return status
+        else:
+            return ''.join([hex(ord(c))[-2:] for c in status[::-1]])
 
 
 class Board(object):
