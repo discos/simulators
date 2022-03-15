@@ -26,7 +26,7 @@ class System(ListeningSystem):
     nak = b'nak\n'
 
     firmware_string = 'fpga 29.12.2009 simulator, firmware rev.48'
-    
+
     commands = {
         'T': '_T',
         'E': '_E',
@@ -74,6 +74,7 @@ class System(ListeningSystem):
         self.externalNoise = 0
         self.toggle = 0
 
+        self.diagnostic_string = ''
         self.time_offset = 0
         self.sample_period = 1000  # milliseconds
         self.data_address = ""
@@ -101,7 +102,7 @@ class System(ListeningSystem):
 
     def _execute(self, msg):
         msg = msg.strip()
-        print msg
+        print(msg)
         args = [x.strip() for x in msg.split(' ')]
 
         cmd = self.commands.get(args[0])
@@ -247,7 +248,7 @@ class System(ListeningSystem):
     def _R(self, _):
         response = '%d 0 0 ' % self._get_time()[0]
         response += ' '.join(
-            ['%d' % randint(0, 1000000) for _ in range(self.channels)]
+            ['%d' % (randint(0, 1000000) + i) for i in range(self.channels)]
         )
         return response + '\x0D\x0A'
 
@@ -260,7 +261,7 @@ class System(ListeningSystem):
         self.zeroPeriod = params[2]     # tpzero_period
         self.data_address = params[3]   # data_storage_server_address
         self.data_port = params[4]      # data_storage_server_port
-        
+
         self.data_pause.value = True
         self.data_socket = socket.socket()
         self.data_socket.connect((self.data_address, self.data_port))
@@ -276,7 +277,8 @@ class System(ListeningSystem):
         pass
 
     def _C(self, params):
-        return str(params[0])
+        self.diagnostic_string = str(params[0])
+        return self.diagnostic_string
 
     def _J(self, _):
         return self.address
@@ -317,7 +319,7 @@ class System(ListeningSystem):
         self.data_thread = None
         self.data_socket.close()
         return self.ack
-        
+
     def _send_socket_data(self, stop, pause):
         packet = ''
         packets_per_second = 1000 / self.sample_period
@@ -391,7 +393,7 @@ class System(ListeningSystem):
         # Last 3 bits are always 1
         status += '111'
         status = binary_to_bytes(status)
-        if not ascii_format: 
+        if not ascii_format:
             return status
         else:
             return ''.join([hex(ord(c))[-2:] for c in status[::-1]])
@@ -462,4 +464,3 @@ class Board(object):
     @property
     def B(self):
         return self.bandwidths.get(self._filter)
-
