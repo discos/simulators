@@ -40,24 +40,15 @@ class System(ListeningSystem):
         'S': '_S',
         'R': '_R',
         'X': '_X',
-        'K': '_K',
-        'C': '_C',
-        'J': '_J',
-        'O': '_O',
-        '!': '_global',
-        'W': '_W',
-        'L': '_L',
         'V': '_V',
         'pause': '_pause',
         'stop': '_stop',
-        'resume': '_resume',
-        'quit': '_quit',
+        'resume': '_resume'
     }
 
     params_types = {
         'I': [str, int, int],
         'A': [int, str, int, int],
-        'C': [str],
         'X': [int, int, int, str, int]
     }
 
@@ -74,7 +65,6 @@ class System(ListeningSystem):
         self.externalNoise = 0
         self.toggle = 0
 
-        self.diagnostic_string = ''
         self.time_offset = 0
         self.sample_period = 1000  # milliseconds
         self.data_address = ""
@@ -102,7 +92,6 @@ class System(ListeningSystem):
 
     def _execute(self, msg):
         msg = msg.strip()
-        print(msg)
         args = [x.strip() for x in msg.split(' ')]
 
         cmd = self.commands.get(args[0])
@@ -248,7 +237,7 @@ class System(ListeningSystem):
     def _R(self, _):
         response = '%d 0 0 ' % self._get_time()[0]
         response += ' '.join(
-            ['%d' % (randint(0, 1000000) + i) for i in range(self.channels)]
+            ['%d' % randint(0, 1000000) for __ in range(self.channels)]
         )
         return response + '\x0D\x0A'
 
@@ -272,36 +261,6 @@ class System(ListeningSystem):
         self.data_thread.daemon = True
         self.data_thread.start()
         return self.ack
-
-    def _K(self, _):
-        pass
-
-    def _C(self, params):
-        self.diagnostic_string = str(params[0])
-        return self.diagnostic_string
-
-    def _J(self, _):
-        return self.address
-
-    def _O(self, params):
-        if len(params) == 2:
-            self.address = params[1]
-        return self.ack
-
-    def _global(self, _):
-        # set global carrier
-        pass
-
-    def _W(self, _):
-        # save carrier configuration
-        pass
-
-    def _L(self, params):
-        if len(params) == 1:
-            if params[0] == 0:
-                self.l_par = 0
-            else:
-                self.l_par = 1
 
     def _V(self, _):
         return self.firmware_string
@@ -373,9 +332,6 @@ class System(ListeningSystem):
 
     def _resume(self, _):
         self.data_pause.value = False
-        return self.ack
-
-    def _quit(self, _):
         return self.ack
 
     def _get_status(self, ascii_format=False):
