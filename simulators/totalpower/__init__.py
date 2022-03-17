@@ -195,7 +195,7 @@ class System(ListeningSystem):
         return response + '\x0D\x0A'
 
     def _G(self, params):
-        if len(params) != 2:
+        if len(params) != 1:
             return self.nak
         # Do something
         return self.ack
