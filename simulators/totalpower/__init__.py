@@ -274,14 +274,19 @@ class System(ListeningSystem):
 
     def _send_socket_data(self, stop, pause):
         packet = ''
-        packets_per_second = 1000 / self.sample_period
-        composed_packets = 0
         sample_counter = 0
         cycle = self.sample_period
+        cal_off_samples = 0
+        next_sample = None
         while True:
+            if next_sample:
+                t0 = next_sample
+            else:
+                t0 = time.time()
+
             # No composed packets, either we just started or everything was
             # already sent, we check if we need to pause or stop
-            if not composed_packets:
+            if not '':
                 if stop.value:
                     # End of current acquisition
                     break
@@ -290,23 +295,26 @@ class System(ListeningSystem):
                     time.sleep(0.001)
                     continue
 
-            if cycle == self.sample_period:
-                cycle = 0
-                packet += uint_to_bytes(self._get_time()[0])
-                packet += uint_to_bytes(sample_counter, n_bytes=2)
-                packet += self._get_status()
-                # Signal strength, 200 noise floor, 2000 strong signal
-                for _ in range(self.channels):
-                    packet += uint_to_bytes(
-                        randint(200, 2000) * self.sample_period
-                    )
-                sample_counter += 1
-                if sample_counter == 65536:
-                    sample_counter = 0
-                composed_packets += 1
-            cycle += 1
+            packet += uint_to_bytes(self._get_time()[0])
+            packet += uint_to_bytes(sample_counter, n_bytes=2)
+            if self.calOnPeriod:
+                if cal_off_samples == self.calOnPeriod:
+                    self.calOn = 1
+                    cal_off_samples = 0
+                else:
+                    cal_off_samples += 1
+            packet += self._get_status()
+            self.calOn = 0
+            # Signal strength, 200 noise floor, 2000 strong signal
+            for _ in range(self.channels):
+                packet += uint_to_bytes(
+                    randint(200, 2000) * self.sample_period
+                )
+            sample_counter += 1
+            if sample_counter == 65536:
+                sample_counter = 0
 
-            if composed_packets == packets_per_second:
+            if len(packet) / 64 == 1000 / self.sample_period:
                 # Send acquired packets
                 try:
                     self.data_socket.sendall(packet)
@@ -314,14 +322,14 @@ class System(ListeningSystem):
                     # For some reason the socket is not connected. In order
                     # to keep the thread running we simply ignore this
                     pass
-                # Reset current packet state
+                # Reset packet state
                 packet = ''
-                composed_packets = 0
                 # Toggle the status bits
                 self.toggle = 0 if self.toggle else 1
 
-            # Cycle every millisecond
-            time.sleep(0.001)
+            now = time.time()
+            next_sample = t0 + float(self.sample_period) / 1000
+            time.sleep(max(0, next_sample - now))
 
     def _resume(self, _):
         self.data_pause.value = False
