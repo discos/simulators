@@ -275,7 +275,6 @@ class System(ListeningSystem):
     def _send_socket_data(self, stop, pause):
         packet = ''
         sample_counter = 0
-        cycle = self.sample_period
         cal_off_samples = 0
         next_sample = None
         while True:
