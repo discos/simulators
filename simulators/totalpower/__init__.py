@@ -33,7 +33,6 @@ class System(ListeningSystem):
         'I': '_I',
         'A': '_A',
         '?': '_status',
-        'G': '_G',
         'N': '_N',
         'M': '_M',
         'Z': '_Z',
@@ -193,12 +192,6 @@ class System(ListeningSystem):
         for board in self.boards:
             response += ' %s %d %d' % (board.I, board.A, board.B)
         return response + '\x0D\x0A'
-
-    def _G(self, params):
-        if len(params) != 1:
-            return self.nak
-        # Do something
-        return self.ack
 
     def _N(self, params):
         if len(params) != 1:
