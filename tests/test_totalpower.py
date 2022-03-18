@@ -129,52 +129,125 @@ class TestTotalPower(unittest.TestCase):
         self.assertEqual(self.system.parse(msg[-1]), 'nak\n')
 
     def test_status(self):
-        pass
-
-    def test_G(self):
-        pass
+        msg = '?\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(
+            len(self.system.parse(msg[-1]).split()),
+            7 + (self.system.channels * 3)
+        )
 
     def test_N(self):
-        pass
+        msg = 'N 1\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
+
+    def test_N_too_few_params(self):
+        msg = 'N\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'nak\n')
+
+    def test_N_wrong_params(self):
+        msg = 'N 2\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'nak\n')
 
     def test_M(self):
-        pass
+        msg = 'M 1\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
+
+    def test_M_too_few_params(self):
+        msg = 'M\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'nak\n')
+
+    def test_M_wrong_params(self):
+        msg = 'M 2\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'nak\n')
 
     def test_Z(self):
-        pass
+        msg = 'Z 1\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
+
+    def test_Z_too_few_params(self):
+        msg = 'Z\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'nak\n')
+
+    def test_Z_wrong_params(self):
+        msg = 'Z 2\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'nak\n')
 
     def test_S(self):
-        pass
+        msg = 'S 100\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
+
+    def test_S_too_few_params(self):
+        msg = 'Z\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'nak\n')
 
     def test_R(self):
-        pass
+        msg = 'R\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(
+            len(self.system.parse(msg[-1]).split()), 3 + self.system.channels
+        )
 
     def test_X(self):
         pass
 
-    def test_K(self):
-        pass
+    def test_X_too_few_params(self):
+        msg = 'X 40 0 0 127.0.0.1\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'nak\n')
 
-    def test_C(self):
-        pass
-
-    def test_J(self):
-        pass
-
-    def test_O(self):
-        pass
-
-    def test_global(self):
-        pass
-
-    def test_W(self):
-        pass
-
-    def test_L(self):
+    def send_socket_data(self):
         pass
 
     def test_V(self):
-        pass
+        msg = 'V\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(
+            self.system.parse(msg[-1]), self.system.firmware_string
+        )
+
+    def test_pause(self):
+        msg = 'pause\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
+
+    def test_stop(self):
+        msg = 'stop\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
+
+    def test_resume(self):
+        msg = 'resume\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
 
 
 if __name__ == '__main__':
