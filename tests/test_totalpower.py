@@ -1,4 +1,6 @@
 import unittest
+import socket
+from threading import Thread
 from simulators.totalpower import System
 
 
@@ -211,8 +213,64 @@ class TestTotalPower(unittest.TestCase):
             len(self.system.parse(msg[-1]).split()), 3 + self.system.channels
         )
 
+    def discos_reponse_X(self):
+        """
+        IPAddress="192.168.51.94"
+        Port="5003"
+        DataPort="6001"
+        DataIPAddress="192.168.51.100"
+        """
+        LISTENING_PORT = 6001
+        LISTENING_ADDRESS = '127.0.0.1'
+
+        try:
+            self.socket_instance = socket.socket(
+                socket.AF_INET, socket.SOCK_STREAM
+            )
+            self.socket_instance.bind((LISTENING_ADDRESS, LISTENING_PORT))
+        except socket.error as e:
+            print e
+        self.data_thread = Thread(
+            target=self.socket_data,
+            args=(self.socket_instance,)
+        )
+        self.data_thread.daemon = True
+        self.data_thread.start()
+
+    def socket_data(self, socket_instance):
+        response_msg = 'X 40 0 0 127.0.0.1 6001\n'
+        pause_msg = 'pause\n'
+        stop_msg = 'stop\n'
+        resume_msg = 'resume\n'
+
+        socket_instance.listen(1)
+        socket_connection, address = socket_instance.accept()
+        while True:
+            data = socket_connection.recv(1024).decode()
+            if not data:
+                break
+            if data == response_msg:
+                socket_connection.sendall(b'ack\n'.encode())
+            elif data == pause_msg:
+                pass
+            elif data == resume_msg:
+                pass
+            elif data == stop_msg:
+                socket_connection.close()
+
     def test_X(self):
-        pass
+        msg = 'X 40 0 0 127.0.0.1 6001\n'
+        self.discos_reponse_X()
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
+
+    def test_X_wrong_port(self):
+        msg = 'X 40 0 0 127.0.0.1 5001\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        with self.assertRaises(socket.error):
+            self.system.parse(msg[-1])
 
     def test_X_too_few_params(self):
         msg = 'X 40 0 0 127.0.0.1\n'
