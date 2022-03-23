@@ -215,12 +215,6 @@ class TestTotalPower(unittest.TestCase):
         )
 
     def discos_reponse_X(self):
-        """
-        IPAddress="192.168.51.94"
-        Port="5003"
-        DataPort="6001"
-        DataIPAddress="192.168.51.100"
-        """
         self.data_thread = Thread(target=self.socket_data)
         self.data_thread.daemon = True
         self.data_thread.start()
@@ -236,7 +230,6 @@ class TestTotalPower(unittest.TestCase):
             socket_instance.bind((LISTENING_ADDRESS, LISTENING_PORT))
             socket_instance.listen(10)
             socket_connection, address = socket_instance.accept()
-            print("3way handshake: " + str(address[0]) + " " + str(address[1]))
         except socket.error as e:
             print(e)
         while True:
