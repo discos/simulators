@@ -234,6 +234,9 @@ class System(ListeningSystem):
         )
         return response + '\x0D\x0A'
 
+    def _V(self, _):
+        return self.firmware_string
+
     def _X(self, params):
         if len(params) != 5:
             return self.nak
@@ -255,8 +258,9 @@ class System(ListeningSystem):
         self.data_thread.start()
         return self.ack
 
-    def _V(self, _):
-        return self.firmware_string
+    def _resume(self, _):
+        self.data_pause.value = False
+        return self.ack
 
     def _pause(self, _):
         self.data_pause.value = True
@@ -277,22 +281,38 @@ class System(ListeningSystem):
         sample_counter = 0
         cal_off_samples = 0
         next_sample = None
+        paused = True
         while True:
             if next_sample:
                 t0 = next_sample
             else:
                 t0 = time.time()
 
-            # No composed packets, either we just started or everything was
-            # already sent, we check if we need to pause or stop
-            if not '':
+            if len(packet) / 64 == 1000 / self.sample_period:
+                # Send acquired packets
+                try:
+                    self.data_socket.sendall(packet)
+                except socket.error:
+                    # For some reason the socket is not connected. In order
+                    # to keep the thread running we simply ignore this
+                    pass
+                # Reset packet state
+                packet = ''
+                # Toggle the status bits
+                self.toggle = 0 if self.toggle else 1
                 if stop.value:
                     # End of current acquisition
                     break
                 elif pause.value:
-                    # Waiting a resume command
-                    time.sleep(0.001)
+                    paused = True
                     continue
+
+            if not pause.value:
+                paused = False
+
+            if paused:
+                time.sleep(0.001)
+                continue
 
             packet += uint_to_bytes(self._get_time()[0])
             packet += uint_to_bytes(sample_counter, n_bytes=2)
@@ -313,26 +333,10 @@ class System(ListeningSystem):
             if sample_counter == 65536:
                 sample_counter = 0
 
-            if len(packet) / 64 == 1000 / self.sample_period:
-                # Send acquired packets
-                try:
-                    self.data_socket.sendall(packet)
-                except socket.error:
-                    # For some reason the socket is not connected. In order
-                    # to keep the thread running we simply ignore this
-                    pass
-                # Reset packet state
-                packet = ''
-                # Toggle the status bits
-                self.toggle = 0 if self.toggle else 1
-
             now = time.time()
             next_sample = t0 + float(self.sample_period) / 1000
             time.sleep(max(0, next_sample - now))
 
-    def _resume(self, _):
-        self.data_pause.value = False
-        return self.ack
 
     def _get_status(self, ascii_format=False):
         # First byte alternates between \xA0 and \x90 each second of data
