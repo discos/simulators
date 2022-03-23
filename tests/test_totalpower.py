@@ -1,3 +1,4 @@
+from time import sleep
 import unittest
 import socket
 from threading import Thread
@@ -220,50 +221,60 @@ class TestTotalPower(unittest.TestCase):
         DataPort="6001"
         DataIPAddress="192.168.51.100"
         """
+        self.data_thread = Thread(target=self.socket_data)
+        self.data_thread.daemon = True
+        self.data_thread.start()
+
+    def socket_data(self):    
         LISTENING_PORT = 6001
         LISTENING_ADDRESS = '127.0.0.1'
 
         try:
-            self.socket_instance = socket.socket(
+            socket_instance = socket.socket(
                 socket.AF_INET, socket.SOCK_STREAM
             )
-            self.socket_instance.bind((LISTENING_ADDRESS, LISTENING_PORT))
+            socket_instance.bind((LISTENING_ADDRESS, LISTENING_PORT))
+            socket_instance.listen(10)
+            socket_connection, address = socket_instance.accept()
+            print("3way handshake: " + str(address[0]) + " " + str(address[1]))
         except socket.error as e:
-            print e
-        self.data_thread = Thread(
-            target=self.socket_data,
-            args=(self.socket_instance,)
-        )
-        self.data_thread.daemon = True
-        self.data_thread.start()
-
-    def socket_data(self, socket_instance):
-        response_msg = 'X 40 0 0 127.0.0.1 6001\n'
-        pause_msg = 'pause\n'
-        stop_msg = 'stop\n'
-        resume_msg = 'resume\n'
-
-        socket_instance.listen(1)
-        socket_connection, address = socket_instance.accept()
+            print(e)
         while True:
-            data = socket_connection.recv(1024).decode()
-            if not data:
+            self.data_sock = socket_connection.recv(64)
+            if not self.data_sock:
                 break
-            if data == response_msg:
-                socket_connection.sendall(b'ack\n'.encode())
-            elif data == pause_msg:
-                pass
-            elif data == resume_msg:
-                pass
-            elif data == stop_msg:
-                socket_connection.close()
 
     def test_X(self):
-        msg = 'X 40 0 0 127.0.0.1 6001\n'
+        msg = 'X 1000 0 0 127.0.0.1 6001\n'
         self.discos_reponse_X()
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
+        sleep(0.5)
+        
+        msg = 'resume\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
+        sleep(0.5)
+        
+        msg = 'pause\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
+        self.assertEqual(len(self.data_sock), 64)
+        
+        msg = 'resume\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
+        sleep(0.5)
+
+        msg = 'stop\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
+        self.assertEqual(len(self.data_sock), 64)
 
     def test_X_wrong_port(self):
         msg = 'X 40 0 0 127.0.0.1 5001\n'
@@ -277,9 +288,6 @@ class TestTotalPower(unittest.TestCase):
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.parse(msg[-1]), 'nak\n')
-
-    def send_socket_data(self):
-        pass
 
     def test_V(self):
         msg = 'V\n'
