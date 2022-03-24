@@ -1,8 +1,11 @@
-from time import sleep
 import unittest
 import socket
+import time
 from threading import Thread
-from simulators.totalpower import System
+from simulators.totalpower import System, Board
+
+LISTENING_ADDRESS = '127.0.0.1'
+LISTENING_PORT = 6001
 
 
 class TestTotalPower(unittest.TestCase):
@@ -181,6 +184,10 @@ class TestTotalPower(unittest.TestCase):
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
+        msg = 'Z 0\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
 
     def test_Z_too_few_params(self):
         msg = 'Z\n'
@@ -201,7 +208,7 @@ class TestTotalPower(unittest.TestCase):
         self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
 
     def test_S_too_few_params(self):
-        msg = 'Z\n'
+        msg = 'S\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.parse(msg[-1]), 'nak\n')
@@ -214,60 +221,64 @@ class TestTotalPower(unittest.TestCase):
             len(self.system.parse(msg[-1]).split()), 3 + self.system.channels
         )
 
-    def discos_reponse_X(self):
-        self.data_thread = Thread(target=self.socket_data)
-        self.data_thread.daemon = True
-        self.data_thread.start()
-
-    def socket_data(self):    
-        LISTENING_PORT = 6001
-        LISTENING_ADDRESS = '127.0.0.1'
-
-        try:
-            socket_instance = socket.socket(
-                socket.AF_INET, socket.SOCK_STREAM
-            )
-            socket_instance.bind((LISTENING_ADDRESS, LISTENING_PORT))
-            socket_instance.listen(10)
-            socket_connection, address = socket_instance.accept()
-        except socket.error as e:
-            print(e)
-        while True:
-            self.data_sock = socket_connection.recv(64)
-            if not self.data_sock:
-                break
-
-    def test_X(self):
-        msg = 'X 1000 0 0 127.0.0.1 6001\n'
-        self.discos_reponse_X()
+    def _send_x_command(self, msg):
+        time.sleep(0.05)
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
-        sleep(0.5)
-        
+
+    def test_X(self):
+        # A sample period of 501 allows to receive only
+        # one packet in a second, therefore speeding up the test
+        sample_period = 501
+        msg = 'X %d 1 0 %s %d\n' % (
+            sample_period,
+            LISTENING_ADDRESS,
+            LISTENING_PORT
+        )
+
+        s = socket.socket()
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind((LISTENING_ADDRESS, LISTENING_PORT))
+        s.listen(1)
+
+        t = Thread(target=self._send_x_command, args=(msg,))
+        t.start()
+        s, _ = s.accept()
+        t.join()
+
+        # We also check if the sample counter reverts to 0
+        self.system.sample_counter = 65535
+
         msg = 'resume\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
-        sleep(0.5)
-        
+        time.sleep(float(sample_period / 2) / 1000)
+
         msg = 'pause\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
-        self.assertEqual(len(self.data_sock), 64)
-        
+
+        data = s.recv(1024)
+        self.assertEqual(len(data), 64 * (1000 / sample_period))
+
         msg = 'resume\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
-        sleep(0.5)
+        time.sleep(float(sample_period / 2) / 1000)
 
         msg = 'stop\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
-        self.assertEqual(len(self.data_sock), 64)
+
+        data = s.recv(1024)
+        self.assertEqual(len(data), 64 * (1000 / sample_period))
+
+        s.close()
 
     def test_X_wrong_port(self):
         msg = 'X 40 0 0 127.0.0.1 5001\n'
@@ -282,6 +293,53 @@ class TestTotalPower(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.parse(msg[-1]), 'nak\n')
 
+    def test_X_disconnect_without_stop(self):
+        # A sample period of 501 allows to receive only
+        # one packet in a second, therefore speeding up the test
+        sample_period = 501
+        msg = 'X %d 1 0 %s %d\n' % (
+            sample_period,
+            LISTENING_ADDRESS,
+            LISTENING_PORT
+        )
+
+        s = socket.socket()
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind((LISTENING_ADDRESS, LISTENING_PORT))
+        s.listen(1)
+
+        t = Thread(target=self._send_x_command, args=(msg,))
+        t.start()
+        s, _ = s.accept()
+        t.join()
+
+        msg = 'resume\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
+        time.sleep(float(sample_period + 10) / 1000)
+
+        data = s.recv(1024)
+        self.assertEqual(len(data), 64 * (1000 / sample_period))
+
+        # Disconnect socket
+        s.close()
+
+        t0 = time.time()
+        # Wait up to 1 second for the timer to join and be set to None
+        while time.time() - t0 < 1:
+            if self.system.data_timer is None:
+                break
+            time.sleep(0.01)
+        if self.system.data_timer:
+            self.fail('timer is taking too long to join!')
+
+    def test_resume_without_X(self):
+        msg = 'resume\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(msg[-1]), 'nak\n')
+
     def test_V(self):
         msg = 'V\n'
         for byte in msg[:-1]:
@@ -290,23 +348,47 @@ class TestTotalPower(unittest.TestCase):
             self.system.parse(msg[-1]), self.system.firmware_string
         )
 
-    def test_pause(self):
-        msg = 'pause\n'
-        for byte in msg[:-1]:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
 
-    def test_stop(self):
-        msg = 'stop\n'
-        for byte in msg[:-1]:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
+class TestBoard(unittest.TestCase):
 
-    def test_resume(self):
-        msg = 'resume\n'
-        for byte in msg[:-1]:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
+    def setUp(self):
+        self.board = Board()
+
+    def test_I(self):
+        self.assertEqual(self.board.I, 'PRIM')
+        self.board.I = 'B'
+        self.assertEqual(self.board.I, 'BWG')
+        self.board.I = 'DUMMY'
+        self.assertEqual(self.board.I, 'BWG')
+        self.board.I = 'GREG'
+        self.assertEqual(self.board.I, 'GREG')
+        self.board.I = 'Z'
+        self.assertEqual(self.board.I, '50_OHM')
+        self.board.I = None
+        self.assertEqual(self.board.I, 'GREG')
+
+    def test_A(self):
+        self.assertEqual(self.board.A, 7)
+        self.board.A = 14
+        self.assertEqual(self.board.A, 14)
+        self.board.A = 1000
+        self.assertEqual(self.board.A, 14)
+
+    def test_F(self):
+        self.assertEqual(self.board.F, 1)
+        self.board.F = 4
+        self.assertEqual(self.board.F, 4)
+        self.board.F = 10
+        self.assertEqual(self.board.F, 4)
+
+    def test_B(self):
+        self.assertEqual(self.board.B, 2000)
+        self.board.F = 4
+        self.assertEqual(self.board.F, 4)
+        self.assertEqual(self.board.B, 300)
+        self.board.F = 10
+        self.assertEqual(self.board.F, 4)
+        self.assertEqual(self.board.B, 300)
 
 
 if __name__ == '__main__':

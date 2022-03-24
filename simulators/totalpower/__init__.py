@@ -1,6 +1,6 @@
 import time
 import socket
-from threading import Thread
+from threading import Timer
 from multiprocessing import Value
 from ctypes import c_bool
 from math import modf
@@ -16,6 +16,14 @@ servers = [
     # Medicina TotalPower simulator, 4 channels
     (('0.0.0.0', 11501), (), ThreadingTCPServer, {"channels": 4})
 ]
+
+
+def _get_time(time_offset=0):
+    now = time.time()
+    now_microsec, now_sec = modf(now)
+    now_microsec = str(now_microsec)[2:8]
+    _, sec = modf(now + time_offset)
+    return int(now_sec), int(now_microsec), int(sec)
 
 
 class System(ListeningSystem):
@@ -63,22 +71,20 @@ class System(ListeningSystem):
         self.fastSwitch = 0
         self.externalNoise = 0
         self.toggle = 0
+        self.sample_counter = 0
 
         self.time_offset = 0
         self.sample_period = 1000  # milliseconds
         self.data_address = ""
         self.data_port = 0
+        self.data_configured = False
         self.data_socket = socket.socket()
-        self.data_pause = Value(c_bool, True)
-        self.data_stop = Value(c_bool, False)
-        self.data_thread = None
+        self.pause = Value(c_bool, True)
+        self.stop = Value(c_bool, False)
+        self.data_timer = None
         self.msg = ''
 
     def __del__(self):
-        self.data_stop.value = True
-        if self.data_thread and self.data_thread.is_alive():
-            # Wait for the data thread to terminate
-            self.data_thread.join()
         self.data_socket.close()
 
     def parse(self, byte):
@@ -112,20 +118,13 @@ class System(ListeningSystem):
         response = cmd(params)
         return response
 
-    def _get_time(self):
-        now = time.time()
-        now_microsec, now_sec = modf(now)
-        now_microsec = str(now_microsec)[:8].split('.')[1]
-        _, sec = modf(now + self.time_offset)
-        return int(now_sec), int(now_microsec), int(sec)
-
     def _T(self, params):
         if len(params) != 2:
             return self.nak
         new_time = float('%d.%.6d' % (params[0], params[1]))
         now = time.time()
         self.time_offset = now - new_time
-        t = self._get_time()
+        t = _get_time(self.time_offset)
         response = '%d, %d, %d, %d, %d' % (
             params[0],
             params[1],
@@ -138,7 +137,7 @@ class System(ListeningSystem):
     def _E(self, params):
         if len(params) != 2:
             return self.nak
-        t = self._get_time()
+        t = _get_time(self.time_offset)
         response = '%d, %d, %d, %d, %d' % (
             params[0],
             params[1],
@@ -179,7 +178,7 @@ class System(ListeningSystem):
         return self.ack
 
     def _status(self, _):
-        t = self._get_time()
+        t = _get_time(self.time_offset)
         response = '%d %d %d %s %d %d %d' % (
             t[0],
             t[1],
@@ -228,7 +227,7 @@ class System(ListeningSystem):
         return self.ack
 
     def _R(self, _):
-        response = '%d 0 0 ' % self._get_time()[0]
+        response = '%d 0 0 ' % _get_time(self.time_offset)[0]
         response += ' '.join(
             ['%d' % randint(0, 1000000) for __ in range(self.channels)]
         )
@@ -238,105 +237,114 @@ class System(ListeningSystem):
         return self.firmware_string
 
     def _X(self, params):
-        if len(params) != 5:
-            return self.nak
-
         self.sample_period = params[0]  # sample period (orig. sample_rate)
         self.calOnPeriod = params[1]    # cal_on_period
         self.zeroPeriod = params[2]     # tpzero_period
         self.data_address = params[3]   # data_storage_server_address
         self.data_port = params[4]      # data_storage_server_port
 
-        self.data_pause.value = True
+        self.sample_counter = 0
+        self.cal_off_samples = 0
+        self.stop.value = False
+        self.pause.value = False
         self.data_socket = socket.socket()
         self.data_socket.connect((self.data_address, self.data_port))
-        self.data_thread = Thread(
-            target=self._send_socket_data,
-            args=(self.data_stop, self.data_pause)
-        )
-        self.data_thread.daemon = True
-        self.data_thread.start()
+        self.data_configured = True
         return self.ack
 
     def _resume(self, _):
-        self.data_pause.value = False
+        if not self.data_configured:
+            # Not configured, we cannot start
+            return self.nak
+
+        self.stop.value = False
+        self.pause.value = False
+        self.data_timer = Timer(
+            1000 / self.sample_period * (float(self.sample_period) / 1000),
+            self._send_packet,
+            args=(self.stop, self.pause)
+        )
+        self.data_timer.start()
         return self.ack
 
     def _pause(self, _):
-        self.data_pause.value = True
+        self.pause.value = True
         return self.ack
 
     def _stop(self, _):
-        self.data_pause.value = True
-        self.data_stop.value = True
-        if self.data_thread:
-            self.data_thread.join()
-        self.data_stop.value = False
-        self.data_thread = None
-        self.data_socket.close()
+        self.stop.value = True
+
+        def _wait_for_timer():
+            self.data_timer.join()
+            self.data_timer = None
+
+        if self.data_timer and self.data_timer.isAlive():
+            t = Timer(0, _wait_for_timer)
+            t.start()
+
         return self.ack
 
-    def _send_socket_data(self, stop, pause):
+    def _send_packet(self, stop, pause):
         packet = ''
-        sample_counter = 0
-        cal_off_samples = 0
-        next_sample = None
-        paused = True
-        while True:
-            if next_sample:
-                t0 = next_sample
-            else:
-                t0 = time.time()
+        # Timestamp of the last packet
+        t0 = timestamp = time.time()
+        # Subtract the whole acquisition duration in order to mimic the start
+        # time of the acquisition
+        timestamp -= \
+            (1000 / self.sample_period) * (float(self.sample_period) / 1000)
+        for _ in range(1000 / self.sample_period):
+            # The epoch should represent the ending instant of each sample,
+            # therefore, we add a sample_period
+            timestamp += float(self.sample_period) / 1000
+            packet += uint_to_bytes(int(timestamp))
+            # Add a sample_period to the timestamp each sample we generate
+            packet += uint_to_bytes(self.sample_counter, n_bytes=2)
 
-            if len(packet) / 64 == 1000 / self.sample_period:
-                # Send acquired packets
-                try:
-                    self.data_socket.sendall(packet)
-                except socket.error:
-                    # For some reason the socket is not connected. In order
-                    # to keep the thread running we simply ignore this
-                    pass
-                # Reset packet state
-                packet = ''
-                # Toggle the status bits
-                self.toggle = 0 if self.toggle else 1
-                if stop.value:
-                    # End of current acquisition
-                    break
-                elif pause.value:
-                    paused = True
-                    continue
-
-            if not pause.value:
-                paused = False
-
-            if paused:
-                time.sleep(0.001)
-                continue
-
-            packet += uint_to_bytes(self._get_time()[0])
-            packet += uint_to_bytes(sample_counter, n_bytes=2)
             if self.calOnPeriod:
-                if cal_off_samples == self.calOnPeriod:
+                if self.cal_off_samples == self.calOnPeriod:
                     self.calOn = 1
-                    cal_off_samples = 0
+                    self.cal_off_samples = 0
                 else:
-                    cal_off_samples += 1
+                    self.cal_off_samples += 1
             packet += self._get_status()
             self.calOn = 0
+
             # Signal strength, 200 noise floor, 2000 strong signal
-            for _ in range(self.channels):
+            for __ in range(self.channels):
                 packet += uint_to_bytes(
                     randint(200, 2000) * self.sample_period
                 )
-            sample_counter += 1
-            if sample_counter == 65536:
-                sample_counter = 0
+            self.sample_counter += 1
+            if self.sample_counter == 65536:
+                self.sample_counter = 0
 
-            now = time.time()
-            next_sample = t0 + float(self.sample_period) / 1000
-            time.sleep(max(0, next_sample - now))
+        # Packet complete, send it
+        self.toggle = 0 if self.toggle else 1
+        try:
+            self.data_socket.sendall(packet)
+        except socket.error:
+            # For some reason the socket is not connected.
+            # Stop the acquisition
+            self._stop(None)
 
+        # Start the timer again if not paused
+        if stop.value:
+            self.sample_counter = 0
+            self.cal_off_samples = 0
+            self.data_socket.close()
+        elif pause.value:
+            return
+        else:
+            # Restart the timer
+            next_packet = t0 + \
+                1000 / self.sample_period * (float(self.sample_period) / 1000)
+            t = Timer(
+                max(0, next_packet - time.time()),
+                self._send_packet,
+                args=(stop, pause)
+            )
+            t.start()
+            self.data_timer = t
 
     def _get_status(self, ascii_format=False):
         # First byte alternates between \xA0 and \x90 each second of data
