@@ -25,7 +25,6 @@ jobs:
       run: |
         coverage run -m unittest discover -b tests
         coverage combine
+        coverage html
     - name: Upload coverage to codecov
       uses: codecov/codecov-action@v2
-      with:
-        files: .coverage
