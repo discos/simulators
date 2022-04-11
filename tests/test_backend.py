@@ -1,10 +1,10 @@
 import unittest
 import time
 from simulators.utils import ACS_TO_UNIX_TIME
-from simulators.backend import System, PROTOCOL_VERSION, grammar
+from simulators.backend import System, PROTOCOL_VERSION, grammar, Sardara
 
 
-class TestBackend(unittest.TestCase):
+class TestGenericBackend(unittest.TestCase):
 
     def setUp(self):
         self.system = System()
@@ -489,6 +489,18 @@ class TestBackend(unittest.TestCase):
         cmd, answer = response.split(',')
         self.assertEqual(cmd, '!%s' % command)
         self.assertEqual(answer, 'ok')
+
+
+class TestSardara(unittest.TestCase):
+
+    def setUp(self):
+        self.system = System(backend_type=Sardara)
+
+    def tearDown(self):
+        del self.system
+
+    def test_sardara_instance(self):
+        self.assertEqual(type(self.system.backend), Sardara)
 
 
 class TestMessage(unittest.TestCase):
