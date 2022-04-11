@@ -2,7 +2,7 @@ strictness: veryhigh
 
 test-warnings: true
 
-autodetect: yes
+autodetect: false
 
 ignore-paths:
   - build
