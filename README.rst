@@ -2,8 +2,8 @@
 DISCOS Simulators
 *****************
 
-.. image:: https://travis-ci.org/discos/simulators.svg?branch=master
-   :target: https://travis-ci.org/discos/simulators
+.. image:: https://github.com/discos/simulators/workflows/CI%20Tests/badge.svg
+   :target: https://github.com/discos/simulators
 
 .. image:: https://codecov.io/gh/discos/simulators/branch/master/graph/badge.svg?token=UgIM6Vs2q5
    :target: https://codecov.io/gh/discos/simulators
