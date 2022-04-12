@@ -2,11 +2,11 @@
 DISCOS Simulators
 *****************
 
-.. image:: https://travis-ci.org/discos/simulators.svg?branch=master
-   :target: https://travis-ci.org/discos/simulators
+.. image:: https://github.com/discos/simulators/workflows/CI%20Tests/badge.svg
+   :target: https://github.com/discos/simulators
 
-.. image:: https://coveralls.io/repos/github/discos/simulators/badge.svg
-   :target: https://coveralls.io/github/discos/simulators
+.. image:: https://codecov.io/gh/discos/simulators/branch/master/graph/badge.svg?token=UgIM6Vs2q5
+   :target: https://codecov.io/gh/discos/simulators
 
 .. image:: https://readthedocs.org/projects/discos-simulators/badge/?version=latest
    :target: https://discos-simulators.readthedocs.io/en/latest/?badge=latest

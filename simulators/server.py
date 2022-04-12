@@ -6,6 +6,7 @@ import socket
 import logging
 import importlib
 import threading
+import time
 from Queue import Queue, Empty
 from multiprocessing import Process
 from SocketServer import (
@@ -60,6 +61,8 @@ class BaseHandler(BaseRequestHandler):
             if isinstance(response, str):
                 self.socket.sendto(response, self.client_address)
                 if response == '$server_shutdown%%%%%':
+                    # Wait 10ms
+                    time.sleep(0.01)
                     self.server.stop()
         except AttributeError:
             logging.debug('command %s not supported', name)
