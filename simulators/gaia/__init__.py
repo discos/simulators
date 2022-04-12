@@ -130,7 +130,7 @@ class System(ListeningSystem):
         if len(args) > l:                   # too many args
             return self._error(1015)
         if l >= 1:
-            if len(args) == 0:              # first argument expected but missing
+            if not args:                    # first argument missing
                 return self._error(1004)
             try:
                 args[0] = int(args[0])
@@ -142,7 +142,7 @@ class System(ListeningSystem):
             if args[0] not in first_range:
                 return self._error(1003)
         if l == 2:
-            if len(args) == 1:              # second argument expected but missing
+            if len(args) == 1:              # second argument missing
                 return self._error(1008)
             try:
                 args[1] = int(args[1])
@@ -168,13 +168,13 @@ class System(ListeningSystem):
     def _setd(self, args):
         x = args[0]
         y = args[1]
-        self.VD[x-1] = y
+        self.VD[x - 1] = y
         return '%d%c' % (x, self.tail)
 
     def _setg(self, args):
         x = args[0]
         y = args[1]
-        self.VG[x-1] = y
+        self.VG[x - 1] = y
         return '%d%c' % (x, self.tail)
 
     def _setsg(self, args):
@@ -231,11 +231,11 @@ class System(ListeningSystem):
 
     def _getvg(self, args):
         x = args[0]
-        return '%d%c' % (self.VG[x-1], self.tail)
+        return '%d%c' % (self.VG[x - 1], self.tail)
 
     def _getvd(self, args):
         x = args[0]
-        return '%d%c' % (self.VD[x-1], self.tail)
+        return '%d%c' % (self.VD[x - 1], self.tail)
 
     def _getid(self, _):
         # corrente tra 0 e XmA
@@ -245,7 +245,7 @@ class System(ListeningSystem):
         x = args[0]
         if x == 1:
             return '2.5' + self.tail
-        elif x == 2:
+        else:
             return '5' + self.tail
 
     def _getemp(self, _):
