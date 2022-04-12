@@ -5,6 +5,9 @@ DISCOS Simulators
 .. image:: https://github.com/discos/simulators/workflows/CI%20Tests/badge.svg
    :target: https://github.com/discos/simulators
 
+.. image:: https://www.codefactor.io/repository/github/discos/simulators/badge
+   :target: https://www.codefactor.io/repository/github/discos/simulators
+
 .. image:: https://codecov.io/gh/discos/simulators/branch/master/graph/badge.svg?token=UgIM6Vs2q5
    :target: https://codecov.io/gh/discos/simulators
 
