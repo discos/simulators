@@ -245,8 +245,7 @@ class System(ListeningSystem):
         x = args[0]
         if x == 1:
             return '2.5' + self.tail
-        else:
-            return '5' + self.tail
+        return '5' + self.tail
 
     def _getemp(self, _):
         return '%d%c' % (randint(30, 36), self.tail)
