@@ -15,6 +15,7 @@ servers = [(('0.0.0.0', 12600), (), ThreadingUDPServer, {})]
 
 class System(ListeningSystem):
 
+    header = '#'
     tail = '\n'
     firmware_string = 'GAIA Simulator Rev. 1.0.0 / 2022.02.08.1'
     channels = range(1, 11)
@@ -22,54 +23,53 @@ class System(ListeningSystem):
 
     commands = {
         '*IDN?': '_idn',
-        '#*IDN?': '_idn',
-        '#SETD': '_setd',
-        '#SETG': '_setg',
-        '#SETSG': '_setsg',
-        '#SETSD': '_setsd',
-        '#SETSGZ': '_setsgz',
-        '#SETSDZ': '_setsdz',
-        '#SAVECPU': '_savecpu',
-        '#RESETD': '_resetd',
-        '#RESETG': '_resetg',
-        '#SAVE': '_save',
-        '#SETDF': '_setdf',
-        '#SETGF': '_setgf',
-        '#GETEF': '_getef',
-        '#ENABLE': '_enable',
-        '#DISABLE': '_disable',
-        '#GETVG': '_getvg',
-        '#GETVD': '_getvd',
-        '#GETID': '_getid',
-        '#GETREF': '_getref',
-        '#GETEMP': '_getemp',
-        '#NAME?': '_name'
+        'SETD': '_setd',
+        'SETG': '_setg',
+        'SETSG': '_setsg',
+        'SETSD': '_setsd',
+        'SETSGZ': '_setsgz',
+        'SETSDZ': '_setsdz',
+        'SAVECPU': '_savecpu',
+        'RESETD': '_resetd',
+        'RESETG': '_resetg',
+        'SAVE': '_save',
+        'SETDF': '_setdf',
+        'SETGF': '_setgf',
+        'GETEF': '_getef',
+        'ENABLE': '_enable',
+        'DISABLE': '_disable',
+        'GETVG': '_getvg',
+        'GETVD': '_getvd',
+        'GETID': '_getid',
+        'GETREF': '_getref',
+        'GETEMP': '_getemp',
+        'NAME?': '_name'
     }
 
+    # Only arguments, no command id
     params = {
         '*IDN?': 0,
-        '#*IDN?': 0,
-        '#SETD': 2,
-        '#SETG': 2,
-        '#SETSG': 1,
-        '#SETSD': 1,
-        '#SETSGZ': 1,
-        '#SETSDZ': 1,
-        '#SAVECPU': 1,
-        '#RESETD': 1,
-        '#RESETG': 1,
-        '#SAVE': 1,
-        '#SETDF': 1,
-        '#SETGF': 1,
-        '#GETEF': 1,
-        '#ENABLE': 1,
-        '#DISABLE': 1,
-        '#GETVG': 1,
-        '#GETVD': 1,
-        '#GETID': 1,
-        '#GETREF': 1,
-        '#GETEMP': 1,
-        '#NAME?': 0
+        'SETD': 2,
+        'SETG': 2,
+        'SETSG': 1,
+        'SETSD': 1,
+        'SETSGZ': 1,
+        'SETSDZ': 1,
+        'SAVECPU': 1,
+        'RESETD': 1,
+        'RESETG': 1,
+        'SAVE': 1,
+        'SETDF': 1,
+        'SETGF': 1,
+        'GETEF': 1,
+        'ENABLE': 1,
+        'DISABLE': 1,
+        'GETVG': 1,
+        'GETVD': 1,
+        'GETID': 1,
+        'GETREF': 1,
+        'GETEMP': 1,
+        'NAME?': 0
     }
 
     errors = {
@@ -97,6 +97,7 @@ class System(ListeningSystem):
         1021: 'ERROR_ON_SWITCH_READ_MODE',
         1022: 'ERROR_COMMAND_NOT_VALID_IN_READ_MODE',
         1023: 'ERROR_NAME_BOARD_TOO_SHORT_OR_TOO_LONG',
+        1024: 'ERROR_NO_COMMAND_ID',
         2000: 'ERROR_CHECKSUM'
     }
 
@@ -104,10 +105,13 @@ class System(ListeningSystem):
         self.VD = 10 * [0]
         self.VG = 10 * [0]
         self.msg = b''
+        self.cmd_id = b''
 
     def parse(self, byte):
         self.msg += byte
-        if byte == self.tail:
+        if not self.msg.startswith(self.header):
+            self.msg = b''
+        elif byte == self.tail:
             msg = self.msg[:-1]
             self.msg = b''
             return self._execute(msg)
@@ -119,16 +123,19 @@ class System(ListeningSystem):
 
         :param msg: the received command, comprehensive of its header and tail.
         """
-        args = msg.split()
+        args = msg.lstrip(self.header).strip().split()
         if not args:
             return self._error(1000)
         cmd = self.commands.get(args[0])
         if not cmd:
             return self._error(1001)
-        l = self.params.get(args[0])        # cmd + arguments length
-        args = args[1:]
-        if len(args) > l:                   # too many args
+        l = self.params.get(args[0])  # cmd + arguments length
+        args, self.cmd_id = args[1:-1], args[-1]
+        if len(args) > l:  # too many args
             return self._error(1015)
+        if l == 0:  # no arguments, only the id
+            if cmd not in ('_idn', '_name'):
+                pass # Placeholder real commands with no arguments
         if l >= 1:
             if not args:                    # first argument missing
                 return self._error(1004)
@@ -151,104 +158,108 @@ class System(ListeningSystem):
             if args[1] not in range(1024):
                 return self._error(1010)
         cmd = getattr(self, cmd)
-        return cmd(args)
+        raw_response = cmd(args)
+        tail = ' %s%s' % (self.cmd_id, self.tail)
+        return self.header + str(raw_response) + tail
 
     def _error(self, error_code):
         error_string = self.errors.get(error_code)
-        return 'ERROR(%d)[%s](%s)%c' % (
+        return '%sERROR(%d)[%s](%s) %s%c' % (
+            self.header,
             error_code,
             error_string,
             error_string.encode('hex'),
+            self.cmd_id,
             self.tail
         )
 
-    def _idn(self, _):
-        return self.firmware_string + self.tail
+    def _idn(self, args):
+        return self.firmware_string
 
     def _setd(self, args):
         x = args[0]
         y = args[1]
         self.VD[x - 1] = y
-        return '%d%c' % (x, self.tail)
+        return x
 
     def _setg(self, args):
         x = args[0]
         y = args[1]
         self.VG[x - 1] = y
-        return '%d%c' % (x, self.tail)
+        return x
 
     def _setsg(self, args):
         x = args[0]
-        return '%d%c' % (x, self.tail)
+        return x
 
     def _setsd(self, args):
         x = args[0]
-        return '%d%c' % (x, self.tail)
+        return x
 
     def _setsgz(self, args):
         x = args[0]
-        return '%d%c' % (x, self.tail)
+        return x
 
     def _setsdz(self, args):
         x = args[0]
-        return '%d%c' % (x, self.tail)
+        return x
 
     def _savecpu(self, args):
         x = args[0]
-        return '%d%c' % (x, self.tail)
+        return x
 
     def _resetd(self, args):
         x = args[0]
-        return '%d%c' % (x, self.tail)
+        return x
 
     def _resetg(self, args):
         x = args[0]
-        return '%d%c' % (x, self.tail)
+        return x
 
     def _save(self, args):
         x = args[0]
-        return '%d%c' % (x, self.tail)
+        return x
 
     def _setdf(self, args):
         x = args[0]
-        return '%d%c' % (x, self.tail)
+        return x
 
     def _setgf(self, args):
         x = args[0]
-        return '%d%c' % (x, self.tail)
+        return x
 
     def _getef(self, args):
         x = args[0]
-        return '%d%c' % (x, self.tail)
+        return x
 
     def _enable(self, args):
         x = args[0]
-        return '%d%c' % (x, self.tail)
+        return x
 
     def _disable(self, args):
         x = args[0]
-        return '%d%c' % (x, self.tail)
+        return x
 
     def _getvg(self, args):
         x = args[0]
-        return '%d%c' % (self.VG[x - 1], self.tail)
+        return self.VG[x - 1]
 
     def _getvd(self, args):
         x = args[0]
-        return '%d%c' % (self.VD[x - 1], self.tail)
+        return self.VD[x - 1]
 
     def _getid(self, _):
-        # corrente tra 0 e XmA
-        return '0%c' % self.tail
+        # current in mA, inside range [0, X]
+        return 0
 
     def _getref(self, args):
         x = args[0]
         if x == 1:
-            return '2.5' + self.tail
-        return '5' + self.tail
+            return '2.5'
+        return 5
 
     def _getemp(self, _):
-        return '%d%c' % (randint(30, 36), self.tail)
+        return randint(30, 36)
 
     def _name(self, _):
-        return self.name + self.tail
+        return self.name
