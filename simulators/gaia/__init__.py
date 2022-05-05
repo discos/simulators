@@ -133,11 +133,10 @@ class System(ListeningSystem):
         args, self.cmd_id = args[1:-1], args[-1]
         if len(args) > l:  # too many args
             return self._error(1015)
-        if l == 0:  # no arguments, only the id
-            if cmd not in ('_idn', '_name'):
-                pass # Placeholder real commands with no arguments
+        if l == 0:  # no arguments, just the id
+            pass  # nothing to do for IDN and NAME commands
         if l >= 1:
-            if not args:                    # first argument missing
+            if not args:  # first argument missing
                 return self._error(1004)
             try:
                 args[0] = int(args[0])
@@ -149,7 +148,7 @@ class System(ListeningSystem):
             if args[0] not in first_range:
                 return self._error(1003)
         if l == 2:
-            if len(args) == 1:              # second argument missing
+            if len(args) == 1:  # second argument missing
                 return self._error(1008)
             try:
                 args[1] = int(args[1])
@@ -249,8 +248,7 @@ class System(ListeningSystem):
         return self.VD[x - 1]
 
     def _getid(self, _):
-        # current in mA, inside range [0, X]
-        return 0
+        return 0  # current in mA, inside range [0, X]
 
     def _getref(self, args):
         x = args[0]

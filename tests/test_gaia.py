@@ -201,9 +201,6 @@ class TestGaia(unittest.TestCase):
         self.assertIn('ERROR(1015)[ERROR_TOO_MANY_ARGS]', answer)
 
     def test_first_arg_not_integer(self):
-        expected_answer = (
-            '(4552524f525f46495253545f4152475f4e4f545f4e554d424552)\n'
-        )
         command = self.wrap('GETEMP A')
         for byte in command[:-1]:
             self.assertTrue(self.system.parse(byte))
@@ -237,6 +234,13 @@ class TestGaia(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         self.assertIn('ERROR(1010)[ERROR_SECOND_ARG_OUT_OF_RANGE]', answer)
+
+    def test_no_header(self):
+        command = 'noheader'
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.msg, b'')
+
 
 
 if __name__ == '__main__':
