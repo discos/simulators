@@ -242,6 +242,5 @@ class TestGaia(unittest.TestCase):
         self.assertEqual(self.system.msg, b'')
 
 
-
 if __name__ == '__main__':
     unittest.main()
