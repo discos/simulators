@@ -187,43 +187,56 @@ class System(ListeningSystem):
         self.VG[x - 1] = y
         return x
 
-    def _setsg(self, args):
+    @staticmethod
+    def _setsg(args):
         return args[0]
 
-    def _setsd(self, args):
+    @staticmethod
+    def _setsd(args):
         return args[0]
 
-    def _setsgz(self, args):
+    @staticmethod
+    def _setsgz(args):
         return args[0]
 
-    def _setsdz(self, args):
+    @staticmethod
+    def _setsdz(args):
         return args[0]
 
-    def _savecpu(self, args):
+    @staticmethod
+    def _savecpu(args):
         return args[0]
 
-    def _resetd(self, args):
+    @staticmethod
+    def _resetd(args):
         return args[0]
 
-    def _resetg(self, args):
+    @staticmethod
+    def _resetg(args):
         return args[0]
 
-    def _save(self, args):
+    @staticmethod
+    def _save(args):
         return args[0]
 
-    def _setdf(self, args):
+    @staticmethod
+    def _setdf(args):
         return args[0]
 
-    def _setgf(self, args):
+    @staticmethod
+    def _setgf(args):
         return args[0]
 
-    def _getef(self, args):
+    @staticmethod
+    def _getef(args):
         return args[0]
 
-    def _enable(self, args):
+    @staticmethod
+    def _enable(args):
         return args[0]
 
-    def _disable(self, args):
+    @staticmethod
+    def _disable(args):
         return args[0]
 
     def _getvg(self, args):
@@ -234,16 +247,19 @@ class System(ListeningSystem):
         x = args[0]
         return self.VD[x - 1]
 
-    def _getid(self, _):
+    @staticmethod
+    def _getid(_):
         return 0  # current in mA, inside range [0, X]
 
-    def _getref(self, args):
+    @staticmethod
+    def _getref(args):
         x = args[0]
         if x == 1:
             return '2.5'
         return 5
 
-    def _getemp(self, _):
+    @staticmethod
+    def _getemp(_):
         return randint(30, 36)
 
     def _name(self, _):
