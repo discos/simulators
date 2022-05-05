@@ -172,7 +172,7 @@ class System(ListeningSystem):
             self.tail
         )
 
-    def _idn(self, args):
+    def _idn(self, _):
         return self.firmware_string
 
     def _setd(self, args):
@@ -188,56 +188,43 @@ class System(ListeningSystem):
         return x
 
     def _setsg(self, args):
-        x = args[0]
-        return x
+        return args[0]
 
     def _setsd(self, args):
-        x = args[0]
-        return x
+        return args[0]
 
     def _setsgz(self, args):
-        x = args[0]
-        return x
+        return args[0]
 
     def _setsdz(self, args):
-        x = args[0]
-        return x
+        return args[0]
 
     def _savecpu(self, args):
-        x = args[0]
-        return x
+        return args[0]
 
     def _resetd(self, args):
-        x = args[0]
-        return x
+        return args[0]
 
     def _resetg(self, args):
-        x = args[0]
-        return x
+        return args[0]
 
     def _save(self, args):
-        x = args[0]
-        return x
+        return args[0]
 
     def _setdf(self, args):
-        x = args[0]
-        return x
+        return args[0]
 
     def _setgf(self, args):
-        x = args[0]
-        return x
+        return args[0]
 
     def _getef(self, args):
-        x = args[0]
-        return x
+        return args[0]
 
     def _enable(self, args):
-        x = args[0]
-        return x
+        return args[0]
 
     def _disable(self, args):
-        x = args[0]
-        return x
+        return args[0]
 
     def _getvg(self, args):
         x = args[0]
