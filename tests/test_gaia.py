@@ -19,6 +19,19 @@ class TestGaia(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.parse(command[-1]), expected_answer)
 
+    def test_conf(self):
+        conf = 5
+        expected_answer = self.wrap(5)
+        command = self.wrap('LOADCONF %s' % conf)
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(command[-1]), expected_answer)
+        # Get the configuration
+        command = self.wrap('CONF?')
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.parse(command[-1]), expected_answer)
+
     def test_setd(self):
         expected_answer = self.wrap(1)
         command = self.wrap('SETD 1 0')
