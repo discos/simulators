@@ -95,7 +95,7 @@ def parse_message(message_string):
             arguments = match.groupdict()["arguments"].split(",")
         else:
             arguments = []
-    except:
+    except AttributeError:
         raise GrammarException('wrong arguments separator')
     code = match.groupdict()["code"] if "code" in match.groupdict() else ""
     return Message(
