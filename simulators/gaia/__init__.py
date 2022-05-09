@@ -255,7 +255,7 @@ class System(ListeningSystem):
     def _getref(args):
         x = args[0]
         if x == 1:
-            return '2.5'
+            return 2.5
         return 5
 
     @staticmethod
