@@ -10,7 +10,7 @@ class BackendException(Exception):
 
 class GenericBackend(object):
 
-    def __init__(self, max_sections=5, max_bandwidth=2000):
+    def __init__(self, max_sections=14, max_bandwidth=2000):
         self.status_string = "ok"
         self.acquiring = False
         self.configuration_string = "unconfigured"
@@ -25,6 +25,7 @@ class GenericBackend(object):
         self.max_bandwidth = max_bandwidth
         self._filename = ""
         self.interleave = 0
+        self.current_sections = range(0, self.max_sections)
 
     def system_stop(self):
         if self._startID:
@@ -107,6 +108,18 @@ class GenericBackend(object):
     @staticmethod
     def convert_data():
         pass
+
+    def set_enable(self, feed1, feed2):
+        if feed1 not in range(self.max_sections / 2):
+            raise BackendException("feed1 out of range")
+        if feed2 not in range(self.max_sections / 2):
+            raise BackendException("feed2 out of range")
+        self.current_sections = [
+            feed1 * 2,
+            feed1 * 2 + 1,
+            feed2 * 2,
+            feed2 * 2 + 1
+        ]
 
     @staticmethod
     def _get_time():

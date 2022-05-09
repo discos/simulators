@@ -44,6 +44,17 @@ class TestGenericBackend(unittest.TestCase):
         self.assertEqual(answer, 'invalid')
         self.assertEqual(reason, "syntax error: invalid message type '&'")
 
+    def test_invalid_separator(self):
+        command = 'set-enable'
+        msg = '?%s foo bar\r\n' % command
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, answer, reason = response.split(',')
+        self.assertEqual(cmd, '!undefined')
+        self.assertEqual(answer, 'invalid')
+        self.assertEqual(reason, 'syntax error: wrong arguments separator')
+
     def test_greet_message(self):
         msg = self.system.system_greet()
         expected = '!version,ok,%s\r\n' % PROTOCOL_VERSION
@@ -382,7 +393,7 @@ class TestGenericBackend(unittest.TestCase):
         self.assertEqual(answer, 'ok')
 
     def test_set_section_wrong_section(self):
-        response = self._set_section(section=10)
+        response = self._set_section(section=15)
         cmd, answer, reason = response.split(',')
         self.assertEqual(cmd, '!set-section')
         self.assertEqual(answer, 'fail')
@@ -489,6 +500,66 @@ class TestGenericBackend(unittest.TestCase):
         cmd, answer = response.split(',')
         self.assertEqual(cmd, '!%s' % command)
         self.assertEqual(answer, 'ok')
+
+    def test_set_enable(self):
+        command = 'set-enable'
+        feed1 = 0
+        feed2 = 3
+        msg = '?%s,%d,%d\r\n' % (command, feed1, feed2)
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, answer = response.split(',')
+        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(answer, 'ok')
+
+    def test_set_enable_less_than_2_feeds(self):
+        command = 'set-enable'
+        msg = '?%s\r\n' % command
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, answer, reason = response.split(',')
+        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(answer, 'fail')
+        self.assertEqual(reason, 'set-enable needs 2 arguments')
+
+    def test_set_enable_wrong_parameter_format(self):
+        command = 'set-enable'
+        msg = '?%s,foo,bar\r\n' % command
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, answer, reason = response.split(',')
+        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(answer, 'fail')
+        self.assertEqual(reason, 'wrong parameter format')
+
+    def test_set_enable_feed1_out_of_range(self):
+        command = 'set-enable'
+        feed1 = 8
+        feed2 = 3
+        msg = '?%s,%d,%d\r\n' % (command, feed1, feed2)
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, answer, reason = response.split(',')
+        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(answer, 'fail')
+        self.assertEqual(reason, 'feed1 out of range')
+
+    def test_set_enable_feed2_out_of_range(self):
+        command = 'set-enable'
+        feed1 = 0
+        feed2 = 8
+        msg = '?%s,%d,%d\r\n' % (command, feed1, feed2)
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, answer, reason = response.split(',')
+        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(answer, 'fail')
+        self.assertEqual(reason, 'feed2 out of range')
 
 
 class TestSardara(unittest.TestCase):

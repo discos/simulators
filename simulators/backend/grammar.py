@@ -90,10 +90,13 @@ def parse_message(message_string):
             "invalid message type '%s'" % (message_string[0],)
         )
 
-    if match.groupdict()["arguments"]:
-        arguments = match.groupdict()["arguments"].split(",")
-    else:
-        arguments = []
+    try:
+        if match.groupdict()["arguments"]:
+            arguments = match.groupdict()["arguments"].split(",")
+        else:
+            arguments = []
+    except:
+        raise GrammarException('wrong arguments separator')
     code = match.groupdict()["code"] if "code" in match.groupdict() else ""
     return Message(
         message_type=match.groupdict()["type"],
