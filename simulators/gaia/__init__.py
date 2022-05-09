@@ -23,6 +23,8 @@ class System(ListeningSystem):
 
     commands = {
         '*IDN?': '_idn',
+        'LOADCONF': '_loadconf',
+        'CONF?': '_conf',
         'SETD': '_setd',
         'SETG': '_setg',
         'SETSG': '_setsg',
@@ -49,6 +51,8 @@ class System(ListeningSystem):
     # Only arguments, no command id
     params = {
         '*IDN?': 0,
+        'LOADCONF': 1,
+        'CONF?': 0,
         'SETD': 2,
         'SETG': 2,
         'SETSG': 1,
@@ -98,12 +102,14 @@ class System(ListeningSystem):
         1022: 'ERROR_COMMAND_NOT_VALID_IN_READ_MODE',
         1023: 'ERROR_NAME_BOARD_TOO_SHORT_OR_TOO_LONG',
         1024: 'ERROR_NO_COMMAND_ID',
+        1025: 'ERROR_ON_LOAD_CONF',
         2000: 'ERROR_CHECKSUM'
     }
 
     def __init__(self):
         self.VD = 10 * [0]
         self.VG = 10 * [0]
+        self.conf = 0
         self.msg = b''
         self.cmd_id = b''
 
@@ -186,6 +192,13 @@ class System(ListeningSystem):
         y = args[1]
         self.VG[x - 1] = y
         return x
+
+    def _loadconf(self, args):
+        self.conf = args[0]
+        return self.conf
+
+    def _conf(self, _):
+        return self.conf
 
     @staticmethod
     def _setsg(args):
