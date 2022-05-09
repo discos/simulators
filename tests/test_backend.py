@@ -53,7 +53,7 @@ class TestGenericBackend(unittest.TestCase):
         cmd, answer, reason = response.split(',')
         self.assertEqual(cmd, '!undefined')
         self.assertEqual(answer, 'invalid')
-        self.assertEqual(reason, 'syntax error: wrong arguments separator')
+        self.assertEqual(reason, 'syntax error: invalid syntax')
 
     def test_greet_message(self):
         msg = self.system.system_greet()

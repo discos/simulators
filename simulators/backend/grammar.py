@@ -89,14 +89,12 @@ def parse_message(message_string):
         raise GrammarException(
             "invalid message type '%s'" % (message_string[0],)
         )
-
-    try:
-        if match.groupdict()["arguments"]:
-            arguments = match.groupdict()["arguments"].split(",")
-        else:
-            arguments = []
-    except AttributeError:
-        raise GrammarException('wrong arguments separator')
+    if not match:
+        raise GrammarException("invalid syntax")
+    if match.groupdict()["arguments"]:
+        arguments = match.groupdict()["arguments"].split(",")
+    else:
+        arguments = []
     code = match.groupdict()["code"] if "code" in match.groupdict() else ""
     return Message(
         message_type=match.groupdict()["type"],
