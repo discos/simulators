@@ -33,6 +33,7 @@ class System(ListeningSystem):
         'cal-on': 'do_cal_on',
         'set-filename': 'do_set_filename',
         'convert-data': 'do_convert_data',  # New in version 1.2
+        'set-enable': 'do_set_enable'
     }
 
     def __init__(self, backend_type=GenericBackend):
@@ -220,3 +221,13 @@ class System(ListeningSystem):
     def do_convert_data(self, _):
         # Added in version 1.2
         return self.backend.convert_data()
+
+    def do_set_enable(self, args):
+        if len(args) < 2:
+            raise BackendException("set-enable needs 2 arguments")
+        try:
+            _feed1 = int(args[0])
+            _feed2 = int(args[1])
+        except ValueError:
+            raise BackendException("wrong parameter format")
+        return self.backend.set_enable(_feed1, _feed2)
