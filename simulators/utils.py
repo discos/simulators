@@ -175,11 +175,10 @@ def binary_to_bytes(binary_string, little_endian=True):
     >>> binary_to_bytes('0110100001100101011011000110110001101111', False)
     '\x68\x65\x6C\x6C\x6F'
     """
-
     byte_string = b''
 
     for i in range(0, len(binary_string), 8):
-        byte_string += chr(int(binary_string[i:i + 8], 2))
+        byte_string += bytes([int(binary_string[i:i + 8], 2) & 0xFF])
 
     return byte_string[::-1] if little_endian else byte_string
 
@@ -195,18 +194,10 @@ def bytes_to_int(byte_string, little_endian=True):
     :return: the value of byte_string, converted to signed integer
     :rtype: int
 
-    >>> bytes_to_int(b'hello', False)
+    >>> bytes_to_int('hello', False)
     448378203247
     """
-    binary_string = ''
-
-    if little_endian:
-        byte_string = byte_string[::-1]
-
-    for char in byte_string:
-        binary_string += bin(ord(char))[2:].zfill(8)
-
-    return twos_to_int(binary_string)
+    return int.from_bytes(byte_string, 'little' if little_endian else 'big')
 
 
 def bytes_to_binary(byte_string, little_endian=True):
@@ -220,16 +211,17 @@ def bytes_to_binary(byte_string, little_endian=True):
     :return: the binary representation of byte_string
     :rtype: str
 
-    >>> bytes_to_binary(b'hi', little_endian=False)
+    >>> bytes_to_binary('hi', little_endian=False)
     '0110100001101001'
     """
+    byte_string = byte_string
     binary_string = ''
 
     if little_endian:
         byte_string = byte_string[::-1]
 
     for char in byte_string:
-        binary_string += bin(ord(char))[2:].zfill(8)
+        binary_string += bin(char)[2:].zfill(8)
 
     return binary_string
 
@@ -245,7 +237,7 @@ def bytes_to_uint(byte_string, little_endian=True):
     :return: the value of byte_string, converted to unsigned integer
     :rtype: int
 
-    >>> bytes_to_uint(b'hi', little_endian=False)
+    >>> bytes_to_uint('hi', little_endian=False)
     26729
     """
     return int(bytes_to_binary(byte_string, little_endian), 2)
@@ -278,12 +270,12 @@ def real_to_binary(num, precision=1):
     """
     if precision == 1:
         return ''.join(
-            bin(ord(c)).replace('0b', '').rjust(8, '0')
+            bin(c).replace('0b', '').rjust(8, '0')
             for c in struct.pack('!f', num)
         )
     elif precision == 2:
         return ''.join(
-            bin(ord(c)).replace('0b', '').rjust(8, '0')
+            bin(c).replace('0b', '').rjust(8, '0')
             for c in struct.pack('!d', num)
         )
     else:
@@ -501,7 +493,7 @@ def mjd_to_date(original_mjd_date):
     datetime.datetime(2018, 1, 20, 10, 30, 45, 100000)
     """
     try:
-        if not isinstance(original_mjd_date, (int, long, float)):
+        if not isinstance(original_mjd_date, (int, float)):
             raise ValueError
         elif original_mjd_date < 0:
             raise ValueError

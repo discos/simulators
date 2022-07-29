@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 from multiprocessing import Value, Array
 from ctypes import c_bool, c_char
 from threading import Thread
-from Queue import Queue, Empty
-from SocketServer import ThreadingTCPServer
+from queue import Queue, Empty
+from socketserver import ThreadingTCPServer
 from simulators import utils
 from simulators.common import ListeningSystem, SendingSystem
 from simulators.acu.general_status import GeneralStatus
@@ -192,7 +192,7 @@ class System(ListeningSystem, SendingSystem):
 
     @staticmethod
     def _update_status(status, statuses):
-        payload = ''
+        payload = b''
         for subsystem_status in statuses:
             payload += subsystem_status.raw
         status[8:12] = utils.uint_to_bytes(utils.day_milliseconds())

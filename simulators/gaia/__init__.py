@@ -1,5 +1,5 @@
 from random import randint
-from SocketServer import ThreadingUDPServer
+from socketserver import ThreadingUDPServer
 from simulators.common import ListeningSystem
 
 

@@ -1,4 +1,4 @@
-from SocketServer import ThreadingTCPServer
+from socketserver import ThreadingTCPServer
 from simulators.common import ListeningSystem
 from simulators.backend import grammar
 from simulators.backend.genericbackend import GenericBackend, BackendException
@@ -58,7 +58,7 @@ class System(ListeningSystem):
             code=grammar.OK,
             arguments=[PROTOCOL_VERSION]
         )
-        return str(connection_reply)
+        return bytes(str(connection_reply), 'utf-8')
 
     def parse(self, byte):
         self.msg += byte
@@ -71,7 +71,7 @@ class System(ListeningSystem):
     def _parse(self, msg):
         try:
             message = grammar.parse_message(msg)
-        except grammar.GrammarException, ge:
+        except grammar.GrammarException as ge:
             reply_message = grammar.Message(
                 message_type=grammar.REPLY,
                 name="undefined",
@@ -95,7 +95,7 @@ class System(ListeningSystem):
                     reply_message.arguments = map(str, reply_arguments)
                 reply_message.code = grammar.OK
                 return str(reply_message)
-            except BackendException, he:
+            except BackendException as he:
                 return self._send_fail_reply(message, he.message)
         else:
             return True

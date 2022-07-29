@@ -1,4 +1,4 @@
-from SocketServer import ThreadingTCPServer
+from socketserver import ThreadingTCPServer
 from simulators.utils import get_multitype_systems
 from simulators.common import MultiTypeSystem
 

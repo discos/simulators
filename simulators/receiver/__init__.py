@@ -1,4 +1,4 @@
-from SocketServer import ThreadingTCPServer
+from socketserver import ThreadingTCPServer
 from simulators.common import ListeningSystem
 from simulators.receiver import DEFINITIONS as DEF
 from simulators.receiver.slaves import Slave, Dewar, LNA

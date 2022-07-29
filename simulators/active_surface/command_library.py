@@ -4,6 +4,7 @@ whithout having to handle byte values, checksums or other low level parameters.
 Each public method implemented in this class returns a specific command encoded
 ad a byte string, ready to be sent via socket to the simulator or, eventually,
 the hardware."""
+from __future__ import print_function
 from simulators import utils
 
 

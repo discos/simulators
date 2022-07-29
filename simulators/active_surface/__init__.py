@@ -2,7 +2,7 @@ import time
 from threading import Thread
 from multiprocessing import Value
 from ctypes import c_bool
-from SocketServer import ThreadingTCPServer
+from socketserver import ThreadingTCPServer
 from simulators import utils
 from simulators.common import ListeningSystem
 from simulators.active_surface.usd import USD

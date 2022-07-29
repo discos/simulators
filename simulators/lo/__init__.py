@@ -1,6 +1,6 @@
 # Author:
 #   Giuseppe Carboni <giuseppe.carboni@inaf.it>
-from SocketServer import ThreadingTCPServer
+from socketserver import ThreadingTCPServer
 from simulators.common import ListeningSystem
 
 servers = [

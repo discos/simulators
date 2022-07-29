@@ -527,7 +527,7 @@ class PointingStatus(object):
         # True: initialization of pointing completed
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[8] = chr(int(value))
+        self.status[8] = value
 
     @property
     def posEncAz(self):
@@ -586,7 +586,7 @@ class PointingStatus(object):
         # True: pos. of the correction table is added onto the encoder pos.
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[25] = chr(int(value))
+        self.status[25] = value
 
     @property
     def encAzFault(self):
@@ -599,7 +599,7 @@ class PointingStatus(object):
         # True: position encoder azimuth reports an error
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[26] = chr(int(value))
+        self.status[26] = value
 
     @property
     def sectorSwitchAz(self):
@@ -612,7 +612,7 @@ class PointingStatus(object):
         # True: upper sector active
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[27] = chr(int(value))
+        self.status[27] = value
 
     @property
     def posEncEl(self):
@@ -671,7 +671,7 @@ class PointingStatus(object):
         # True: pos. of the correction table is added onto the encoder pos.
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[44] = chr(int(value))
+        self.status[44] = value
 
     @property
     def encElFault(self):
@@ -684,7 +684,7 @@ class PointingStatus(object):
         # True: position encoder elevation reports an error
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[45] = chr(int(value))
+        self.status[45] = value
 
     @property
     def posEncCw(self):
@@ -720,7 +720,7 @@ class PointingStatus(object):
         # True: position encoder cable wrap reports an error
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[54] = chr(int(value))
+        self.status[54] = value
 
     @property
     def timeSource(self):
@@ -769,7 +769,7 @@ class PointingStatus(object):
         # True: GPS receiver sends data
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[73] = chr(int(value))
+        self.status[73] = value
 
     @property
     def clockOK(self):
@@ -782,7 +782,7 @@ class PointingStatus(object):
         # True: GPS receiver sends clock ok
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[74] = chr(int(value))
+        self.status[74] = value
 
     @property
     def year(self):
@@ -874,7 +874,7 @@ class PointingStatus(object):
 
     @property
     def ptState(self):
-        return utils.bytes_to_uint(str(self.status[95:97]))
+        return utils.bytes_to_uint(self.status[95:97])
 
     @ptState.setter
     def ptState(self, value):
@@ -890,7 +890,7 @@ class PointingStatus(object):
 
     @property
     def ptError(self):
-        return utils.bytes_to_binary(str(self.status[97:99]))[::-1]
+        return utils.bytes_to_binary(self.status[97:99])[::-1]
 
     @property
     def Data_Overflow(self):
@@ -900,9 +900,9 @@ class PointingStatus(object):
     def Data_Overflow(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        ptError = bytearray(self.ptError)
+        ptError = list(self.ptError)
         ptError[0] = str(int(value))
-        self.status[97:99] = utils.binary_to_bytes(str(ptError)[::-1])
+        self.status[97:99] = utils.binary_to_bytes(''.join(ptError)[::-1])
 
     @property
     def Time_Distance_Fault(self):
@@ -912,9 +912,9 @@ class PointingStatus(object):
     def Time_Distance_Fault(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        ptError = bytearray(self.ptError)
+        ptError = list(self.ptError)
         ptError[1] = str(int(value))
-        self.status[97:99] = utils.binary_to_bytes(str(ptError)[::-1])
+        self.status[97:99] = utils.binary_to_bytes(''.join(ptError)[::-1])
 
     @property
     def No_Data_Available(self):
@@ -924,9 +924,9 @@ class PointingStatus(object):
     def No_Data_Available(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        ptError = bytearray(self.ptError)
+        ptError = list(self.ptError)
         ptError[2] = str(int(value))
-        self.status[97:99] = utils.binary_to_bytes(str(ptError)[::-1])
+        self.status[97:99] = utils.binary_to_bytes(''.join(ptError)[::-1])
 
     @property
     def actPtTimeOffset(self):
@@ -1024,9 +1024,9 @@ class PointingStatus(object):
         # UINT32, command serial number
         if not isinstance(value, int):
             raise ValueError('Provide an integer number!')
-        parameter_command_status = bytearray(self.parameter_command_status)
+        parameter_command_status = list(self.parameter_command_status)
         parameter_command_status[0:4] = utils.uint_to_bytes(value, n_bytes=4)
-        self.status[121:129] = str(parameter_command_status)
+        self.status[121:129] = bytes(parameter_command_status)
 
     @property
     def parameter_command(self):
@@ -1037,9 +1037,9 @@ class PointingStatus(object):
         # UINT16, parameter command
         if not isinstance(value, int):
             raise ValueError('Provide an integer number!')
-        parameter_command_status = bytearray(self.parameter_command_status)
+        parameter_command_status = list(self.parameter_command_status)
         parameter_command_status[4:6] = utils.uint_to_bytes(value, n_bytes=2)
-        self.status[121:129] = str(parameter_command_status)
+        self.status[121:129] = bytes(parameter_command_status)
 
     @property
     def parameter_command_answer(self):
@@ -1050,6 +1050,6 @@ class PointingStatus(object):
         # UINT16, parameter command answer
         if not isinstance(value, int):
             raise ValueError('Provide an integer number!')
-        parameter_command_status = bytearray(self.parameter_command_status)
+        parameter_command_status = list(self.parameter_command_status)
         parameter_command_status[6:8] = utils.uint_to_bytes(value, n_bytes=2)
-        self.status[121:129] = str(parameter_command_status)
+        self.status[121:129] = bytes(parameter_command_status)

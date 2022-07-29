@@ -1,5 +1,5 @@
 import time
-from Queue import Queue
+from queue import Queue
 from simulators import utils
 
 

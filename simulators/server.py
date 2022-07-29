@@ -7,9 +7,9 @@ import logging
 import importlib
 import threading
 import time
-from Queue import Queue, Empty
+from queue import Queue, Empty
 from multiprocessing import Process
-from SocketServer import (
+from socketserver import (
     ThreadingMixIn, ThreadingTCPServer, ThreadingUDPServer, BaseRequestHandler
 )
 
@@ -36,7 +36,7 @@ class BaseHandler(BaseRequestHandler):
     def setup(self):
         """Method that gets called whenever a client connects to the server."""
         logging.info('Got connection from %s', self.client_address)
-        self.custom_msg = b''
+        self.custom_msg = ''
 
     def _execute_custom_command(self, msg_body):
         """This method accepts a custom command (without the custom header and
@@ -59,14 +59,14 @@ class BaseHandler(BaseRequestHandler):
             method = getattr(self.system, name)
             response = method(*params)
             if isinstance(response, str):
-                self.socket.sendto(response, self.client_address)
+                self.socket.sendto(response.encode('utf-8'), self.client_address)
                 if response == '$server_shutdown%%%%%':
                     # Wait 10ms
                     time.sleep(0.01)
                     self.server.stop()
         except AttributeError:
             logging.debug('command %s not supported', name)
-        except Exception, ex:
+        except Exception as ex:
             logging.debug('unexpected exception %s', ex)
 
 
@@ -95,6 +95,7 @@ class ListenHandler(BaseHandler):
         scenario (i.e. some error condition)."""
         if not self.connection_oriented:  # UDP client
             msg, self.socket = self.socket
+            msg = msg.decode()
             msg += '\n'
             self._handle(msg)
         else:  # TCP client
@@ -103,6 +104,7 @@ class ListenHandler(BaseHandler):
                     msg = self.socket.recv(1)
                     if not msg:
                         break
+                    msg = msg.decode()
                     self._handle(msg)
                 except IOError:
                     break
@@ -120,7 +122,7 @@ class ListenHandler(BaseHandler):
         for byte in msg:
             try:
                 response = self.system.parse(byte)
-            except ValueError, ex:
+            except ValueError as ex:
                 logging.debug(ex)
             except Exception:
                 logging.debug('unexpected exception')
@@ -143,7 +145,7 @@ class ListenHandler(BaseHandler):
                 self.custom_msg += byte
                 if self.custom_msg.endswith(self.custom_tail):
                     msg_body = self.custom_msg[1:-len(self.custom_tail)]
-                    self.custom_msg = b''
+                    self.custom_msg = ''
                     self._execute_custom_command(msg_body)
 
 
@@ -233,7 +235,8 @@ class Server(ThreadingMixIn):
                 'Provide either the `ThreadingTCPServer` class '
                 + 'or the `ThreadingUDPServer` class!'
             )
-        self.__class__.__bases__ = (ThreadingMixIn, server_type, )
+        #self.__class__.__bases__ = (ThreadingMixIn, server_type, )
+        self.__class__.__bases__ = (server_type, )
         self.server_type = server_type
         self.server_type.allow_reuse_address = True
         self.system = system
@@ -361,7 +364,7 @@ class Simulator(object):
                             pass
                     except socket.timeout:
                         pass
-                    sockobj.sendto('$system_stop%%%%%', address)
+                    sockobj.sendto('$system_stop%%%%%'.encode('utf-8'), address)
                     response = sockobj.recv(1024)
                     if response != '$server_shutdown%%%%%':  # pragma: no cover
                         logging.warning(
@@ -370,7 +373,7 @@ class Simulator(object):
                             '$server_shutdown%%%%% string!',
                             'The simulator might still be running!'
                         )
-                except Exception, ex:  # pragma: no cover
+                except Exception as ex:  # pragma: no cover
                     logging.debug(ex)
                 finally:
                     sockobj.close()

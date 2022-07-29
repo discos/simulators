@@ -146,7 +146,7 @@ class Servo(object):
         elif [1240, 0] == index_sub:  # Max speed
             answer += '10'
         else:
-            # print 'index_sub, type: ', index_sub, type(index_sub)
+            # print('index_sub, type: ', index_sub, type(index_sub))
             answer += '0'
 
         answer += closers[0]
@@ -162,8 +162,8 @@ class Servo(object):
     @staticmethod
     def ctime():
         """Return the current time in OMG format"""
-        acstime_ACE_BEGIN = 122192928000000000L
-        return int(acstime_ACE_BEGIN + time.time() * 10000000L)
+        acstime_ACE_BEGIN = 122192928000000000
+        return int(acstime_ACE_BEGIN + time.time() * 10000000)
 
 
 class History(object):

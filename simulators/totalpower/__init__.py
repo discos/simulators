@@ -5,7 +5,7 @@ from multiprocessing import Value
 from ctypes import c_bool
 from math import modf
 from random import randint
-from SocketServer import ThreadingTCPServer
+from socketserver import ThreadingTCPServer
 from simulators.common import ListeningSystem
 from simulators.utils import uint_to_bytes, binary_to_bytes, bytes_to_binary
 

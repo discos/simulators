@@ -2,7 +2,7 @@
 #   Marco Buttu <marco.buttu@inaf.it>
 #   Giuseppe Carboni <giuseppe.carboni@inaf.it>
 from multiprocessing import Value
-from SocketServer import ThreadingTCPServer
+from socketserver import ThreadingTCPServer
 from simulators.common import ListeningSystem
 from simulators.mscu.servo import Servo
 from simulators.mscu.parameters import headers, closers, app_nr
