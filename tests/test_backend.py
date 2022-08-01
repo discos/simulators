@@ -577,7 +577,7 @@ class TestSardara(unittest.TestCase):
         self.system.system_stop()
 
     def test_sardara_instance(self):
-        self.assertEqual(type(self.system), Sardara)
+        self.assertIsInstance(self.system, Sardara)
 
 
 class TestMessage(unittest.TestCase):

@@ -55,9 +55,6 @@ class GenericBackendSystem(ListeningSystem):
         self.current_sections = range(0, self.max_sections)
         self._valid_conf_re = re.compile("^[a-z0-9]")
 
-    def __del__(self):
-        self.system_stop()
-
     def system_stop(self):
         if self._startID:
             self._startID.cancel()
