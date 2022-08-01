@@ -1,9 +1,7 @@
-import re
-from simulators.backend.genericbackend import GenericBackend
+from simulators.backend.genericbackend import GenericBackendSystem
 
 
-class Sardara(GenericBackend):
+class System(GenericBackendSystem):
 
     def __init__(self):
-        GenericBackend.__init__(self)
-        self._valid_conf_re = re.compile("^[A-Z0-9]")
+        GenericBackendSystem.__init__(self) 

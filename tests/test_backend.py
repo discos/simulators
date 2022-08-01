@@ -1,16 +1,21 @@
 import unittest
 import time
 from simulators.utils import ACS_TO_UNIX_TIME
-from simulators.backend import System, PROTOCOL_VERSION, grammar, Sardara
+from simulators.backend.sardara import System as Sardara
+from simulators.backend.genericbackend import (
+    grammar,
+    PROTOCOL_VERSION,
+    GenericBackendSystem,
+)
 
 
 class TestGenericBackend(unittest.TestCase):
 
     def setUp(self):
-        self.system = System()
+        self.system = GenericBackendSystem()
 
     def tearDown(self):
-        del self.system
+        self.system.system_stop()
 
     def test_empty_message(self):
         msg = '\r\n'
@@ -398,7 +403,7 @@ class TestGenericBackend(unittest.TestCase):
         self.assertEqual(cmd, '!set-section')
         self.assertEqual(answer, 'fail')
         expected_reason = 'backend supports %d sections' % (
-            self.system.backend.max_sections
+            self.system.max_sections
         )
         self.assertEqual(reason, expected_reason)
 
@@ -408,7 +413,7 @@ class TestGenericBackend(unittest.TestCase):
         self.assertEqual(cmd, '!set-section')
         self.assertEqual(answer, 'fail')
         expected_reason = 'backend maximum bandwidth is %f' % (
-            self.system.backend.max_bandwidth
+            self.system.max_bandwidth
         )
         self.assertEqual(reason, expected_reason)
 
@@ -565,13 +570,13 @@ class TestGenericBackend(unittest.TestCase):
 class TestSardara(unittest.TestCase):
 
     def setUp(self):
-        self.system = System(backend_type=Sardara)
+        self.system = Sardara()
 
     def tearDown(self):
-        del self.system
+        self.system.system_stop()
 
     def test_sardara_instance(self):
-        self.assertEqual(type(self.system.backend), Sardara)
+        self.assertEqual(type(self.system), Sardara)
 
 
 class TestMessage(unittest.TestCase):
