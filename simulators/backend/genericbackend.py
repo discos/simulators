@@ -12,7 +12,7 @@ headers = ('!', '?')
 closers = ('\r\n')
 
 
-class BackendException(Exception):
+class BackendError(Exception):
     pass
 
 
@@ -97,7 +97,7 @@ class GenericBackendSystem(ListeningSystem):
                     name=message.name
                 )
                 if message.name not in self.commands.keys():
-                    raise BackendException(
+                    raise BackendError(
                         "invalid command '%s'" % (message.name,)
                     )
                 method = getattr(self, self.commands[message.name])
@@ -106,7 +106,7 @@ class GenericBackendSystem(ListeningSystem):
                     reply_message.arguments = map(str, reply_arguments)
                 reply_message.code = grammar.OK
                 return str(reply_message)
-            except BackendException, he:
+            except BackendError, he:
                 return self._send_fail_reply(message, he.message)
         else:
             return True
@@ -140,7 +140,7 @@ class GenericBackendSystem(ListeningSystem):
                 timestamp = float(args[0]) / ACS_TO_UNIX_TIME
                 self._start_at(timestamp)
             except ValueError:
-                raise BackendException("wrong timestamp '%s'" % (args[0],))
+                raise BackendError("wrong timestamp '%s'" % (args[0],))
 
     def do_stop(self, args):
         if len(args) < 1:
@@ -150,14 +150,14 @@ class GenericBackendSystem(ListeningSystem):
                 timestamp = float(args[0]) / ACS_TO_UNIX_TIME
                 self._stop_at(timestamp)
             except ValueError:
-                raise BackendException("wrong timestamp '%s'" % (args[0],))
+                raise BackendError("wrong timestamp '%s'" % (args[0],))
 
     def do_set_configuration(self, args):
         if len(args) < 1:
-            raise BackendException("missing argument: configuration")
+            raise BackendError("missing argument: configuration")
         conf_name = str(args[0])
         if not self._is_valid_configuration(conf_name):
-            raise BackendException("invalid configuration")
+            raise BackendError("invalid configuration")
         # Here you should perform actual hardware configuration
         self.configuration_string = conf_name
 
@@ -169,20 +169,20 @@ class GenericBackendSystem(ListeningSystem):
 
     def do_set_integration(self, args):
         if len(args) < 1:
-            raise BackendException("missing argument: integration time")
+            raise BackendError("missing argument: integration time")
         try:
             _integration = int(args[0])
             if _integration < 0:
                 raise ValueError
         except ValueError:
-            raise BackendException(
+            raise BackendError(
                 "integration time must be an integer number"
             )
         self.integration = _integration
 
     def do_set_filename(self, args):
         if len(args) < 1:
-            raise BackendException("command needs <filename> as argument")
+            raise BackendError("command needs <filename> as argument")
         else:
             self._filename = args[0]
 
@@ -213,13 +213,13 @@ class GenericBackendSystem(ListeningSystem):
 
     def _start_now(self):
         if self.acquiring:
-            raise BackendException("already acquiring")
+            raise BackendError("already acquiring")
         self._waiting_for_start_time = False
         self.acquiring = True
 
     def _start_at(self, timestamp):
         if timestamp < time.time():
-            raise BackendException("starting time already elapsed")
+            raise BackendError("starting time already elapsed")
         if self._waiting_for_start_time:
             self._startID.cancel()
         self._waiting_for_start_time = True
@@ -229,14 +229,14 @@ class GenericBackendSystem(ListeningSystem):
 
     def _stop_now(self):
         if not self.acquiring:
-            raise BackendException("not acquiring")
+            raise BackendError("not acquiring")
         self._waiting_for_start_time = False
         self._waiting_for_stop_time = False
         self.acquiring = False
 
     def _stop_at(self, timestamp):
         if timestamp < time.time():
-            raise BackendException("stop time already elapsed")
+            raise BackendError("stop time already elapsed")
         if self._waiting_for_stop_time:
             self._stopID.cancel()
         self._waiting_for_stop_time = True
@@ -260,7 +260,7 @@ class GenericBackendSystem(ListeningSystem):
                 return _type_converter(p)
 
         if len(args) < 7:
-            raise BackendException("set-section needs 7 arguments")
+            raise BackendError("set-section needs 7 arguments")
         try:
             section = _get_param(args[0], int)
             start_freq = _get_param(args[1], float)
@@ -270,14 +270,14 @@ class GenericBackendSystem(ListeningSystem):
             sample_rate = _get_param(args[5], float)
             bins = _get_param(args[6], int)
         except ValueError:
-            raise BackendException("wrong parameter format")
+            raise BackendError("wrong parameter format")
 
-        if section > self.max_sections and not section == "*":
-            raise BackendException(
+        if section > self.max_sections and section != "*":
+            raise BackendError(
                 "backend supports %d sections" % (self.max_sections)
             )
-        if bandwidth > self.max_bandwidth and not bandwidth == "*":
-            raise BackendException(
+        if bandwidth > self.max_bandwidth and bandwidth != "*":
+            raise BackendError(
                 "backend maximum bandwidth is %f" % (self.max_bandwidth)
             )
         self._sections[section] = (
@@ -298,24 +298,24 @@ class GenericBackendSystem(ListeningSystem):
                 if interleave < 0:
                     raise ValueError
             except ValueError:
-                raise BackendException(
+                raise BackendError(
                     "interleave samples must be a positive int"
                 )
         self.interleave = interleave
 
     def do_set_enable(self, args):
         if len(args) < 2:
-            raise BackendException("set-enable needs 2 arguments")
+            raise BackendError("set-enable needs 2 arguments")
         try:
             feed1 = int(args[0])
             feed2 = int(args[1])
         except ValueError:
-            raise BackendException("wrong parameter format")
+            raise BackendError("wrong parameter format")
 
         if feed1 not in range(self.max_sections / 2):
-            raise BackendException("feed1 out of range")
+            raise BackendError("feed1 out of range")
         if feed2 not in range(self.max_sections / 2):
-            raise BackendException("feed2 out of range")
+            raise BackendError("feed2 out of range")
         self.current_sections = [
             feed1 * 2,
             feed1 * 2 + 1,

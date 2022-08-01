@@ -1,6 +1,7 @@
 import unittest
 import time
 from simulators.utils import ACS_TO_UNIX_TIME
+from simulators.backend import System
 from simulators.backend.sardara import System as Sardara
 from simulators.backend.genericbackend import (
     grammar,
@@ -570,7 +571,7 @@ class TestGenericBackend(unittest.TestCase):
 class TestSardara(unittest.TestCase):
 
     def setUp(self):
-        self.system = Sardara()
+        self.system = System(system_type='sardara')
 
     def tearDown(self):
         self.system.system_stop()
