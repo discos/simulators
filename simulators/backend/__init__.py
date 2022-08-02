@@ -6,7 +6,7 @@ from simulators.common import MultiTypeSystem
 systems = get_multitype_systems(__file__)
 servers = [
     (('0.0.0.0', 12801), (), ThreadingTCPServer, {'system_type': 'sardara'}),
-    (('0.0.0.0', 12802), (), ThreadingTCPServer, {'system_type': 'mistral'}),
+    # (('0.0.0.0', 12802), (), ThreadingTCPServer, {'system_type': 'mistral'}),
 ]
 
 
