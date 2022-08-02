@@ -30,7 +30,7 @@ jobs:
       uses: codecov/codecov-action@v2
     - name: Run prospector
       run: |
-        python -m pip install prospector==1.2.0
+        python -m pip install prospector
         prospector
     - name: Build documentation
       run: |
