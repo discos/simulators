@@ -105,7 +105,7 @@ class System(ListeningSystem):
         """Resets the received command string to its default value.
         It is called when a tail character is received or when a command is
         received malformed."""
-        self.msg = b''
+        self.msg = ''
         self.msg_to_all = False
         self.expected_bytes = 0
 
@@ -279,7 +279,7 @@ class System(ListeningSystem):
                     bin(1)[2:].zfill(3)
                     + bin(usd_index)[2:].zfill(5)
                 )
-                retval += utils.binary_to_bytes(
+                retval += utils.binary_to_string(
                     byte_nbyte_address,
                     little_endian=False
                 )
@@ -336,12 +336,12 @@ class System(ListeningSystem):
                     bin(4)[2:].zfill(3)
                     + bin(usd_index)[2:].zfill(5)
                 )
-                retval += utils.binary_to_bytes(
+                retval += utils.binary_to_string(
                     byte_nbyte_address,
                     little_endian=False
                 )
             pos = self.drivers[params[0]].get_position()
-            retval += utils.int_to_bytes(
+            retval += utils.int_to_string(
                 pos,
                 n_bytes=4,
                 little_endian=False
@@ -372,7 +372,7 @@ class System(ListeningSystem):
                     bin(3)[2:].zfill(3)
                     + bin(usd_index)[2:].zfill(5)
                 )
-                retval += utils.binary_to_bytes(
+                retval += utils.binary_to_string(
                     byte_nbyte_address,
                     little_endian=False
                 )
@@ -403,12 +403,12 @@ class System(ListeningSystem):
                     bin(1)[2:].zfill(3)
                     + bin(usd_index)[2:].zfill(5)
                 )
-                retval += utils.binary_to_bytes(
+                retval += utils.binary_to_string(
                     byte_nbyte_address,
                     little_endian=False
                 )
             driver_type = self.drivers[params[0]].get_driver_type()
-            retval += utils.int_to_bytes(
+            retval += utils.int_to_string(
                 driver_type,
                 n_bytes=1,
                 little_endian=False
@@ -434,8 +434,8 @@ class System(ListeningSystem):
             else:
                 return self.byte_nak
         else:
-            frequency = utils.bytes_to_int(
-                [chr(x) for x in params[2]],
+            frequency = utils.string_to_int(
+                ''.join([chr(x) for x in params[2]]),
                 little_endian=False
             )
             if params[0] is None:
@@ -467,8 +467,8 @@ class System(ListeningSystem):
             else:
                 return self.byte_nak
         else:
-            frequency = utils.bytes_to_int(
-                [chr(x) for x in params[2]],
+            frequency = utils.string_to_int(
+                ''.join([chr(x) for x in params[2]]),
                 little_endian=False
             )
             if params[0] is None:
@@ -529,8 +529,8 @@ class System(ListeningSystem):
             else:
                 return self.byte_nak
         else:
-            reference_pos = utils.bytes_to_int(
-                [chr(x) for x in params[2]],
+            reference_pos = utils.string_to_int(
+                ''.join([chr(x) for x in params[2]]),
                 little_endian=False
             )
 
@@ -715,8 +715,8 @@ class System(ListeningSystem):
             else:
                 return self.byte_nak
         else:
-            absolute_position = utils.bytes_to_int(
-                [chr(x) for x in params[2]],
+            absolute_position = utils.string_to_int(
+                ''.join([chr(x) for x in params[2]]),
                 little_endian=False
             )
 
@@ -751,8 +751,8 @@ class System(ListeningSystem):
             else:
                 return self.byte_nak
         else:
-            relative_position = utils.bytes_to_int(
-                [chr(x) for x in params[2]],
+            relative_position = utils.string_to_int(
+                ''.join([chr(x) for x in params[2]]),
                 little_endian=False
             )
 
@@ -821,8 +821,8 @@ class System(ListeningSystem):
             else:
                 return self.byte_nak
         else:
-            velocity = utils.bytes_to_int(
-                [chr(x) for x in params[2]],
+            velocity = utils.string_to_int(
+                ''.join([chr(x) for x in params[2]]),
                 little_endian=False
             )
 

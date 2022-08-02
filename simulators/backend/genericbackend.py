@@ -82,11 +82,11 @@ class GenericBackend(object):
 
     def set_section(self, section, start_freq, bandwidth,
                     feed, mode, sample_rate, bins):
-        if section > self.max_sections and not section == "*":
+        if not section == '*' and section > self.max_sections:
             raise BackendException(
                 "backend supports %d sections" % (self.max_sections)
             )
-        if bandwidth > self.max_bandwidth and not bandwidth == "*":
+        if not bandwidth == '*' and bandwidth > self.max_bandwidth:
             raise BackendException(
                 "backend maximum bandwidth is %f" % (self.max_bandwidth)
             )
@@ -110,9 +110,9 @@ class GenericBackend(object):
         pass
 
     def set_enable(self, feed1, feed2):
-        if feed1 not in range(self.max_sections / 2):
+        if feed1 not in range(int(self.max_sections / 2)):
             raise BackendException("feed1 out of range")
-        if feed2 not in range(self.max_sections / 2):
+        if feed2 not in range(int(self.max_sections / 2)):
             raise BackendException("feed2 out of range")
         self.current_sections = [
             feed1 * 2,

@@ -61,7 +61,7 @@ class System(ListeningSystem):
     def parse(self, byte):
         t = current_thread().ident
         if not self.msg.get(t):
-            self.msg[t] = b''
+            self.msg[t] = ''
 
         self.msg[t] += byte
 

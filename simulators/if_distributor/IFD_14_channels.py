@@ -9,9 +9,9 @@ class System(ListeningSystem):
     useful in the future in case a new IFDistributor gets developed starting
     from the old schematics."""
 
-    header = b'#'
-    tail = b'\n'
-    max_msg_length = 12  # b'#AAA 99 999\n'
+    header = '#'
+    tail = '\n'
+    max_msg_length = 12  # '#AAA 99 999\n'
     # The dictionary devices has the device types as keys,
     # and a dictionary as value.  The value has the address as
     # key and the allowed values as value
@@ -22,10 +22,10 @@ class System(ListeningSystem):
     max_att_multiplier = max_att / att_step
     channels = [max_att_multiplier] * max_channels
     switched = False
-    version = b'SRT IF Distributor Simulator 1.0'
+    version = 'SRT IF Distributor Simulator 1.0'
 
     def __init__(self):
-        self.msg = b''
+        self.msg = ''
         self._set_default()
 
     def _set_default(self):
@@ -41,21 +41,21 @@ class System(ListeningSystem):
             if byte == self.header:
                 return True  # Got the header
             else:
-                self.msg = b''
+                self.msg = ''
                 return False
         elif len(self.msg) < self.max_msg_length:
             if byte != self.tail:
                 return True
         elif len(self.msg) == self.max_msg_length:
             if byte != self.tail:
-                self.msg = b''
+                self.msg = ''
                 raise ValueError(
                     'Message too long: max length should be %d.'
                     % self.max_msg_length
                 )
 
         msg = self.msg[1:-1]  # Remove the header and tail
-        self.msg = b''
+        self.msg = ''
         return self._execute(msg)
 
     def _execute(self, msg):
@@ -65,7 +65,7 @@ class System(ListeningSystem):
         :param msg: the received command, after its header and tail got
             stripped away.
         """
-        if b' ' in msg and b'?' not in msg:  # Setup request
+        if ' ' in msg and '?' not in msg:  # Setup request
             try:
                 command, channel, value = msg.split()
             except ValueError:
@@ -107,8 +107,8 @@ class System(ListeningSystem):
                 else:
                     raise ValueError(
                         'SWT command accepts only values 00 or 01')
-            return b''
-        elif b' ' in msg and b'?' in msg:  # Get request
+            return ''
+        elif ' ' in msg and '?' in msg:  # Get request
             msg = msg.rstrip('?')
             try:
                 command, channel = msg.split()
@@ -128,18 +128,18 @@ class System(ListeningSystem):
                     'Channel %d does not exist.' % channel)
             else:
                 if command == 'ATT':
-                    return b'#%s\n' % str(
+                    return '#%s\n' % str(
                         self.channels[channel] * self.att_step)
                 elif command == 'SWT':
-                    return b'#%s\n' % (1 if self.switched else 0)
+                    return '#%s\n' % (1 if self.switched else 0)
                 else:
                     raise ValueError(
                         'Command %s not in %s'
                         % (command, self.allowed_commands))
-        elif msg == b'*IDN?':  # IDN request
+        elif msg == '*IDN?':  # IDN request
             return self.version
-        elif msg == b'*RST':  # RST command
+        elif msg == '*RST':  # RST command
             self._set_default()
             return None
         else:  # Not expected command
-            return b'#COMMAND UNKNOWN\n'
+            return '#COMMAND UNKNOWN\n'

@@ -15,13 +15,13 @@ servers = [(('0.0.0.0', 12500), (), ThreadingTCPServer, {})]
 
 class System(ListeningSystem):
 
-    tail = [b'\x0A', b'\x0D']  # NEWLINE and CR
-    max_msg_length = 7  # b'I 16 1\n'
+    tail = ['\x0A', '\x0D']  # NEWLINE and CR
+    max_msg_length = 7  # 'I 16 1\n'
     max_channels = 17
     max_period = 5000
 
-    ack = b'ack\n'
-    nak = b'nak\n'
+    ack = 'ack\n'
+    nak = 'nak\n'
 
     commands = {
         'I': '_set_input',
@@ -35,7 +35,7 @@ class System(ListeningSystem):
         self.current_channel = self.slow_channel
         self.polarities = [0] * self.max_channels
         self.calon = [0] * self.max_channels
-        self.msg = b''
+        self.msg = ''
 
     def parse(self, byte):
         self.msg += byte
@@ -44,21 +44,21 @@ class System(ListeningSystem):
             if byte in self.commands.keys():
                 return True
             else:
-                self.msg = b''
+                self.msg = ''
                 return False
         elif len(self.msg) < self.max_msg_length:
             if byte not in self.tail:
                 return True
         elif len(self.msg) == self.max_msg_length:
             if byte not in self.tail:
-                self.msg = b''
+                self.msg = ''
                 raise ValueError(
                     'Message too long: max length should be %d'
                     % self.max_msg_length
                 )
 
         msg = self.msg[:-1]
-        self.msg = b''
+        self.msg = ''
         return self._execute(msg)
 
     def _execute(self, msg):
@@ -107,7 +107,7 @@ class System(ListeningSystem):
     def _get_status(self, params):
         if params:
             return self.nak
-        retval = b'%s %s %s\n' % (
+        retval = '%s %s %s\n' % (
             self.current_channel,
             self.polarities[self.current_channel],
             self.calon[self.current_channel]

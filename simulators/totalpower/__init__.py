@@ -7,7 +7,7 @@ from math import modf
 from random import randint
 from socketserver import ThreadingTCPServer
 from simulators.common import ListeningSystem
-from simulators.utils import uint_to_bytes, binary_to_bytes, bytes_to_binary
+from simulators.utils import uint_to_bytes, binary_to_string, string_to_binary
 
 
 servers = [
@@ -28,10 +28,10 @@ def _get_time(time_offset=0):
 
 class System(ListeningSystem):
 
-    tail = [b'\x0A', b'\x0D']  # NEWLINE and CR
+    tail = ['\x0A', '\x0D']  # NEWLINE and CR
 
-    ack = b'ack\n'
-    nak = b'nak\n'
+    ack = 'ack\n'
+    nak = 'nak\n'
 
     firmware_string = 'fpga 29.12.2009 simulator, firmware rev.48'
 
@@ -78,14 +78,15 @@ class System(ListeningSystem):
         self.data_address = ""
         self.data_port = 0
         self.data_configured = False
-        self.data_socket = socket.socket()
+        self.data_socket = None
         self.pause = Value(c_bool, True)
         self.stop = Value(c_bool, False)
         self.data_timer = None
         self.msg = ''
 
     def __del__(self):
-        self.data_socket.close()
+        if isinstance(self.data_socket, socket.socket):
+            self.data_socket.close()
 
     def parse(self, byte):
         if byte in self.tail:
@@ -278,21 +279,21 @@ class System(ListeningSystem):
             self.data_timer.join()
             self.data_timer = None
 
-        if self.data_timer and self.data_timer.isAlive():
+        if self.data_timer and self.data_timer.is_alive():
             t = Timer(0, _wait_for_timer)
             t.start()
 
         return self.ack
 
     def _send_packet(self, stop, pause):
-        packet = ''
+        packet = b''
         # Timestamp of the last packet
         t0 = timestamp = time.time()
         # Subtract the whole acquisition duration in order to mimic the start
         # time of the acquisition
         timestamp -= \
             (1000 / self.sample_period) * (float(self.sample_period) / 1000)
-        for _ in range(1000 / self.sample_period):
+        for _ in range(int(1000 / self.sample_period)):
             # The epoch should represent the ending instant of each sample,
             # therefore, we add a sample_period
             timestamp += float(self.sample_period) / 1000
@@ -349,7 +350,7 @@ class System(ListeningSystem):
     def _get_status(self, ascii_format=False):
         # First byte alternates between \xA0 and \x90 each second of data
         status = '\xA0' if self.toggle else '\x90'
-        status = bytes_to_binary(status)
+        status = string_to_binary(status)
         # Next 2 bits are always set to 01
         status += '01'
         # Inputs set to 50 Ohm
@@ -360,9 +361,9 @@ class System(ListeningSystem):
         status += str(self.toggle)
         # Last 3 bits are always 1
         status += '111'
-        status = binary_to_bytes(status)
+        status = binary_to_string(status)
         if not ascii_format:
-            return status
+            return status.encode('raw_unicode_escape')
         else:
             return ''.join([hex(ord(c))[-2:] for c in status[::-1]])
 

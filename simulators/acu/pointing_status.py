@@ -243,10 +243,10 @@ class PointingStatus(object):
 
         :param command: the received command.
         """
-        cmd_cnt = utils.bytes_to_uint(command[4:8])
-        parameter_id = utils.bytes_to_uint(command[8:10])
-        parameter_1 = utils.bytes_to_real(command[10:18], 2)
-        parameter_2 = utils.bytes_to_real(command[18:26], 2)
+        cmd_cnt = utils.string_to_uint(command[4:8])
+        parameter_id = utils.string_to_uint(command[8:10])
+        parameter_1 = utils.string_to_real(command[10:18], 2)
+        parameter_2 = utils.string_to_real(command[18:26], 2)
 
         self.parameter_command_counter = cmd_cnt
         self.parameter_command = parameter_id
@@ -349,8 +349,8 @@ class PointingStatus(object):
 
         :param command: the received program track parameter command.
         """
-        cmd_cnt = utils.bytes_to_uint(command[4:8])
-        parameter_id = utils.bytes_to_uint(command[8:10])
+        cmd_cnt = utils.string_to_uint(command[4:8])
+        parameter_id = utils.string_to_uint(command[8:10])
 
         self.parameter_command_counter = cmd_cnt
         self.parameter_command = parameter_id
@@ -359,25 +359,25 @@ class PointingStatus(object):
             self.parameter_command_answer = 0
             return
 
-        interpolation_mode = utils.bytes_to_uint(command[10:12])
+        interpolation_mode = utils.string_to_uint(command[10:12])
 
         if interpolation_mode != 4:
             self.parameter_command_answer = 5
             return
 
-        tracking_mode = utils.bytes_to_uint(command[12:14])
+        tracking_mode = utils.string_to_uint(command[12:14])
 
         if tracking_mode != 1:
             self.parameter_command_answer = 5
             return
 
-        load_mode = utils.bytes_to_uint(command[14:16])
+        load_mode = utils.string_to_uint(command[14:16])
 
         if load_mode not in [1, 2]:
             self.parameter_command_answer = 5
             return
 
-        sequence_length = utils.bytes_to_uint(command[16:18])
+        sequence_length = utils.string_to_uint(command[16:18])
 
         if sequence_length > 50:
             self.parameter_command_answer = 5
@@ -391,7 +391,7 @@ class PointingStatus(object):
             self.parameter_command_answer = 5
             return
 
-        start_time = utils.mjd_to_date(utils.bytes_to_real(command[18:26], 2))
+        start_time = utils.mjd_to_date(utils.string_to_real(command[18:26], 2))
         start_time += self.time_source_offset
 
         if load_mode == 2 and start_time != self.start_time:
@@ -409,8 +409,8 @@ class PointingStatus(object):
         elevation_positions = deepcopy(self.elevation_positions)
         self.lock.release()
 
-        azimuth_max_rate = utils.bytes_to_real(command[26:34], 2)
-        elevation_max_rate = utils.bytes_to_real(command[34:42], 2)
+        azimuth_max_rate = utils.string_to_real(command[26:34], 2)
+        elevation_max_rate = utils.string_to_real(command[34:42], 2)
 
         byte_entries = command[42:]
 
@@ -424,7 +424,7 @@ class PointingStatus(object):
         for i in range(sequence_length):
             offset = i * 20
 
-            relative_time = utils.bytes_to_int(
+            relative_time = utils.string_to_int(
                 byte_entries[offset:offset + 4]
             )
 
@@ -447,13 +447,13 @@ class PointingStatus(object):
             relative_times.append(relative_time)
             last_relative_time = relative_time
 
-            azimuth_position = utils.bytes_to_real(
+            azimuth_position = utils.string_to_real(
                 byte_entries[offset + 4:offset + 12],
                 2
             )
             azimuth_positions.append(azimuth_position)
 
-            elevation_position = utils.bytes_to_real(
+            elevation_position = utils.string_to_real(
                 byte_entries[offset + 12:offset + 20],
                 2
             )
@@ -531,7 +531,7 @@ class PointingStatus(object):
 
     @property
     def posEncAz(self):
-        return utils.bytes_to_int(str(self.status[9:13]))
+        return utils.bytes_to_int(self.status[9:13])
 
     @posEncAz.setter
     def posEncAz(self, value):
@@ -542,7 +542,7 @@ class PointingStatus(object):
 
     @property
     def pointOffsetAz(self):
-        return utils.bytes_to_int(str(self.status[13:17]))
+        return utils.bytes_to_int(self.status[13:17])
 
     @pointOffsetAz.setter
     def pointOffsetAz(self, value):
@@ -553,7 +553,7 @@ class PointingStatus(object):
 
     @property
     def posCalibChartAz(self):
-        return utils.bytes_to_int(str(self.status[17:21]))
+        return utils.bytes_to_int(self.status[17:21])
 
     @posCalibChartAz.setter
     def posCalibChartAz(self, value):
@@ -565,7 +565,7 @@ class PointingStatus(object):
 
     @property
     def posCorrTableAz_F_plst_El(self):
-        return utils.bytes_to_int(str(self.status[21:25]))
+        return utils.bytes_to_int(self.status[21:25])
 
     @posCorrTableAz_F_plst_El.setter
     def posCorrTableAz_F_plst_El(self, value):
@@ -616,7 +616,7 @@ class PointingStatus(object):
 
     @property
     def posEncEl(self):
-        return utils.bytes_to_int(str(self.status[28:32]))
+        return utils.bytes_to_int(self.status[28:32])
 
     @posEncEl.setter
     def posEncEl(self, value):
@@ -627,7 +627,7 @@ class PointingStatus(object):
 
     @property
     def pointOffsetEl(self):
-        return utils.bytes_to_int(str(self.status[32:36]))
+        return utils.bytes_to_int(self.status[32:36])
 
     @pointOffsetEl.setter
     def pointOffsetEl(self, value):
@@ -638,7 +638,7 @@ class PointingStatus(object):
 
     @property
     def posCalibChartEl(self):
-        return utils.bytes_to_int(str(self.status[36:40]))
+        return utils.bytes_to_int(self.status[36:40])
 
     @posCalibChartEl.setter
     def posCalibChartEl(self, value):
@@ -650,7 +650,7 @@ class PointingStatus(object):
 
     @property
     def posCorrTableEl_F_plst_Az(self):
-        return utils.bytes_to_int(str(self.status[40:44]))
+        return utils.bytes_to_int(self.status[40:44])
 
     @posCorrTableEl_F_plst_Az.setter
     def posCorrTableEl_F_plst_Az(self, value):
@@ -688,7 +688,7 @@ class PointingStatus(object):
 
     @property
     def posEncCw(self):
-        return utils.bytes_to_int(str(self.status[46:50]))
+        return utils.bytes_to_int(self.status[46:50])
 
     @posEncCw.setter
     def posEncCw(self, value):
@@ -699,7 +699,7 @@ class PointingStatus(object):
 
     @property
     def posCalibChartCw(self):
-        return utils.bytes_to_int(str(self.status[50:54]))
+        return utils.bytes_to_int(self.status[50:54])
 
     @posCalibChartCw.setter
     def posCalibChartCw(self, value):
@@ -724,7 +724,7 @@ class PointingStatus(object):
 
     @property
     def timeSource(self):
-        return utils.bytes_to_uint(str(self.status[55:57]))
+        return utils.bytes_to_uint(self.status[55:57])
 
     @timeSource.setter
     def timeSource(self, value):
@@ -786,7 +786,7 @@ class PointingStatus(object):
 
     @property
     def year(self):
-        return utils.bytes_to_uint(str(self.status[75:77]))
+        return utils.bytes_to_uint(self.status[75:77])
 
     @year.setter
     def year(self, value):
@@ -797,7 +797,7 @@ class PointingStatus(object):
 
     @property
     def month(self):
-        return utils.bytes_to_uint(str(self.status[77:79]))
+        return utils.bytes_to_uint(self.status[77:79])
 
     @month.setter
     def month(self, value):
@@ -808,7 +808,7 @@ class PointingStatus(object):
 
     @property
     def day(self):
-        return utils.bytes_to_uint(str(self.status[79:81]))
+        return utils.bytes_to_uint(self.status[79:81])
 
     @day.setter
     def day(self, value):
@@ -819,7 +819,7 @@ class PointingStatus(object):
 
     @property
     def hour(self):
-        return utils.bytes_to_uint(str(self.status[81:83]))
+        return utils.bytes_to_uint(self.status[81:83])
 
     @hour.setter
     def hour(self, value):
@@ -830,7 +830,7 @@ class PointingStatus(object):
 
     @property
     def minute(self):
-        return utils.bytes_to_uint(str(self.status[83:85]))
+        return utils.bytes_to_uint(self.status[83:85])
 
     @minute.setter
     def minute(self, value):
@@ -841,7 +841,7 @@ class PointingStatus(object):
 
     @property
     def second(self):
-        return utils.bytes_to_uint(str(self.status[85:87]))
+        return utils.bytes_to_uint(self.status[85:87])
 
     @second.setter
     def second(self, value):
@@ -852,7 +852,7 @@ class PointingStatus(object):
 
     @property
     def actPtPos_Azimuth(self):
-        return utils.bytes_to_int(str(self.status[87:91]))
+        return utils.bytes_to_int(self.status[87:91])
 
     @actPtPos_Azimuth.setter
     def actPtPos_Azimuth(self, value):
@@ -863,7 +863,7 @@ class PointingStatus(object):
 
     @property
     def actPtPos_Elevation(self):
-        return utils.bytes_to_int(str(self.status[91:95]))
+        return utils.bytes_to_int(self.status[91:95])
 
     @actPtPos_Elevation.setter
     def actPtPos_Elevation(self, value):
@@ -930,7 +930,7 @@ class PointingStatus(object):
 
     @property
     def actPtTimeOffset(self):
-        return utils.bytes_to_int(str(self.status[99:103]))
+        return utils.bytes_to_int(self.status[99:103])
 
     @actPtTimeOffset.setter
     def actPtTimeOffset(self, value):
@@ -941,7 +941,7 @@ class PointingStatus(object):
 
     @property
     def ptInterpolMode(self):
-        return utils.bytes_to_uint(str(self.status[103:105]))
+        return utils.bytes_to_uint(self.status[103:105])
 
     @ptInterpolMode.setter
     def ptInterpolMode(self, value):
@@ -956,7 +956,7 @@ class PointingStatus(object):
 
     @property
     def ptTrackingType(self):
-        return utils.bytes_to_uint(str(self.status[105:107]))
+        return utils.bytes_to_uint(self.status[105:107])
 
     @ptTrackingType.setter
     def ptTrackingType(self, value):
@@ -968,7 +968,7 @@ class PointingStatus(object):
 
     @property
     def ptTrackingMode(self):
-        return utils.bytes_to_uint(str(self.status[107:109]))
+        return utils.bytes_to_uint(self.status[107:109])
 
     @ptTrackingMode.setter
     def ptTrackingMode(self, value):
@@ -980,7 +980,7 @@ class PointingStatus(object):
 
     @property
     def ptActTableIndex(self):
-        return utils.bytes_to_uint(str(self.status[109:113]))
+        return utils.bytes_to_uint(self.status[109:113])
 
     @ptActTableIndex.setter
     def ptActTableIndex(self, value):
@@ -991,7 +991,7 @@ class PointingStatus(object):
 
     @property
     def ptEndTableIndex(self):
-        return utils.bytes_to_uint(str(self.status[113:117]))
+        return utils.bytes_to_uint(self.status[113:117])
 
     @ptEndTableIndex.setter
     def ptEndTableIndex(self, value):
@@ -1002,7 +1002,7 @@ class PointingStatus(object):
 
     @property
     def ptTableLength(self):
-        return utils.bytes_to_uint(str(self.status[117:121]))
+        return utils.bytes_to_uint(self.status[117:121])
 
     @ptTableLength.setter
     def ptTableLength(self, value):
@@ -1017,7 +1017,7 @@ class PointingStatus(object):
 
     @property
     def parameter_command_counter(self):
-        return utils.bytes_to_uint(str(self.parameter_command_status[0:4]))
+        return utils.bytes_to_uint(self.parameter_command_status[0:4])
 
     @parameter_command_counter.setter
     def parameter_command_counter(self, value):
@@ -1030,7 +1030,7 @@ class PointingStatus(object):
 
     @property
     def parameter_command(self):
-        return utils.bytes_to_uint(str(self.parameter_command_status[4:6]))
+        return utils.bytes_to_uint(self.parameter_command_status[4:6])
 
     @parameter_command.setter
     def parameter_command(self, value):
@@ -1043,7 +1043,7 @@ class PointingStatus(object):
 
     @property
     def parameter_command_answer(self):
-        return utils.bytes_to_uint(str(self.parameter_command_status[6:8]))
+        return utils.bytes_to_uint(self.parameter_command_status[6:8])
 
     @parameter_command_answer.setter
     def parameter_command_answer(self, value):

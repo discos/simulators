@@ -88,7 +88,7 @@ class TestWeatherStation(unittest.TestCase):
         self.assertFalse(self.system.parse('c'))  # Should be ` `
 
     def test_read(self):
-        for sensor, values in self.sensors.iteritems():
+        for sensor, values in iter(self.sensors.items()):
             cmd = 'r %s' % sensor
             for byte in cmd:
                 self.assertTrue(self.system.parse(byte))
@@ -109,7 +109,7 @@ class TestWeatherStation(unittest.TestCase):
 
     def test_read_as_write(self):
         date = datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
-        args = (self.sensors.keys()[0], 10.0, date)
+        args = (list(self.sensors.keys())[0], 10.0, date)
         cmd = 'r %s %s %s' % args
         for byte in cmd:
             self.assertTrue(self.system.parse(byte))
@@ -117,7 +117,7 @@ class TestWeatherStation(unittest.TestCase):
 
     def test_write(self):
         date = datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
-        for sensor, values in self.sensors.iteritems():
+        for sensor, values in iter(self.sensors.items()):
             args = (sensor, 10.0, date)
             cmd = 'w %s %s %s' % args
             for byte in cmd:
@@ -133,7 +133,7 @@ class TestWeatherStation(unittest.TestCase):
 
     def test_write_wrong_value(self):
         date = datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
-        for sensor, values in self.sensors.iteritems():
+        for sensor, values in iter(self.sensors.items()):
             args = (sensor, 'wrong', date)
             cmd = 'w %s %s %s' % args
             for byte in cmd:
@@ -148,7 +148,7 @@ class TestWeatherStation(unittest.TestCase):
             self.assertTrue(self._compare(expected, response))
 
     def test_write_wrong_date(self):
-        for sensor, values in self.sensors.iteritems():
+        for sensor, values in iter(self.sensors.items()):
             args = (sensor, 10.0, 'wrong_date')
             cmd = 'w %s %s %s' % args
             for byte in cmd:
@@ -172,7 +172,7 @@ class TestWeatherStation(unittest.TestCase):
         self.assertEqual(response, self.err_string)
 
     def test_write_wrong_number_of_args(self):
-        for sensor, _ in self.sensors.iteritems():
+        for sensor, _ in iter(self.sensors.items()):
             args = (sensor, 10.0)
             cmd = 'w %s %s' % args
             for byte in cmd:
@@ -180,7 +180,7 @@ class TestWeatherStation(unittest.TestCase):
             self.assertFalse(self.system.parse('\n'))
 
     def test_write_as_read(self):
-        cmd = 'w %s' % self.sensors.keys()[0]
+        cmd = 'w %s' % list(self.sensors.keys())[0]
         for byte in cmd:
             self.assertTrue(self.system.parse(byte))
         self.assertFalse(self.system.parse('\n'))

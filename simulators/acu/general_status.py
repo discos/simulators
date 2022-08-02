@@ -69,8 +69,8 @@ class GeneralStatus(object):
     @property
     def version(self):
         return (
-            utils.bytes_to_uint(self.status[1].decode()),
-            utils.bytes_to_uint(self.status[0].decode())
+            utils.bytes_to_uint(self.status[1]),
+            utils.bytes_to_uint(self.status[0])
         )
 
     @version.setter
@@ -85,7 +85,7 @@ class GeneralStatus(object):
 
     @property
     def master(self):
-        return utils.bytes_to_uint(self.status[2]).decode()
+        return utils.bytes_to_uint(self.status[2])
 
     @master.setter
     def master(self, value=2):
@@ -103,7 +103,7 @@ class GeneralStatus(object):
     @property
     def status_HMI(self):
         status_HMI = []
-        for value in utils.bytes_to_binary(self.status[3:5].decode())[::-1]:
+        for value in utils.bytes_to_binary(self.status[3:5])[::-1]:
             status_HMI.append(bool(int(value)))
         return status_HMI
 

@@ -42,7 +42,7 @@ def _compose(address_on_response, usd_index, byte_command, params=None):
 
     if usd_index is None:
         command += '\x00'
-        command += utils.int_to_bytes(
+        command += utils.int_to_string(
             val=len(cmd),
             n_bytes=1
         )
@@ -54,7 +54,7 @@ def _compose(address_on_response, usd_index, byte_command, params=None):
         else:
             length = bin(len(cmd))[2:].zfill(3)
             address = bin(usd_index)[2:].zfill(5)
-            command += utils.int_to_bytes(
+            command += utils.int_to_string(
                 val=utils.twos_to_int(length + address),
                 n_bytes=1
             )
@@ -219,7 +219,7 @@ def set_min_frequency(frequency, usd_index=None, address_on_response=True):
     if not isinstance(frequency, int):
         raise TypeError('Argument frequency must be an integer.')
 
-    frequency = utils.int_to_bytes(
+    frequency = utils.int_to_string(
         val=frequency,
         n_bytes=2,
         little_endian=False
@@ -249,7 +249,7 @@ def set_max_frequency(frequency, usd_index=None, address_on_response=True):
     if not isinstance(frequency, int):
         raise TypeError('Argument frequency must be an integer.')
 
-    frequency = utils.int_to_bytes(
+    frequency = utils.int_to_string(
         val=frequency,
         n_bytes=2,
         little_endian=False
@@ -279,7 +279,7 @@ def set_slope_multiplier(multiplier, usd_index=None, address_on_response=True):
     if not isinstance(multiplier, int):
         raise TypeError('Argument multiplier must be an integer.')
 
-    multiplier = utils.int_to_bytes(
+    multiplier = utils.int_to_string(
         val=multiplier,
         n_bytes=1,
     )
@@ -312,7 +312,7 @@ def set_reference_position(position, usd_index=None, address_on_response=True):
             'Argument position must be inside range [-2147483648:2147483647].'
         )
 
-    position = utils.int_to_bytes(
+    position = utils.int_to_string(
         val=position,
         n_bytes=4,
         little_endian=False
@@ -339,7 +339,7 @@ def set_io_pins(byte_value, usd_index=None, address_on_response=True):
     \xfc\x41\x25\x00\x9d
     """
     if isinstance(byte_value, int):
-        byte_value = utils.uint_to_bytes(
+        byte_value = utils.uint_to_string(
             val=byte_value,
             n_bytes=1
         )
@@ -370,7 +370,7 @@ def set_resolution(resolution, usd_index=None, address_on_response=True):
     \xfc\x41\x26\x01\x9b
     """
     if isinstance(resolution, int):
-        resolution = utils.uint_to_bytes(
+        resolution = utils.uint_to_string(
             val=resolution,
             n_bytes=1
         )
@@ -401,7 +401,7 @@ def reduce_current(byte_value, usd_index=None, address_on_response=True):
     \xfc\x41\x27\x00\x9b
     """
     if isinstance(byte_value, int):
-        byte_value = utils.uint_to_bytes(
+        byte_value = utils.uint_to_string(
             val=byte_value,
             n_bytes=1
         )
@@ -434,7 +434,7 @@ def set_response_delay(delay, usd_index=None, address_on_response=True):
     if not isinstance(delay, int):
         raise TypeError('Argument delay must be an integer.')
 
-    delay = utils.uint_to_bytes(
+    delay = utils.uint_to_string(
         val=delay,
         n_bytes=1
     )
@@ -464,7 +464,7 @@ def toggle_delayed_execution(
     \xfc\x41\x29\x01\x98
     """
     if isinstance(byte_value, int):
-        byte_value = utils.uint_to_bytes(
+        byte_value = utils.uint_to_string(
             val=byte_value,
             n_bytes=1
         )
@@ -502,7 +502,7 @@ def set_absolute_position(position, usd_index=None, address_on_response=True):
             'Argument position must be inside range [-2147483648:2147483647].'
         )
 
-    position = utils.int_to_bytes(
+    position = utils.int_to_string(
         val=position,
         n_bytes=4,
         little_endian=False
@@ -536,7 +536,7 @@ def set_relative_position(position, usd_index=None, address_on_response=True):
             'Argument position must be inside range [-2147483648:2147483647].'
         )
 
-    position = utils.int_to_bytes(
+    position = utils.int_to_string(
         val=position,
         n_bytes=4,
         little_endian=False
@@ -565,7 +565,7 @@ def rotate(direction, usd_index=None, address_on_response=True):
     if not isinstance(direction, int):
         raise TypeError('Argument direction must be an integer.')
 
-    direction = utils.int_to_bytes(
+    direction = utils.int_to_string(
         val=direction,
         n_bytes=1
     )
@@ -593,7 +593,7 @@ def set_velocity(velocity, usd_index=None, address_on_response=True):
     if not isinstance(velocity, int):
         raise TypeError('Argument velocity must be an integer.')
 
-    velocity = utils.int_to_bytes(
+    velocity = utils.int_to_string(
         val=velocity,
         n_bytes=3,
         little_endian=False
@@ -620,7 +620,7 @@ def set_stop_io(byte_value, usd_index=None, address_on_response=True):
     \xfc\x41\x2a\x00\x98
     """
     if isinstance(byte_value, int):
-        byte_value = utils.uint_to_bytes(
+        byte_value = utils.uint_to_string(
             val=byte_value,
             n_bytes=1
         )
@@ -652,7 +652,7 @@ def set_positioning_io(byte_value, usd_index=None, address_on_response=True):
     \xfc\x41\x2b\x00\x97
     """
     if isinstance(byte_value, int):
-        byte_value = utils.uint_to_bytes(
+        byte_value = utils.uint_to_string(
             val=byte_value,
             n_bytes=1
         )
@@ -683,7 +683,7 @@ def set_home_io(byte_value, usd_index=None, address_on_response=True):
     \xfc\x41\x2c\x00\x96
     """
     if isinstance(byte_value, int):
-        byte_value = utils.uint_to_bytes(
+        byte_value = utils.uint_to_string(
             val=byte_value,
             n_bytes=1
         )
@@ -715,7 +715,7 @@ def set_working_mode(byte_value, usd_index=None, address_on_response=True):
     \xfc\x61\x2d\x00\x00\x75
     """
     if isinstance(byte_value, int):
-        byte_value = utils.uint_to_bytes(
+        byte_value = utils.uint_to_string(
             val=byte_value,
             n_bytes=1
         )

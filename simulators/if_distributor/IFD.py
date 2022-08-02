@@ -6,14 +6,14 @@ class System(ListeningSystem):
     shifts the received signal wave by means of a local oscillator.
     This system is the simulator of the SRT LP band IFDistributor."""
 
-    tail = [b'\x0A', b'\x0D']  # NEWLINE and CR
+    tail = ['\x0A', '\x0D']  # NEWLINE and CR
     ref_freq = 10
     ol_freq = 2300
     max_attenuation = 31.5
-    max_msg_length = 15  # b'S 0 100 2300 1\n'
+    max_msg_length = 15  # 'S 0 100 2300 1\n'
 
-    ack = b'ack\n'
-    nak = b'nak\n'
+    ack = 'ack\n'
+    nak = 'nak\n'
 
     commands = {
         '?': '_get_status',
@@ -34,7 +34,7 @@ class System(ListeningSystem):
         for i in range(5, 21):
             self.boards[i] = self._init_board(i, 5)
 
-        self.msg = b''
+        self.msg = ''
 
     def _init_board(self, address, pcb_type):
         """This method initializes the status of a given board.
@@ -80,21 +80,21 @@ class System(ListeningSystem):
             if byte in self.commands.keys():
                 return True
             else:
-                self.msg = b''
+                self.msg = ''
                 return False
         elif len(self.msg) < self.max_msg_length:
             if byte not in self.tail:
                 return True
         elif len(self.msg) == self.max_msg_length:
             if byte not in self.tail:
-                self.msg = b''
+                self.msg = ''
                 raise ValueError(
                     'Message too long: max length should be %d'
                     % self.max_msg_length
                 )
 
         msg = self.msg[:-1]
-        self.msg = b''
+        self.msg = ''
         return self._execute(msg)
 
     def _execute(self, msg):

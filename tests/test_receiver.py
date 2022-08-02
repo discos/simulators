@@ -1874,7 +1874,7 @@ class TestLNA(unittest.TestCase):
                 # 4: 9, 11, 13, 15
                 port_setting = bin(AD)[2:].zfill(4)
                 port_setting += bin(EN)[2:].zfill(4)
-                port_setting = utils.binary_to_bytes(
+                port_setting = utils.binary_to_string(
                     port_setting,
                     little_endian=False
                 )
@@ -1920,7 +1920,7 @@ class TestLNA(unittest.TestCase):
                 # 4: 9, 11, 13, 15
                 port_setting = bin(AD)[2:].zfill(4)
                 port_setting += bin(EN)[2:].zfill(4)
-                port_setting = utils.binary_to_bytes(
+                port_setting = utils.binary_to_string(
                     port_setting,
                     little_endian=False
                 )
@@ -1966,7 +1966,7 @@ class TestLNA(unittest.TestCase):
                 # 4: 9, 11, 13, 15
                 port_setting = bin(AD)[2:].zfill(4)
                 port_setting += bin(EN)[2:].zfill(4)
-                port_setting = utils.binary_to_bytes(
+                port_setting = utils.binary_to_string(
                     port_setting,
                     little_endian=False
                 )
@@ -2007,7 +2007,7 @@ class TestLNA(unittest.TestCase):
         EN = 1  # feeds offset 1:0,2,4,6 2:1,3,5,7 3:8,10,12,14 4:9,11,13,15
         port_setting = bin(AD)[2:].zfill(4)
         port_setting += bin(EN)[2:].zfill(4)
-        port_setting = utils.binary_to_bytes(
+        port_setting = utils.binary_to_string(
             port_setting,
             little_endian=False
         )

@@ -252,7 +252,7 @@ class TestGaia(unittest.TestCase):
         command = 'noheader'
         for byte in command[:-1]:
             self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.msg, b'')
+        self.assertEqual(self.system.msg, '')
 
 
 if __name__ == '__main__':

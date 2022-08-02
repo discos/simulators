@@ -1,8 +1,8 @@
 import time
 from simulators import utils
 
-start_flag = b'\x1A\xCF\xFC\x1D'
-end_flag = b'\xD1\xCF\xFC\xA1'
+start_flag = '\x1A\xCF\xFC\x1D'
+end_flag = '\xD1\xCF\xFC\xA1'
 
 
 class ModeCommand(object):
@@ -28,12 +28,12 @@ class ModeCommand(object):
     def get(self, command_counter):
         self.command_counter = command_counter
         return(
-            utils.uint_to_bytes(1, 2)  # 1: mode command
-            + utils.uint_to_bytes(self.subsystem_id, 2)
-            + utils.uint_to_bytes(self.command_counter)
-            + utils.uint_to_bytes(self.mode_id, 2)
-            + utils.real_to_bytes(self.parameter_1, 2)
-            + utils.real_to_bytes(self.parameter_2, 2)
+            utils.uint_to_string(1, 2)  # 1: mode command
+            + utils.uint_to_string(self.subsystem_id, 2)
+            + utils.uint_to_string(self.command_counter)
+            + utils.uint_to_string(self.mode_id, 2)
+            + utils.real_to_string(self.parameter_1, 2)
+            + utils.real_to_string(self.parameter_2, 2)
         )
 
 
@@ -53,12 +53,12 @@ class ParameterCommand(object):
     def get(self, command_counter):
         self.command_counter = command_counter
         return(
-            utils.uint_to_bytes(2, 2)  # 2: parameter command
-            + utils.uint_to_bytes(self.subsystem_id, 2)
-            + utils.uint_to_bytes(self.command_counter)
-            + utils.uint_to_bytes(self.parameter_id, 2)
-            + utils.real_to_bytes(self.parameter_1, 2)
-            + utils.real_to_bytes(self.parameter_2, 2)
+            utils.uint_to_string(2, 2)  # 2: parameter command
+            + utils.uint_to_string(self.subsystem_id, 2)
+            + utils.uint_to_string(self.command_counter)
+            + utils.uint_to_string(self.parameter_id, 2)
+            + utils.real_to_string(self.parameter_1, 2)
+            + utils.real_to_string(self.parameter_2, 2)
         )
 
 
@@ -71,9 +71,9 @@ class ProgramTrackEntry(object):
 
     def get(self):
         return(
-            utils.int_to_bytes(self.relative_time)
-            + utils.real_to_bytes(self.azimuth_position, 2)
-            + utils.real_to_bytes(self.elevation_position, 2)
+            utils.int_to_string(self.relative_time)
+            + utils.real_to_string(self.azimuth_position, 2)
+            + utils.real_to_string(self.elevation_position, 2)
         )
 
 
@@ -125,19 +125,19 @@ class ProgramTrackCommand(object):
             sequence_bytes += entry.get()
 
         return(
-            utils.uint_to_bytes(4, 2)  # 4: program track parameter command
+            utils.uint_to_string(4, 2)  # 4: program track parameter command
             # The only subsystem supported is 5, tracking, but it is possible
             # to be overridden to generate some specific errors
-            + utils.uint_to_bytes(self.subsystem_id, 2)
-            + utils.uint_to_bytes(self.command_counter)
-            + utils.uint_to_bytes(self.parameter_id, 2)
-            + utils.uint_to_bytes(self.interpolation_mode, 2)
-            + utils.uint_to_bytes(self.tracking_mode, 2)
-            + utils.uint_to_bytes(self.load_mode, 2)
-            + utils.uint_to_bytes(len(self.sequence), 2)
-            + utils.real_to_bytes(self.start_time, 2)
-            + utils.real_to_bytes(self.azimuth_rate, 2)
-            + utils.real_to_bytes(self.elevation_rate, 2)
+            + utils.uint_to_string(self.subsystem_id, 2)
+            + utils.uint_to_string(self.command_counter)
+            + utils.uint_to_string(self.parameter_id, 2)
+            + utils.uint_to_string(self.interpolation_mode, 2)
+            + utils.uint_to_string(self.tracking_mode, 2)
+            + utils.uint_to_string(self.load_mode, 2)
+            + utils.uint_to_string(len(self.sequence), 2)
+            + utils.real_to_string(self.start_time, 2)
+            + utils.real_to_string(self.azimuth_rate, 2)
+            + utils.real_to_string(self.elevation_rate, 2)
             + sequence_bytes
         )
 
@@ -172,7 +172,7 @@ class Command(object):
                 "Wrong command type: '%s'." % type(command))
 
     def get(self):
-        commands = b''
+        commands = ''
 
         if not self.command_counter:
             self.command_counter = utils.day_milliseconds()
@@ -184,9 +184,9 @@ class Command(object):
 
         return(
             start_flag
-            + utils.uint_to_bytes(20 + len(commands))
-            + utils.uint_to_bytes(self.command_counter)
-            + utils.uint_to_bytes(len(self.command_list))
+            + utils.uint_to_string(20 + len(commands))
+            + utils.uint_to_string(self.command_counter)
+            + utils.uint_to_string(len(self.command_list))
             + commands
             + end_flag
         )

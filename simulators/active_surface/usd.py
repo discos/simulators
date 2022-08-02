@@ -157,7 +157,7 @@ class USD(object):
             + str(self.io_val[0])
         )
 
-        for key, val in self.resolutions.iteritems():
+        for key, val in iter(self.resolutions.items()):
             if val == self.resolution:
                 res = key
                 break

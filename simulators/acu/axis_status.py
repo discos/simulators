@@ -201,7 +201,7 @@ class SimpleAxisStatus(object):
 
     @property
     def warnings(self):
-        return utils.bytes_to_binary(self.status[6:10][::-1])
+        return utils.bytes_to_binary(self.status[6:10])[::-1]
 
     @property
     def Param_Fault(self):
@@ -421,7 +421,8 @@ class SimpleAxisStatus(object):
 
     @property
     def Pre_Limit_Dn(self):
-        return bool(int(self.warnings[20]))
+        retval = bool(int(self.warnings[20]))
+        return retval
 
     @Pre_Limit_Dn.setter
     def Pre_Limit_Dn(self, value):
@@ -872,7 +873,7 @@ class SimpleAxisStatus(object):
 
     @property
     def axis_trajectory_state(self):
-        return utils.bytes_to_uint(str(self.status[16:18]))
+        return utils.bytes_to_uint(self.status[16:18])
 
     @axis_trajectory_state.setter
     def axis_trajectory_state(self, value):
@@ -1018,7 +1019,7 @@ class SimpleAxisStatus(object):
     @property
     def brakes_open(self):
         brakes_open = []
-        for brake in utils.bytes_to_binary(str(self.status[56:58]))[::-1]:
+        for brake in utils.bytes_to_binary(self.status[56:58])[::-1]:
             brakes_open.append(bool(int(brake)))
         return brakes_open
 
@@ -1044,7 +1045,7 @@ class SimpleAxisStatus(object):
     @property
     def power_module_ok(self):
         power_module_ok = []
-        power_modules = utils.bytes_to_binary(str(self.status[58:60]))[::-1]
+        power_modules = utils.bytes_to_binary(self.status[58:60])[::-1]
         for power_module in power_modules:
             power_module_ok.append(bool(int(power_module)))
         return power_module_ok
@@ -1098,7 +1099,7 @@ class SimpleAxisStatus(object):
     @property
     def stow_pin_in(self):
         stow_pin_in = []
-        for stow_pin in utils.bytes_to_binary(str(self.status[62:64]))[::-1]:
+        for stow_pin in utils.bytes_to_binary(self.status[62:64])[::-1]:
             stow_pin_in.append(bool(int(stow_pin)))
         return stow_pin_in
 
@@ -1124,7 +1125,7 @@ class SimpleAxisStatus(object):
     @property
     def stow_pin_out(self):
         stow_pin_out = []
-        for stow_pin in utils.bytes_to_binary(str(self.status[64:66]))[::-1]:
+        for stow_pin in utils.bytes_to_binary(self.status[64:66])[::-1]:
             stow_pin_out.append(bool(int(stow_pin)))
         return stow_pin_out
 
@@ -1175,15 +1176,15 @@ class SimpleAxisStatus(object):
 
     @property
     def mode_command_status(self):
-        return str(self.status[68:84])
+        return self.status[68:84]
 
     @property
     def received_mode_command_status(self):
-        return str(self.status[68:76])
+        return self.status[68:76]
 
     @property
     def received_mode_command_counter(self):
-        return utils.bytes_to_uint(str(self.status[68:72]))
+        return utils.bytes_to_uint(self.status[68:72])
 
     @received_mode_command_counter.setter
     def received_mode_command_counter(self, value):
@@ -1194,7 +1195,7 @@ class SimpleAxisStatus(object):
 
     @property
     def received_mode_command(self):
-        return utils.bytes_to_uint(str(self.status[72:74]))
+        return utils.bytes_to_uint(self.status[72:74])
 
     @received_mode_command.setter
     def received_mode_command(self, value):
@@ -1218,7 +1219,7 @@ class SimpleAxisStatus(object):
 
     @property
     def received_mode_command_answer(self):
-        return utils.bytes_to_uint(str(self.status[74:76]))
+        return utils.bytes_to_uint(self.status[74:76])
 
     @received_mode_command_answer.setter
     def received_mode_command_answer(self, value):
@@ -1234,11 +1235,11 @@ class SimpleAxisStatus(object):
 
     @property
     def executed_mode_command_status(self):
-        return str(self.status[76:84])
+        return self.status[76:84]
 
     @property
     def executed_mode_command_counter(self):
-        return utils.bytes_to_uint(str(self.status[76:80]))
+        return utils.bytes_to_uint(self.status[76:80])
 
     @executed_mode_command_counter.setter
     def executed_mode_command_counter(self, value):
@@ -1249,7 +1250,7 @@ class SimpleAxisStatus(object):
 
     @property
     def executed_mode_command(self):
-        return utils.bytes_to_uint(str(self.status[80:82]))
+        return utils.bytes_to_uint(self.status[80:82])
 
     @executed_mode_command.setter
     def executed_mode_command(self, value):
@@ -1273,7 +1274,7 @@ class SimpleAxisStatus(object):
 
     @property
     def executed_mode_command_answer(self):
-        return utils.bytes_to_uint(str(self.status[82:84]))
+        return utils.bytes_to_uint(self.status[82:84])
 
     @executed_mode_command_answer.setter
     def executed_mode_command_answer(self, value):
@@ -1289,11 +1290,11 @@ class SimpleAxisStatus(object):
 
     @property
     def parameter_command_status(self):
-        return str(self.status[84:92])
+        return self.status[84:92]
 
     @property
     def parameter_command_counter(self):
-        return utils.bytes_to_uint(str(self.status[84:88]))
+        return utils.bytes_to_uint(self.status[84:88])
 
     @parameter_command_counter.setter
     def parameter_command_counter(self, value):
@@ -1304,7 +1305,7 @@ class SimpleAxisStatus(object):
 
     @property
     def parameter_command(self):
-        return utils.bytes_to_uint(str(self.status[88:90]))
+        return utils.bytes_to_uint(self.status[88:90])
 
     @parameter_command.setter
     def parameter_command(self, value):
@@ -1322,7 +1323,7 @@ class SimpleAxisStatus(object):
 
     @property
     def parameter_command_answer(self):
-        return utils.bytes_to_uint(str(self.status[90:92]))
+        return utils.bytes_to_uint(self.status[90:92])
 
     @parameter_command_answer.setter
     def parameter_command_answer(self, value):
@@ -1505,10 +1506,10 @@ class MasterAxisStatus(SimpleAxisStatus):
 
         :param cmd: the received mode command.
         """
-        cmd_cnt = utils.bytes_to_int(cmd[4:8])
-        mode_id = utils.bytes_to_int(cmd[8:10])
-        par_1 = utils.bytes_to_real(cmd[10:18], 2)
-        par_2 = utils.bytes_to_real(cmd[18:26], 2)
+        cmd_cnt = utils.string_to_int(cmd[4:8])
+        mode_id = utils.string_to_int(cmd[8:10])
+        par_1 = utils.string_to_real(cmd[10:18], 2)
+        par_2 = utils.string_to_real(cmd[18:26], 2)
 
         command = self.mode_commands.get(mode_id)
 
@@ -1917,11 +1918,11 @@ class MasterAxisStatus(SimpleAxisStatus):
 
         :param cmd: the received command.
         """
-        self.parameter_command_counter = utils.bytes_to_uint(cmd[4:8])
+        self.parameter_command_counter = utils.string_to_uint(cmd[4:8])
 
-        parameter_id = utils.bytes_to_uint(cmd[8:10])
-        parameter_1 = utils.bytes_to_real(cmd[10:18], 2)
-        parameter_2 = utils.bytes_to_real(cmd[18:26], 2)
+        parameter_id = utils.string_to_uint(cmd[8:10])
+        parameter_1 = utils.string_to_real(cmd[10:18], 2)
+        parameter_2 = utils.string_to_real(cmd[18:26], 2)
 
         self.parameter_command = parameter_id
 

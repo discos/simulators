@@ -88,7 +88,7 @@ class MotorStatus(object):
 
     @property
     def active(self):
-        return utils.bytes_to_uint(str(self.status[16]))
+        return utils.bytes_to_uint(self.status[16])
 
     @active.setter
     def active(self, value):
@@ -99,7 +99,7 @@ class MotorStatus(object):
 
     @property
     def speed_of_rotation(self):
-        return utils.bytes_to_uint(str(self.status[17]))
+        return utils.bytes_to_uint(self.status[17])
 
     @speed_of_rotation.setter
     def speed_of_rotation(self, value):
@@ -110,7 +110,7 @@ class MotorStatus(object):
 
     @property
     def speed_of_rotation_OK(self):
-        return utils.bytes_to_uint(str(self.status[18]))
+        return utils.bytes_to_uint(self.status[18])
 
     @speed_of_rotation_OK.setter
     def speed_of_rotation_OK(self, value):
@@ -121,7 +121,7 @@ class MotorStatus(object):
 
     @property
     def position(self):
-        return utils.bytes_to_uint(str(self.status[19]))
+        return utils.bytes_to_uint(self.status[19])
 
     @position.setter
     def position(self, value):
@@ -132,7 +132,7 @@ class MotorStatus(object):
 
     @property
     def bus(self):
-        return utils.bytes_to_uint(str(self.status[20]))
+        return utils.bytes_to_uint(self.status[20])
 
     @bus.setter
     def bus(self, value):
@@ -143,7 +143,7 @@ class MotorStatus(object):
 
     @property
     def servo(self):
-        return utils.bytes_to_uint(str(self.status[21]))
+        return utils.bytes_to_uint(self.status[21])
 
     @servo.setter
     def servo(self, value):
@@ -154,7 +154,7 @@ class MotorStatus(object):
 
     @property
     def sensor(self):
-        return utils.bytes_to_uint(str(self.status[22]))
+        return utils.bytes_to_uint(self.status[22])
 
     @sensor.setter
     def sensor(self, value):

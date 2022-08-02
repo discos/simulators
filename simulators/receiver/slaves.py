@@ -481,31 +481,31 @@ class LNA(Slave):
                             try:
                                 if value == 0:
                                     # VD
-                                    data += utils.real_to_bytes(
+                                    data += utils.real_to_string(
                                         self.feeds[index].VDL[stage],
                                         little_endian=False
                                     )
-                                    data += utils.real_to_bytes(
+                                    data += utils.real_to_string(
                                         self.feeds[index].VDR[stage],
                                         little_endian=False
                                     )
                                 elif value == 1:
                                     # ID
-                                    data += utils.real_to_bytes(
+                                    data += utils.real_to_string(
                                         self.feeds[index].IDL[stage],
                                         little_endian=False
                                     )
-                                    data += utils.real_to_bytes(
+                                    data += utils.real_to_string(
                                         self.feeds[index].IDR[stage],
                                         little_endian=False
                                     )
                                 elif value == 2:
                                     # VG
-                                    data += utils.real_to_bytes(
+                                    data += utils.real_to_string(
                                         self.feeds[index].VGL[stage],
                                         little_endian=False
                                     )
-                                    data += utils.real_to_bytes(
+                                    data += utils.real_to_string(
                                         self.feeds[index].VGR[stage],
                                         little_endian=False
                                     )
@@ -555,7 +555,7 @@ class LNA(Slave):
                     if len(port_setting) != 1:
                         retval = DEF.CMD_ERR_DATA
                     if port_number == DEF.PORT_NUMBER_00_07:
-                        port_setting = utils.bytes_to_binary(
+                        port_setting = utils.string_to_binary(
                             port_setting,
                             little_endian=False
                         )

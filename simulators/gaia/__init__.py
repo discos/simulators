@@ -1,3 +1,4 @@
+import codecs
 from random import randint
 from socketserver import ThreadingUDPServer
 from simulators.common import ListeningSystem
@@ -110,16 +111,16 @@ class System(ListeningSystem):
         self.VD = 10 * [0]
         self.VG = 10 * [0]
         self.conf = 0
-        self.msg = b''
-        self.cmd_id = b''
+        self.msg = ''
+        self.cmd_id = ''
 
     def parse(self, byte):
         self.msg += byte
         if not self.msg.startswith(self.header):
-            self.msg = b''
+            self.msg = ''
         elif byte == self.tail:
             msg = self.msg[:-1]
-            self.msg = b''
+            self.msg = ''
             return self._execute(msg)
         return True
 
@@ -173,7 +174,7 @@ class System(ListeningSystem):
             self.header,
             error_code,
             error_string,
-            error_string.encode('hex'),
+            codecs.encode(error_string.encode('raw_unicode_escape'), 'hex'),
             self.cmd_id,
             self.tail
         )

@@ -59,7 +59,7 @@ class BaseHandler(BaseRequestHandler):
             method = getattr(self.system, name)
             response = method(*params)
             if isinstance(response, str):
-                self.socket.sendto(response.encode('utf-8'), self.client_address)
+                self.socket.sendto(response.encode('raw_unicode_escape'), self.client_address)
                 if response == '$server_shutdown%%%%%':
                     # Wait 10ms
                     time.sleep(0.01)
@@ -79,7 +79,7 @@ class ListenHandler(BaseHandler):
         if not isinstance(self.socket, tuple):  # TCP client
             greet_msg = self.system.system_greet()
             if greet_msg:
-                self.socket.sendto(greet_msg, self.client_address)
+                self.socket.sendto(greet_msg.encode('raw_unicode_escape'), self.client_address)
         else:  # UDP client
             self.connection_oriented = False
 
@@ -95,7 +95,7 @@ class ListenHandler(BaseHandler):
         scenario (i.e. some error condition)."""
         if not self.connection_oriented:  # UDP client
             msg, self.socket = self.socket
-            msg = msg.decode()
+            msg = msg.decode('raw_unicode_escape')
             msg += '\n'
             self._handle(msg)
         else:  # TCP client
@@ -104,7 +104,7 @@ class ListenHandler(BaseHandler):
                     msg = self.socket.recv(1)
                     if not msg:
                         break
-                    msg = msg.decode()
+                    msg = msg.decode('raw_unicode_escape')
                     self._handle(msg)
                 except IOError:
                     break
@@ -130,6 +130,7 @@ class ListenHandler(BaseHandler):
                 pass
             elif response and isinstance(response, str):
                 try:
+                    response = response.encode('raw_unicode_escape')
                     self.socket.sendto(response, self.client_address)
                 except IOError:  # pragma: no cover
                     # Something went wrong while sending the response,
@@ -171,10 +172,10 @@ class SendHandler(BaseHandler):
         while True:
             try:
                 if msg:
-                    custom_msg = msg
+                    custom_msg = msg.decode('raw_unicode_escape')
                     msg = None
                 else:
-                    custom_msg = self.socket.recv(1024)
+                    custom_msg = self.socket.recv(1024).decode('raw_unicode_escape')
                 # Check if the client is sending a custom command
                 if not custom_msg:
                     break
@@ -235,8 +236,7 @@ class Server(ThreadingMixIn):
                 'Provide either the `ThreadingTCPServer` class '
                 + 'or the `ThreadingUDPServer` class!'
             )
-        #self.__class__.__bases__ = (ThreadingMixIn, server_type, )
-        self.__class__.__bases__ = (server_type, )
+        self.__class__.__bases__ = (server_type, ThreadingMixIn)
         self.server_type = server_type
         self.server_type.allow_reuse_address = True
         self.system = system
@@ -269,8 +269,14 @@ class Server(ThreadingMixIn):
         """
         if isinstance(self.system, types.ModuleType):
             self.system = self.system.System(**self.system_kwargs)
-        elif isinstance(self.system, abc.ABCMeta):
-            self.system = self.system(**self.system_kwargs)
+        else:
+            try:
+                bases = self.system.__bases__
+                bases = [str(x).split("'")[1].split('.')[-1] for x in bases]
+                if 'TestingSystem' in bases:
+                    self.system = self.system(**self.system_kwargs)
+            except AttributeError:
+                pass
         if not self.RequestHandlerClass.system:
             self.RequestHandlerClass.system = self.system
         if self.child_server:
@@ -364,8 +370,9 @@ class Simulator(object):
                             pass
                     except socket.timeout:
                         pass
-                    sockobj.sendto('$system_stop%%%%%'.encode('utf-8'), address)
+                    sockobj.sendto(b'$system_stop%%%%%', address)
                     response = sockobj.recv(1024)
+                    response = response.decode('raw_unicode_escape')
                     if response != '$server_shutdown%%%%%':  # pragma: no cover
                         logging.warning(
                             '%s %s %s',

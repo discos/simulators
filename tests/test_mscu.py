@@ -278,7 +278,7 @@ class TestMSCU(unittest.TestCase):
             # Check if interpolation is correct
             t0 = self.system.servos[servo].history.history[-2][0]
             t1 = self.system.servos[servo].history.history[-1][0]
-            midtime = (t0 + t1) / 2
+            midtime = int((t1 - t0) / 2) + t0
             response = self.system.servos[servo].history.get(midtime)
             timestamp = response[0]
             self.assertEqual(midtime, timestamp)

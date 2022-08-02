@@ -58,7 +58,7 @@ class System(ListeningSystem):
             code=grammar.OK,
             arguments=[PROTOCOL_VERSION]
         )
-        return bytes(str(connection_reply), 'utf-8')
+        return str(connection_reply)
 
     def parse(self, byte):
         self.msg += byte
@@ -76,7 +76,7 @@ class System(ListeningSystem):
                 message_type=grammar.REPLY,
                 name="undefined",
                 code=grammar.INVALID,
-                arguments=["syntax error: %s" % (ge.message,)]
+                arguments=["syntax error: %s" % (str(ge),)]
             )
             return str(reply_message)
         if message.is_request():
@@ -96,7 +96,7 @@ class System(ListeningSystem):
                 reply_message.code = grammar.OK
                 return str(reply_message)
             except BackendException as he:
-                return self._send_fail_reply(message, he.message)
+                return self._send_fail_reply(message, str(he))
         else:
             return True
 
