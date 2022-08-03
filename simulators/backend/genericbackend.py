@@ -83,7 +83,7 @@ class GenericBackendSystem(ListeningSystem):
                 message_type=grammar.REPLY,
                 name="undefined",
                 code=grammar.INVALID,
-                arguments=[f"syntax error: {str(ge)}"]
+                arguments=[f"syntax error: {ge}"]
             )
             return str(reply_message)
 
