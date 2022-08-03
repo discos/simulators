@@ -5,7 +5,7 @@ start_flag = '\x1A\xCF\xFC\x1D'
 end_flag = '\xD1\xCF\xFC\xA1'
 
 
-class ModeCommand(object):
+class ModeCommand:
 
     def __init__(self,
             subsystem_id,
@@ -37,7 +37,7 @@ class ModeCommand(object):
         )
 
 
-class ParameterCommand(object):
+class ParameterCommand:
 
     def __init__(self,
             subsystem_id,
@@ -62,7 +62,7 @@ class ParameterCommand(object):
         )
 
 
-class ProgramTrackEntry(object):
+class ProgramTrackEntry:
 
     def __init__(self, relative_time, azimuth_position, elevation_position):
         self.relative_time = relative_time
@@ -77,7 +77,7 @@ class ProgramTrackEntry(object):
         )
 
 
-class ProgramTrackCommand(object):
+class ProgramTrackCommand:
 
     def __init__(self,
             load_mode,
@@ -102,8 +102,7 @@ class ProgramTrackCommand(object):
     def append_entry(self, entry):
         if not isinstance(entry, ProgramTrackEntry):
             raise ValueError('Not a ProgramTrackEntry object.')
-        else:
-            self.sequence.append(entry)
+        self.sequence.append(entry)
 
     def add_entry(self, relative_time, azimuth_position, elevation_position):
         pte = ProgramTrackEntry(
@@ -142,17 +141,14 @@ class ProgramTrackCommand(object):
         )
 
 
-class Command(object):
+class Command:
 
     def __init__(self, *command_list):
         self.command_list = []
         for command in command_list:
             if not self._check_command(command):
-                raise ValueError(
-                    "Wrong command type: '%s'." % type(command)
-                )
-            else:
-                self.command_list.append(command)
+                raise ValueError(f"Wrong command type: '{type(command)}'.")
+            self.command_list.append(command)
         self.command_counter = None
 
     @staticmethod
@@ -168,8 +164,7 @@ class Command(object):
         if self._check_command(command):
             self.command_list.append(command)
         else:
-            raise ValueError(
-                "Wrong command type: '%s'." % type(command))
+            raise ValueError(f"Wrong command type: '{type(command)}'.")
 
     def get(self):
         commands = ''
@@ -177,8 +172,8 @@ class Command(object):
         if not self.command_counter:
             self.command_counter = utils.day_milliseconds()
 
-        for i in range(len(self.command_list)):
-            commands += self.command_list[i].get(self.command_counter + 1 + i)
+        for i, command in enumerate(self.command_list):
+            commands += command.get(self.command_counter + 1 + i)
 
         time.sleep(0.001 * len(self.command_list))
 
@@ -195,8 +190,8 @@ class Command(object):
         if index is None:
             return self.command_counter
         elif index > 0 and index >= len(self.command_list):
-            raise ValueError('Index %d out of range.' % index)
+            raise ValueError(f'Index {index} out of range.')
         elif index < 0 and abs(index) > len(self.command_list):
-            raise ValueError('Index %d out of range.' % index)
+            raise ValueError(f'Index {index} out of range.')
         else:
             return self.command_list[index].command_counter

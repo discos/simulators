@@ -65,19 +65,19 @@ class TestProtocol(unittest.TestCase):
         self.assertEqual(answer, expected_answer)
 
     def test_ext_inquiry(self, slave_index='\x01', expected_data='\x00' * 11):
-        command = DEF.CMD_SOH + '%c\x01\x41\x00' % slave_index
+        command = DEF.CMD_SOH + f'{slave_index}\x01\x41\x00'
         command += checksum(command) + DEF.CMD_ETX
         for byte in command[:-1]:
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
-        expected_answer = DEF.CMD_STX + '\x01%c\x41\x00\x00' % slave_index
-        expected_answer += '\x0B%s' % expected_data   # Expected data
+        expected_answer = DEF.CMD_STX + f'\x01{slave_index}\x41\x00\x00'
+        expected_answer += f'\x0B{expected_data}'
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
 
     def test_ext_inquiry_slave_absent(self, slave_index='\x20'):
-        command = DEF.CMD_SOH + '%c\x01\x41\x00' % slave_index
+        command = DEF.CMD_SOH + f'{slave_index}\x01\x41\x00'
         command += checksum(command) + DEF.CMD_ETX
         for byte in command:
             self.assertTrue(self.system.parse(byte))
@@ -183,25 +183,25 @@ class TestProtocol(unittest.TestCase):
 
     def test_ext_get_address(self, ):
         for slave in self.system.slaves.keys():
-            command = DEF.CMD_SOH + '%c\x01\x46\x00' % slave
+            command = DEF.CMD_SOH + f'{slave}\x01\x46\x00'
             command += checksum(command) + DEF.CMD_ETX
             for byte in command[:-1]:
                 self.assertTrue(self.system.parse(byte))
             answer = self.system.parse(command[-1])
-            expected_answer = DEF.CMD_STX + '\x01%c\x46\x00\x00' % slave
-            expected_answer += '\x01%c' % slave
+            expected_answer = DEF.CMD_STX + f'\x01{slave}\x46\x00\x00'
+            expected_answer += f'\x01{slave}'
             expected_answer += checksum(expected_answer)
             expected_answer += DEF.CMD_EOT
             self.assertEqual(answer, expected_answer)
 
     def test_abbr_get_address(self):
         for slave in self.system.slaves.keys():
-            command = DEF.CMD_SOH + '%c\x01\x66\x00' % slave
+            command = DEF.CMD_SOH + f'{slave}\x01\x66\x00'
             for byte in command[:-1]:
                 self.assertTrue(self.system.parse(byte))
             answer = self.system.parse(command[-1])
-            expected_answer = DEF.CMD_STX + '\x01%c\x66\x00\x00' % slave
-            expected_answer += '\x01%c' % slave
+            expected_answer = DEF.CMD_STX + f'\x01{slave}\x66\x00\x00'
+            expected_answer += f'\x01{slave}'
             self.assertEqual(answer, expected_answer)
 
     def test_ext_set_address(self):
@@ -428,7 +428,7 @@ class TestProtocol(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x4A\x00\x00'
-        expected_answer += '\x01%c' % frame_size
+        expected_answer += f'\x01{frame_size}'
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
@@ -439,13 +439,13 @@ class TestProtocol(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x6A\x00\x00'
-        expected_answer += '\x01%c' % frame_size
+        expected_answer += f'\x01{frame_size}'
         self.assertEqual(answer, expected_answer)
 
     def test_ext_set_frame(self):
         command = DEF.CMD_SOH + '\x01\x01\x4B\x00'
         frame_size = '\x0A'
-        command += '\x01%c' % frame_size
+        command += f'\x01{frame_size}'
         command += checksum(command) + DEF.CMD_ETX
         for byte in command[:-1]:
             self.assertTrue(self.system.parse(byte))
@@ -459,7 +459,7 @@ class TestProtocol(unittest.TestCase):
     def test_ext_set_frame_wrong_format(self):
         command = DEF.CMD_SOH + '\x01\x01\x4B\x00'
         frame_size = '\x0A'
-        command += '\x02%c\x01' % frame_size
+        command += f'\x02{frame_size}\x01'
         command += checksum(command) + DEF.CMD_ETX
         for byte in command[:-1]:
             self.assertTrue(self.system.parse(byte))
@@ -472,7 +472,7 @@ class TestProtocol(unittest.TestCase):
     def test_ext_set_frame_wrong_frame(self):
         command = DEF.CMD_SOH + '\x01\x01\x4B\x00'
         frame_size = '\x00'
-        command += '\x01%c' % frame_size
+        command += f'\x01{frame_size}'
         command += checksum(command) + DEF.CMD_ETX
         for byte in command[:-1]:
             self.assertTrue(self.system.parse(byte))
@@ -485,7 +485,7 @@ class TestProtocol(unittest.TestCase):
     def test_abbr_set_frame(self):
         command = DEF.CMD_SOH + '\x01\x01\x6B\x00'
         frame_size = '\x0A'
-        command += '\x01%c' % frame_size
+        command += f'\x01{frame_size}'
         for byte in command[:-1]:
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])

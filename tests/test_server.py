@@ -562,24 +562,23 @@ def get_logs():
     now = datetime.datetime.now()
     logs = []
     filename = os.path.join(os.getenv('ACSDATA', ''), 'sim-server.log')
-    f = open(filename, 'r')
-    for line in f.readlines():
-        try:
-            line = line.strip()
-            log_date = datetime.datetime.strptime(
-                ' '.join(line.split(' ')[0:2]) + '000',
-                '%Y-%m-%d %H:%M:%S,%f'
-            )
-            log_date += datetime.timedelta(microseconds=25000)
-            if (now - log_date).total_seconds() < 0.01:
-                logs.append(' '.join(line.split(' ')[2:]))
-        except ValueError:  # pragma: no cover
-            continue
-    f.close()
+    with open(filename, mode='r', encoding='utf-8') as f:
+        for line in f.readlines():
+            try:
+                line = line.strip()
+                log_date = datetime.datetime.strptime(
+                    ' '.join(line.split(' ')[0:2]) + '000',
+                    '%Y-%m-%d %H:%M:%S,%f'
+                )
+                log_date += datetime.timedelta(microseconds=25000)
+                if (now - log_date).total_seconds() < 0.01:
+                    logs.append(' '.join(line.split(' ')[2:]))
+            except ValueError:  # pragma: no cover
+                continue
     return logs
 
 
-class TestingSystem(object):
+class TestingSystem:
     pass
 
 
@@ -629,7 +628,7 @@ class ListeningTestSystem(ListeningSystem, TestingSystem):
     def custom_command(self, *params):
         params_str = ''.join(list(params))
         msg = 'ok_' + params_str if params else 'no_params'
-        return '%s (id: %d)' % (msg, id(self))
+        return f'{msg} (id: {id(self)})'
 
     @staticmethod
     def system_greet():

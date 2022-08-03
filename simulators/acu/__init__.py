@@ -165,8 +165,7 @@ class System(ListeningSystem, SendingSystem):
             if cmd_counter == self.cmd_counter:
                 self._set_default()
                 raise ValueError('Duplicated command counter.')
-            else:
-                self.cmd_counter = cmd_counter
+            self.cmd_counter = cmd_counter
 
         if len(self.msg) == 16:
             self.cmds_number = utils.string_to_int(self.msg[-4:])
@@ -176,8 +175,7 @@ class System(ListeningSystem, SendingSystem):
             self._set_default()
             if msg[-4:] != end_flag:
                 raise ValueError(
-                    'Wrong end flag: got %s, expected %s.'
-                    % (msg[-4:], end_flag)
+                    f'Wrong end flag: got {msg[-4:]}, expected {end_flag}.'
                 )
             self._parse_commands(msg)
 
@@ -221,7 +219,9 @@ class System(ListeningSystem, SendingSystem):
                 pass
             for command_thread in command_threads:
                 if not command_thread.is_alive():
-                    command_threads.remove(command_thread)
+                    command_threads.remove(  # pylint: disable=W4701
+                        command_thread
+                    )
 
             update_subsystems(subsystems)
 
@@ -244,9 +244,7 @@ class System(ListeningSystem, SendingSystem):
 
             correction = 0
             if nxt:
-                correction = (now - nxt).total_seconds()
-                if correction < 0:
-                    correction = 0
+                correction = max(0, (now - nxt).total_seconds())
                 now = nxt
             nxt = now + timedelta(seconds=sampling_time / 20.)
 
@@ -273,7 +271,7 @@ class System(ListeningSystem, SendingSystem):
         while commands_string:
             current_id = utils.string_to_uint(commands_string[:2])
 
-            if current_id == 1 or current_id == 2:
+            if current_id in [1, 2]:
                 command = commands_string[:26]
                 commands_string = commands_string[26:]
             elif current_id == 4:
@@ -293,8 +291,7 @@ class System(ListeningSystem, SendingSystem):
                 commands.append(command)
             else:
                 raise ValueError(
-                    'More than one command for subsystem %d.'
-                    % subsystem
+                    f'More than one command for subsystem {subsystem}.'
                 )
 
         if len(commands) != cmds_number:

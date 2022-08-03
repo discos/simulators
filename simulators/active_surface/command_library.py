@@ -49,15 +49,14 @@ def _compose(address_on_response, usd_index, byte_command, params=None):
     else:
         if not isinstance(usd_index, int):
             raise TypeError('Argument usd_index must be an integer.')
-        elif usd_index not in range(32):
+        if usd_index not in range(32):
             raise IndexError('Argument usd_index must be inside range [0:32]')
-        else:
-            length = bin(len(cmd))[2:].zfill(3)
-            address = bin(usd_index)[2:].zfill(5)
-            command += utils.int_to_string(
-                val=utils.twos_to_int(length + address),
-                n_bytes=1
-            )
+        length = bin(len(cmd))[2:].zfill(3)
+        address = bin(usd_index)[2:].zfill(5)
+        command += utils.int_to_string(
+            val=utils.twos_to_int(length + address),
+            n_bytes=1
+        )
 
     command += cmd
     command += utils.checksum(command)

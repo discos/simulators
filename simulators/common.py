@@ -1,15 +1,14 @@
 import abc
 
 
-class BaseSystem(object):
+class BaseSystem:
     """`System` class from which every other `System` class is inherited.
     If a custom command that can be useful for every kind of simulator has to
     be implemented, this class is the right place."""
 
     __metaclass__ = abc.ABCMeta
 
-    @staticmethod
-    def system_stop():
+    def system_stop(self):
         """Sends back to the server the message `$server_shutdown%%%%%`
         ordering it to stop accepting requests, to close its socket and to shut
         down.
@@ -84,7 +83,7 @@ class SendingSystem(BaseSystem):
         :type q: Queue"""
 
 
-class MultiTypeSystem(object):
+class MultiTypeSystem:
     """This class acts as a 'class factory', it means that given the
     attributes `system_type` and `systems` (that must be defined in child
     classes), creating an instance of `MultiTypeSystem` (or some other
@@ -101,6 +100,6 @@ class MultiTypeSystem(object):
         :return: the System class correspoding to the one selected via command
             line interface, or the default one."""
         if cls.system_type not in cls.systems:
-            raise ValueError('System type %s not found.' % cls.system_type)
+            raise ValueError(f'System type {cls.system_type} not found.')
 
         return cls.systems[cls.system_type].System(**kwargs)

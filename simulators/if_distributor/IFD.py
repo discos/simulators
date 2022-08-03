@@ -77,7 +77,7 @@ class System(ListeningSystem):
         self.msg += byte
 
         if len(self.msg) == 1:
-            if byte in self.commands.keys():
+            if byte in self.commands:
                 return True
             else:
                 self.msg = ''
@@ -89,8 +89,8 @@ class System(ListeningSystem):
             if byte not in self.tail:
                 self.msg = ''
                 raise ValueError(
-                    'Message too long: max length should be %d'
-                    % self.max_msg_length
+                    'Message too long: max length ' +
+                    f'should be {self.max_msg_length}'
                 )
 
         msg = self.msg[:-1]
@@ -125,16 +125,16 @@ class System(ListeningSystem):
                     params.append(float(param))
                 else:
                     params.append(int(param))
-        except ValueError:
+        except ValueError as ex:
             raise ValueError(
                 'Wrong argument format. '
                 + 'Use only integers or floating point numbers.'
-            )
+            ) from ex
 
         if params[0] not in range(len(self.boards)):
             raise IndexError(
-                'Please, specify a board slot in range [0:%d].'
-                % len(self.boards)
+                'Please, specify a board slot in ' +
+                f'range [0:{len(self.boards)}].'
             )
 
         return cmd(params)
@@ -200,7 +200,8 @@ class System(ListeningSystem):
             raise ValueError('Wrong number of arguments for command `S`.')
         if params[1] != self.ref_freq:
             raise ValueError(
-                'Wrong reference frequency. Please, use %d.' % self.ref_freq)
+                f'Wrong reference frequency. Please, use {self.ref_freq}.'
+            )
         if params[3] not in [0, 1]:
             raise ValueError(
                 'Wrong enable parameter for command `S`. Please, use 0 or 1.'

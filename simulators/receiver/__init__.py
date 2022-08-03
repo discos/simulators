@@ -159,7 +159,7 @@ class System(ListeningSystem):
                 answer += DEF.CMD_ERR_CMD
                 total_answer += answer
                 continue
-            elif checksum_error:
+            if checksum_error:
                 answer += DEF.CMD_ERR_CHKS
             elif command in DEF.CMD_INQUIRY:
                 ans, data = slave.inquiry()

@@ -72,15 +72,13 @@ def binary_complement(bin_string, mask=''):
                 retval += '0'
             else:
                 raise ValueError(
-                    'String %s is not expressed in binary notation.' %
-                    bin_string
+                    f'String {bin_string} is not expressed in binary notation.'
                 )
         elif mask[index] == '0':
             retval += '0'
         else:
             raise ValueError(
-                'Mask %s is not expressed in binary notation.' %
-                mask
+                f'Mask {mask} is not expressed in binary notation.'
             )
 
     return retval
@@ -153,11 +151,10 @@ def int_to_twos(val, n_bytes=4):
 
     if val < min_range or val > max_range:
         raise ValueError(
-            "%d out of range (%d, %d)."
-            % (val, min_range, max_range)
+            f"{val} out of range ({min_range}, {max_range})."
         )
     binary_string = bin(val & int("1" * n_bits, 2))[2:]
-    return ("{0:0>%s}" % n_bits).format(binary_string)
+    return f'{binary_string.zfill(n_bits)}'
 
 
 def binary_to_bytes(binary_string, little_endian=True):
@@ -198,7 +195,10 @@ def binary_to_string(binary_string, little_endian=True):
     >>> binary_to_string('0110100001100101011011000110110001101111', False)
     '\x68\x65\x6C\x6C\x6F'
     """
-    return binary_to_bytes(binary_string, little_endian).decode('raw_unicode_escape')
+    return binary_to_bytes(
+        binary_string,
+        little_endian
+    ).decode('raw_unicode_escape')
 
 
 def bytes_to_int(byte_string, little_endian=True):
@@ -215,7 +215,10 @@ def bytes_to_int(byte_string, little_endian=True):
     >>> bytes_to_int(b'hello', False)
     448378203247
     """
-    return int.from_bytes(byte_string, 'little' if little_endian else 'big', signed=True)
+    return int.from_bytes(
+        byte_string,
+        'little' if little_endian else 'big', signed=True
+    )
 
 
 def string_to_int(string, little_endian=True):
@@ -305,7 +308,7 @@ def string_to_uint(string, little_endian=True):
     :return: the value of string, converted to unsigned integer
     :rtype: int
 
-    >>> bytes_to_uint('hi', little_endian=False)
+    >>> string_to_uint('hi', little_endian=False)
     26729
     """
     return bytes_to_uint(string.encode('raw_unicode_escape'), little_endian)
@@ -347,10 +350,7 @@ def real_to_binary(num, precision=1):
             for c in struct.pack('!d', num)
         )
     else:
-        raise ValueError(
-            "Unknown precision %d."
-            % (precision)
-        )
+        raise ValueError(f"Unknown precision {precision}.")
 
 
 def real_to_bytes(num, precision=1, little_endian=True):
@@ -435,10 +435,7 @@ def bytes_to_real(bytes_real, precision=1, little_endian=True):
     elif precision == 2:
         return struct.unpack('!d', bytes_real)[0]
     else:
-        raise ValueError(
-            "Unknown precision %d."
-            % (precision)
-        )
+        raise ValueError(f"Unknown precision {precision}.")
 
 
 def string_to_real(string_real, precision=1, little_endian=True):
@@ -482,7 +479,10 @@ def int_to_bytes(val, n_bytes=4, little_endian=True):
     >>> [hex(x) for x in int_to_bytes(354, little_endian=False)]
     ['0x0', '0x0', '0x1', '0x62']
     """
-    return val.to_bytes(n_bytes, "little" if little_endian else "big", signed=True)
+    return val.to_bytes(
+        n_bytes,
+        "little" if little_endian else "big", signed=True
+    )
 
 
 def int_to_string(val, n_bytes=4, little_endian=True):
@@ -501,7 +501,11 @@ def int_to_string(val, n_bytes=4, little_endian=True):
     >>> [hex(ord(x)) for x in int_to_string(354, little_endian=False)]
     ['0x0', '0x0', '0x1', '0x62']
     """
-    return int_to_bytes(val, n_bytes, little_endian).decode('raw_unicode_escape')
+    return int_to_bytes(
+        val,
+        n_bytes,
+        little_endian
+    ).decode('raw_unicode_escape')
 
 
 def uint_to_bytes(val, n_bytes=4, little_endian=True):
@@ -526,10 +530,7 @@ def uint_to_bytes(val, n_bytes=4, little_endian=True):
     max_range = int(math.pow(2, n_bits)) - 1
 
     if val < min_range or val > max_range:
-        raise ValueError(
-            "%d out of range (%d, %d)."
-            % (val, min_range, max_range)
-        )
+        raise ValueError(f"{val} out of range ({min_range}, {max_range}).")
 
     return binary_to_bytes(
         bin(val)[2:].zfill(n_bytes * 8),
@@ -553,7 +554,11 @@ def uint_to_string(val, n_bytes=4, little_endian=True):
     >>> [hex(ord(x)) for x in uint_to_string(657, little_endian=False)]
     ['0x0', '0x0', '0x2', '0x91']
     """
-    return uint_to_bytes(val, n_bytes, little_endian).decode('raw_unicode_escape')
+    return uint_to_bytes(
+        val,
+        n_bytes,
+        little_endian
+    ).decode('raw_unicode_escape')
 
 
 def sign(number):
@@ -576,7 +581,7 @@ def sign(number):
 
     if not isinstance(number, (int, float)):
         raise ValueError(
-            '%s is not of a valid datatype. ' % str(number)
+            f'{str(number)} is not of a valid datatype. '
             + 'Use only int or float.'
         )
     return int(number and (1, -1)[number < 0])
@@ -607,12 +612,9 @@ def mjd(date=None):
     month = date.month
     day = date.day
 
-    if month == 1 or month == 2:
+    if month in [1, 2]:
         year = year - 1
         month = month + 12
-    else:
-        year = year
-        month = month
 
     a = math.trunc(year / 100.)
     b = 2 - a + math.trunc(a / 4.)
@@ -651,10 +653,12 @@ def mjd_to_date(original_mjd_date):
     try:
         if not isinstance(original_mjd_date, (int, float)):
             raise ValueError
-        elif original_mjd_date < 0:
+        if original_mjd_date < 0:
             raise ValueError
-    except ValueError:
-        raise ValueError('Provide a non-negative floating-point number!')
+    except ValueError as ex:
+        raise ValueError(
+            'Provide a non-negative floating-point number!'
+        ) from ex
 
     str_d = repr(original_mjd_date)
     mjdate, microsecond = str_d.split('.')
@@ -798,7 +802,7 @@ def get_multitype_systems(path):
                     mod = f.replace(prefix, '')
                     mod = mod.replace('.py', '')
                     mod = mod.replace('/', '.')
-                    mod = importlib.import_module('simulators.%s' % mod)
+                    mod = importlib.import_module(f'simulators.{mod}')
                     for _, obj in inspect.getmembers(mod):
                         if inspect.isclass(obj) and obj.__name__ == 'System':
                             if issubclass(obj, BaseSystem):

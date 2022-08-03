@@ -1,5 +1,4 @@
 from __future__ import print_function
-import abc
 import os
 import types
 import socket
@@ -59,7 +58,10 @@ class BaseHandler(BaseRequestHandler):
             method = getattr(self.system, name)
             response = method(*params)
             if isinstance(response, str):
-                self.socket.sendto(response.encode('raw_unicode_escape'), self.client_address)
+                self.socket.sendto(
+                    response.encode('raw_unicode_escape'),
+                    self.client_address
+                )
                 if response == '$server_shutdown%%%%%':
                     # Wait 10ms
                     time.sleep(0.01)
@@ -79,7 +81,10 @@ class ListenHandler(BaseHandler):
         if not isinstance(self.socket, tuple):  # TCP client
             greet_msg = self.system.system_greet()
             if greet_msg:
-                self.socket.sendto(greet_msg.encode('raw_unicode_escape'), self.client_address)
+                self.socket.sendto(
+                    greet_msg.encode('raw_unicode_escape'),
+                    self.client_address
+                )
         else:  # UDP client
             self.connection_oriented = False
 
@@ -175,7 +180,8 @@ class SendHandler(BaseHandler):
                     custom_msg = msg.decode('raw_unicode_escape')
                     msg = None
                 else:
-                    custom_msg = self.socket.recv(1024).decode('raw_unicode_escape')
+                    custom_msg = self.socket.recv(1024)
+                    custom_msg = custom_msg.decode('raw_unicode_escape')
                 # Check if the client is sending a custom command
                 if not custom_msg:
                     break
@@ -301,7 +307,7 @@ class Server(ThreadingMixIn):
         self.shutdown()
 
 
-class Simulator(object):
+class Simulator:
     """This class represents the whole simulator, composed of one
     or more servers.
 
@@ -311,8 +317,7 @@ class Simulator(object):
     def __init__(self, system_module, **kwargs):
         if not isinstance(system_module, types.ModuleType):
             self.system_module = importlib.import_module(
-                'simulators.%s'
-                % system_module
+                f'simulators.{system_module}'
             )
         else:
             self.system_module = system_module
@@ -340,7 +345,7 @@ class Simulator(object):
             p.daemon = daemon
             processes.append(p)
             p.start()
-        print("Simulator '%s' up and running." % self.simulator_name)
+        print(f"Simulator '{self.simulator_name}' up and running.")
 
         if not daemon:
             try:
@@ -392,4 +397,4 @@ class Simulator(object):
             threads.append(t)
         for t in threads:
             t.join()
-        print("Simulator '%s' stopped." % self.simulator_name)
+        print(f"Simulator '{self.simulator_name}' stopped.")

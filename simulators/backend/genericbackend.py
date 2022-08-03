@@ -8,7 +8,7 @@ class BackendException(Exception):
     pass
 
 
-class GenericBackend(object):
+class GenericBackend:
 
     def __init__(self, max_sections=14, max_bandwidth=2000):
         self.status_string = "ok"
@@ -84,11 +84,11 @@ class GenericBackend(object):
                     feed, mode, sample_rate, bins):
         if not section == '*' and section > self.max_sections:
             raise BackendException(
-                "backend supports %d sections" % (self.max_sections)
+                f"backend supports {self.max_sections} sections"
             )
         if not bandwidth == '*' and bandwidth > self.max_bandwidth:
             raise BackendException(
-                "backend maximum bandwidth is %f" % (self.max_bandwidth)
+                f"backend maximum bandwidth is {self.max_bandwidth:.6f}"
             )
         self._sections[section] = (
             start_freq,
@@ -124,7 +124,7 @@ class GenericBackend(object):
     @staticmethod
     def _get_time():
         # Should ask the backend hardware clock
-        return '%.7f' % time.time()
+        return f'{time.time():.7f}'
 
     def _is_valid_configuration(self, configuration_name):
         return self._valid_conf_re.match(configuration_name)

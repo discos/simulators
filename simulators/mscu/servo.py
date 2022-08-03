@@ -6,7 +6,7 @@ from threading import Timer
 from simulators.mscu.parameters import closers, app_nr, axes, stow_position
 
 
-class DriveCabinet(object):
+class DriveCabinet:
     cab_state = {
         'ready': 0,           # The servo ready to move
         'starting': 1,        # The servo is performing a setup
@@ -31,7 +31,7 @@ class DriveCabinet(object):
             pass
 
 
-class Servo(object):
+class Servo:
 
     def __init__(self, address):
         self.id = address
@@ -51,16 +51,16 @@ class Servo(object):
 
     def getpos(self, cmd_num):
         data = self.history.get()
-        answer = '?getpos' + ':%d=%d> %s' % (cmd_num, self.id, Servo.ctime())
+        answer = f'?getpos:{cmd_num}={self.id}> {Servo.ctime()}'
         # Read the position stored in a shelve db by a setpos command
         for position in data[1:]:
-            answer += ',%s' % position
+            answer += f',{position}'
         answer += closers[0]
         return [answer]
 
     def getappstatus(self, cmd_num):
         value = '0000030D'
-        answer = '?getappstatus' + ':%d=%d> %s' % (cmd_num, self.id, value)
+        answer = f'?getappstatus:{cmd_num}={self.id}> {value}'
         return [answer + closers[0]]
 
     def getstatus(self, cmd_num):
@@ -68,36 +68,34 @@ class Servo(object):
         app_status = "FFFF"  # Everything OK
         cab_state = self.dc.cab_state.value
 
-        answer = '?getstatus' + ':%d=%d> ' % (cmd_num, self.id)
-        answer += '%d,%d,%s,%d' % (
-            Servo.ctime(), app_state, app_status, cab_state
-        )
+        answer = f'?getstatus:{cmd_num}={self.id}> '
+        answer += f'{Servo.ctime()},{app_state},{app_status},{cab_state}'
 
         # Read the position stored in a shelve db by a setpos command
         data = self.history.get()
         for position in data[1:]:
-            answer += ',%s' % position
+            answer += f',{position}'
         answer += closers[0]
         return [answer]
 
     def setpos(self, cmd_num, *params):
         if self.setpos_NAK or len(params) != self.axes + 3:
-            answer = '!NAK_setpos' + ':%d=%d' % (cmd_num, self.id)
+            answer = f'!NAK_setpos:{cmd_num}={self.id}'
             params = ['cannot set the position']
         else:
             timestamp, position = params[0], list(params[-self.axes:])
             self.history.insert(position, timestamp)
-            answer = '@setpos' + ':%d=%d' % (cmd_num, self.id)
+            answer = f'@setpos:{cmd_num}={self.id}'
 
         for param in params:
-            answer += ",%s" % param
+            answer += f",{param}"
         answer += closers[0]
         return [answer.replace('@', '?'), answer]
 
     def setup(self, cmd_num, *params):
-        answer = '@setup' + ':%d=%d' % (cmd_num, self.id)
+        answer = f'@setup:{cmd_num}={self.id}'
         for param in params:
-            answer += ",%s" % param
+            answer += f",{param}"
         answer += closers[0]
         self.dc.set_state('starting')
 
@@ -113,32 +111,32 @@ class Servo(object):
         return [answer.replace('@', '?'), answer]
 
     def stow(self, cmd_num, *params):
-        answer = '@stow' + ':%d=%d' % (cmd_num, self.id)
+        answer = f'@stow:{cmd_num}={self.id}'
         for param in params:
-            answer += ",%s" % param
+            answer += f",{param}"
         answer += closers[0]
         self.dc.cab_state.value = DriveCabinet.cab_state['stow']
         self.history.insert(self.stow_position)
         return [answer.replace('@', '?'), answer]
 
     def disable(self, cmd_num, *params):
-        answer = '@disable' + ':%d=%d' % (cmd_num, self.id)
+        answer = f'@disable:{cmd_num}={self.id}'
         for param in params:
-            answer += ",%s" % param
+            answer += f",{param}"
         answer += closers[0]
         self.dc.cab_state.value = DriveCabinet.cab_state['stow']
         return [answer.replace('@', '?'), answer]
 
     def clean(self, cmd_num, *params):
-        answer = '@clean' + ':%d=%d' % (cmd_num, self.id)
+        answer = f'@clean:{cmd_num}={self.id}'
         for param in params:
-            answer += ",%s" % param
+            answer += f",{param}"
         answer += closers[0]
         self.history.clean()
         return [answer.replace('@', '?'), answer]
 
     def getspar(self, cmd_num, *params):
-        answer = '?getspar' + ':%d=%d> ' % (cmd_num, self.id)
+        answer = f'?getspar:{cmd_num}={self.id}> '
 
         index_sub = list(params[-2:])
         if [1250, 0] == index_sub:  # Acceleration
@@ -153,9 +151,9 @@ class Servo(object):
         return [answer]
 
     def setsdatbitb16(self, cmd_num, *params):
-        answer = '@setsdatbitb16' + ':%d=%d' % (cmd_num, self.id)
+        answer = f'@setsdatbitb16:{cmd_num}={self.id}'
         for param in params:
-            answer += ",%s" % param
+            answer += f",{param}"
         answer += closers[0]
         return [answer]
 
@@ -166,7 +164,7 @@ class Servo(object):
         return int(acstime_ACE_BEGIN + time.time() * 10000000)
 
 
-class History(object):
+class History:
     lock = Lock()
 
     def __init__(self, n_axes):

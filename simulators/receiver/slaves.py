@@ -3,7 +3,7 @@ from simulators import utils
 from simulators.receiver import DEFINITIONS as DEF
 
 
-class Slave(object):
+class Slave:
 
     def __init__(self, address):
         self.address = address
@@ -121,7 +121,7 @@ class Slave(object):
             if len(time) != 8:
                 raise IndexError
             date = datetime(
-                int('%.2d%.2d' % (ord(time[0]), ord(time[1]))),
+                int(f'{ord(time[0]):02d}{ord(time[1]):02d}'),
                 ord(time[2]),
                 ord(time[3]),
                 ord(time[4]),
@@ -425,7 +425,7 @@ class Dewar(Slave):
         return retval
 
 
-class Feed(object):
+class Feed:
 
     def __init__(self):
         # The following lists represent:

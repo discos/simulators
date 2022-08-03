@@ -60,7 +60,7 @@ class TestCalmux(unittest.TestCase):
             print(self._send('? 0 0\n'))
 
     def test_set_input(self, channel=0, polarity=0):
-        message = 'I %d %d\n' % (channel, polarity)
+        message = f'I {channel} {polarity}\n'
 
         response = self._send(message)
 
@@ -76,7 +76,7 @@ class TestCalmux(unittest.TestCase):
             self.test_set_input(channel=50)
 
     def test_set_calibration(self, cal=1):
-        message = 'C %d\n' % cal
+        message = f'C {cal}\n'
 
         response = self._send(message)
 
@@ -92,7 +92,7 @@ class TestCalmux(unittest.TestCase):
             self._send('C 0 0\n')
 
     def test_get_frequency(self, period=500):
-        message = 'F %d\n' % period
+        message = f'F {period}\n'
 
         response = self._send(message)
 

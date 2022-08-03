@@ -41,7 +41,7 @@ class System(ListeningSystem):
         self.msg += byte
 
         if len(self.msg) == 1:
-            if byte in self.commands.keys():
+            if byte in self.commands:
                 return True
             else:
                 self.msg = ''
@@ -53,8 +53,8 @@ class System(ListeningSystem):
             if byte not in self.tail:
                 self.msg = ''
                 raise ValueError(
-                    'Message too long: max length should be %d'
-                    % self.max_msg_length
+                    'Message too long: max length '
+                    + f'should be {self.max_msg_length}'
                 )
 
         msg = self.msg[:-1]
@@ -107,12 +107,12 @@ class System(ListeningSystem):
     def _get_status(self, params):
         if params:
             return self.nak
-        retval = '%s %s %s\n' % (
+        args = (
             self.current_channel,
             self.polarities[self.current_channel],
             self.calon[self.current_channel]
         )
-        return retval
+        return f'{args[0]} {args[1]} {args[2]}\n'
 
     def _get_frequency(self, params):
         if len(params) != 1:
@@ -122,4 +122,4 @@ class System(ListeningSystem):
             return self.nak
         period = period / 1000.
         time.sleep(period)
-        return '%d %d %d' % (0, 0, 0)
+        return '0 0 0'

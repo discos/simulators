@@ -3,7 +3,7 @@ from ctypes import c_char
 from simulators import utils
 
 
-class MotorStatus(object):
+class MotorStatus:
     """This class holds the status of a generic axis motor."""
 
     def __init__(self):

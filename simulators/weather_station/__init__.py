@@ -66,7 +66,7 @@ class System(ListeningSystem):
         self.msg[t] += byte
 
         if len(self.msg[t]) == 1:
-            if byte in self.commands.keys():
+            if byte in self.commands:
                 return True
             else:
                 self._reset(t)
@@ -86,11 +86,11 @@ class System(ListeningSystem):
                 sensor = args[1]
             if len(args) == 2:
                 self._reset(t)
-                if command != self._read:
+                if command != self._read:  # pylint: disable=W0143
                     return False
                 return self._read(sensor)
             elif len(args) == 4:
-                if command != self._write:
+                if command != self._write:  # pylint: disable=W0143
                     self._reset(t)
                     return False
                 try:
@@ -110,10 +110,10 @@ class System(ListeningSystem):
             value, date, info = self.sensors[sensor]
             retval = (
                 '<Sensor>'
-                + '<Id>%s</Id>' % sensor
-                + '<Val>%.6f</Val>' % float(value)
-                + '<Date>%s</Date>' % date
-                + '<Info>%s</Info>' % info
+                + f'<Id>{sensor}</Id>'
+                + f'<Val>{float(value):0.6f}</Val>'
+                + f'<Date>{date}</Date>'
+                + f'<Info>{info}</Info>'
                 + '</Sensor>'
             )
         except KeyError:

@@ -5,7 +5,7 @@ from simulators import utils
 from simulators.acu.motor_status import MotorStatus
 
 
-class SimpleAxisStatus(object):
+class SimpleAxisStatus:
     """
     :param n_motors: The number of motors that move the axis.
     """
@@ -1003,14 +1003,13 @@ class SimpleAxisStatus(object):
         try:
             if not isinstance(value, (list, tuple)) or len(value) != 16:
                 raise ValueError
-            else:
-                for motor in value:
-                    if not isinstance(motor, bool):
-                        raise ValueError
-        except ValueError:
+            for motor in value:
+                if not isinstance(motor, bool):
+                    raise ValueError
+        except ValueError as ex:
             raise ValueError(
                 'Provide a list/tuple of booleans of length = 16!'
-            )
+            ) from ex
         motor_selection = ''
         for motor in value:
             motor_selection += str(int(motor))
@@ -1029,14 +1028,13 @@ class SimpleAxisStatus(object):
         try:
             if not isinstance(value, (list, tuple)) or len(value) != 16:
                 raise ValueError
-            else:
-                for motor in value:
-                    if not isinstance(motor, bool):
-                        raise ValueError
-        except ValueError:
+            for motor in value:
+                if not isinstance(motor, bool):
+                    raise ValueError
+        except ValueError as ex:
             raise ValueError(
                 'Provide a list/tuple of booleans of length = 16!'
-            )
+            ) from ex
         brakes_open = ''
         for brake in value:
             brakes_open += str(int(brake))
@@ -1057,14 +1055,13 @@ class SimpleAxisStatus(object):
         try:
             if not isinstance(value, (list, tuple)) or len(value) != 16:
                 raise ValueError
-            else:
-                for motor in value:
-                    if not isinstance(motor, bool):
-                        raise ValueError
-        except ValueError:
+            for motor in value:
+                if not isinstance(motor, bool):
+                    raise ValueError
+        except ValueError as ex:
             raise ValueError(
                 'Provide a list/tuple of booleans of length = 16!'
-            )
+            ) from ex
         power_module_ok = ''
         for power_module in value:
             power_module_ok += str(int(power_module))
@@ -1109,14 +1106,13 @@ class SimpleAxisStatus(object):
         try:
             if not isinstance(value, (list, tuple)) or len(value) != 16:
                 raise ValueError
-            else:
-                for motor in value:
-                    if not isinstance(motor, bool):
-                        raise ValueError
-        except ValueError:
+            for motor in value:
+                if not isinstance(motor, bool):
+                    raise ValueError
+        except ValueError as ex:
             raise ValueError(
                 'Provide a list/tuple of booleans of length = 16!'
-            )
+            ) from ex
         stow_pin_in = ''
         for stow_pin in value:
             stow_pin_in += str(int(stow_pin))
@@ -1135,14 +1131,13 @@ class SimpleAxisStatus(object):
         try:
             if not isinstance(value, (list, tuple)) or len(value) != 16:
                 raise ValueError
-            else:
-                for motor in value:
-                    if not isinstance(motor, bool):
-                        raise ValueError
-        except ValueError:
+            for motor in value:
+                if not isinstance(motor, bool):
+                    raise ValueError
+        except ValueError as ex:
             raise ValueError(
                 'Provide a list/tuple of booleans of length = 16!'
-            )
+            ) from ex
         stow_pin_out = ''
         for stow_pin in value:
             stow_pin_out += str(int(stow_pin))
@@ -1161,14 +1156,13 @@ class SimpleAxisStatus(object):
         try:
             if not isinstance(value, (list, tuple)) or len(value) != 16:
                 raise ValueError
-            else:
-                for motor in value:
-                    if not isinstance(motor, bool):
-                        raise ValueError
-        except ValueError:
+            for motor in value:
+                if not isinstance(motor, bool):
+                    raise ValueError
+        except ValueError as ex:
             raise ValueError(
                 'Provide a list/tuple of booleans of length = 16!'
-            )
+            ) from ex
         stow_pin_selection = ''
         for stow_pin in value:
             stow_pin_selection += str(int(stow_pin))
@@ -1729,8 +1723,7 @@ class MasterAxisStatus(SimpleAxisStatus):
             if counter != self.curr_mode_counter:
                 if self.axis_trajectory_state != 7:
                     break
-                else:
-                    counter = self.curr_mode_counter
+                counter = self.curr_mode_counter
 
             self.axis_trajectory_state = 7  # 7: tracking
 

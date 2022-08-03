@@ -3,7 +3,7 @@ from ctypes import c_char
 from simulators import utils
 
 
-class GeneralStatus(object):
+class GeneralStatus:
     """General status of the ACU. This status holds generic informations
     about the ACU, like its firmware version, the interlock statuses and
     human-machine interfaces status."""
@@ -116,10 +116,10 @@ class GeneralStatus(object):
             for v in value:
                 if not isinstance(v, bool):
                     raise ValueError
-        except ValueError:
+        except ValueError as ex:
             raise ValueError(
                 'Provide a list/tuple of booleans of length = 6!'
-            )
+            ) from ex
 
         LCP_connected = int(value[0])
         remote_computer_connected = int(value[1])

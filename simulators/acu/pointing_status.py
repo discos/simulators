@@ -6,18 +6,18 @@ from ctypes import c_char
 from datetime import datetime, timedelta
 try:
     import numpy as np
-except ImportError:
-    raise ImportError('The `numpy` package, required for the %s simulator'
-        + ' to run, is missing!')
+except ImportError as ex:  # pragma: no cover
+    raise ImportError('The `numpy` package, required for the simulator'
+        + ' to run, is missing!') from ex
 try:
     from scipy import interpolate
-except ImportError:
-    raise ImportError('The `scipy` package, required for the %s simulator'
-        + ' to run, is missing!')
+except ImportError as ex:  # pragma: no cover
+    raise ImportError('The `scipy` package, required for the simulator'
+        + ' to run, is missing!') from ex
 from simulators import utils
 
 
-class PointingStatus(object):
+class PointingStatus:
     """This class handles the trajectory generation for the antenna axes.
 
     :param azimuth: a reference to the azimuth status object
@@ -202,17 +202,16 @@ class PointingStatus(object):
                         self.elevation.v_Bahn = v
                         self.elevation.a_Bahn = a
 
-                    self.lock.acquire()
-                    self.ptActTableIndex = pt_index
-                    self.relative_times = \
-                        self.relative_times[pt_index:]
-                    self.azimuth_positions = \
-                        self.azimuth_positions[pt_index:]
-                    self.elevation_positions = \
-                        self.elevation_positions[pt_index:]
-                    self.ptTableLength = len(self.relative_times)
-                    self.ptEndTableIndex = max(self.ptTableLength - 1, 0)
-                    self.lock.release()
+                    with self.lock:
+                        self.ptActTableIndex = pt_index
+                        self.relative_times = \
+                            self.relative_times[pt_index:]
+                        self.azimuth_positions = \
+                            self.azimuth_positions[pt_index:]
+                        self.elevation_positions = \
+                            self.elevation_positions[pt_index:]
+                        self.ptTableLength = len(self.relative_times)
+                        self.ptEndTableIndex = max(self.ptTableLength - 1, 0)
 
             if self.azimuth_positions:
                 self.azimuth.next_pos = int(round(
@@ -398,16 +397,15 @@ class PointingStatus(object):
             self.parameter_command_answer = 5
             return
 
-        self.lock.acquire()
-        if load_mode == 1:
-            self.relative_times = []
-            self.azimuth_positions = []
-            self.elevation_positions = []
+        with self.lock:
+            if load_mode == 1:
+                self.relative_times = []
+                self.azimuth_positions = []
+                self.elevation_positions = []
 
-        relative_times = deepcopy(self.relative_times)
-        azimuth_positions = deepcopy(self.azimuth_positions)
-        elevation_positions = deepcopy(self.elevation_positions)
-        self.lock.release()
+            relative_times = deepcopy(self.relative_times)
+            azimuth_positions = deepcopy(self.azimuth_positions)
+            elevation_positions = deepcopy(self.elevation_positions)
 
         azimuth_max_rate = utils.string_to_real(command[26:34], 2)
         elevation_max_rate = utils.string_to_real(command[34:42], 2)
@@ -486,15 +484,14 @@ class PointingStatus(object):
         self.ptTableLength = sequence_length
         self.ptEndTableIndex += sequence_length
 
-        self.lock.acquire()
-        self.relative_times = deepcopy(relative_times)
-        self.azimuth_positions = deepcopy(azimuth_positions)
-        self.elevation_positions = deepcopy(elevation_positions)
-        self.last_coordinates = (
-            int(round(1000000 * self.azimuth_positions[-1])),
-            int(round(1000000 * self.elevation_positions[-1]))
-        )
-        self.lock.release()
+        with self.lock:
+            self.relative_times = deepcopy(relative_times)
+            self.azimuth_positions = deepcopy(azimuth_positions)
+            self.elevation_positions = deepcopy(elevation_positions)
+            self.last_coordinates = (
+                int(round(1000000 * self.azimuth_positions[-1])),
+                int(round(1000000 * self.elevation_positions[-1]))
+            )
 
         self.az_tck = interpolate.splrep(
             np.array(relative_times),

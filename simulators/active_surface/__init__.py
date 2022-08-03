@@ -74,11 +74,11 @@ class System(ListeningSystem):
             raise ValueError(
                 'Choose a minimum USD index between 0 and 31!'
             )
-        elif max_usd_index < 0 or max_usd_index > 31:
+        if max_usd_index < 0 or max_usd_index > 31:
             raise ValueError(
                 'Choose a maximum USD index between 0 and 31!'
             )
-        elif max_usd_index < min_usd_index:
+        if max_usd_index < min_usd_index:
             raise ValueError(
                 'max_usd_index cannot be lower than min_usd_index!'
             )
@@ -127,8 +127,8 @@ class System(ListeningSystem):
                     exp_bytes = self.expected_bytes
                     self._set_default()
                     raise ValueError(
-                        "Wrong byte_nbyte_address value: got %d, expected %d."
-                        % (exp_bytes, 7)
+                        'Wrong byte_nbyte_address value: '
+                        + f'got {exp_bytes}, expected 7.'
                     )
             return True
         elif len(self.msg) == 3:
@@ -138,8 +138,7 @@ class System(ListeningSystem):
                     exp_bytes = self.expected_bytes
                     self._set_default()
                     raise ValueError(
-                        "Wrong byte_nbyte value: got %d, expected %d."
-                        % (exp_bytes, 7)
+                        f"Wrong byte_nbyte value: got {exp_bytes}, expected 7."
                     )
             else:
                 self.expected_bytes -= 1

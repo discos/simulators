@@ -3,7 +3,7 @@ from ctypes import c_char
 from simulators import utils
 
 
-class FacilityStatus(object):
+class FacilityStatus:
 
     def __init__(self):
         self.status = Array(c_char, 16)

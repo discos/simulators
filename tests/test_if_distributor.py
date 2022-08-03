@@ -53,7 +53,7 @@ class TestIFDistributorDefaultConfiguration(unittest.TestCase):
             self.test_get_status(board=50)
 
     def test_get_status(self, board=0):
-        message = '? %d\n' % board
+        message = f'? {board}\n'
 
         response = self._send(message)
 
@@ -68,7 +68,7 @@ class TestIFDistributorDefaultConfiguration(unittest.TestCase):
             self._send('? 0 0\n')
 
     def test_set_lo(self, board=0, ref_freq=10, lo_freq=2300, lo_enable=1):
-        message = 'S %d %d %d %d\n' % (board, ref_freq, lo_freq, lo_enable)
+        message = f'S {board} {ref_freq} {lo_freq} {lo_enable}\n'
 
         response = self._send(message)
         self.assertEqual(len(response), 1)
@@ -103,7 +103,7 @@ class TestIFDistributorDefaultConfiguration(unittest.TestCase):
             self._send('S 0 100 2300 1\n')
 
     def test_set_bw(self, board=1, bandwidth=3):
-        message = 'B %d %d\n' % (board, bandwidth)
+        message = f'B {board} {bandwidth}\n'
 
         response = self._send(message)
         self.assertEqual(len(response), 1)
@@ -127,7 +127,7 @@ class TestIFDistributorDefaultConfiguration(unittest.TestCase):
             self._send('B 1 3 0\n')
 
     def test_set_att(self, board=5, channel=0, attenuation=25.5):
-        message = 'A %d %d %.2f\n' % (board, channel, attenuation)
+        message = f'A {board} {channel} {attenuation:0.2f}\n'
 
         response = self._send(message)
         self.assertEqual(len(response), 1)
@@ -155,7 +155,7 @@ class TestIFDistributorDefaultConfiguration(unittest.TestCase):
             self._send('A 5 0\n')
 
     def test_set_input(self, board=2, conversion=0):
-        message = 'I %d %d\n' % (board, conversion)
+        message = f'I {board} {conversion}\n'
 
         response = self._send(message)
         self.assertEqual(len(response), 1)
@@ -262,7 +262,7 @@ class TestIFDistributor14Channels(unittest.TestCase):
     def test_setup_sets_the_value(self):
         """The setup has to set the channel value."""
         value = 100
-        for byte in '#ATT 00 %03d\n' % value:
+        for byte in f'#ATT 00 {value:03d}\n':
             self.system.parse(byte)
         self.assertEqual(self.system.channels[0], value)
 
@@ -308,14 +308,14 @@ class TestIFDistributor14Channels(unittest.TestCase):
     def test_set_and_get_value(self):
         value = 100
         # Set the value
-        for byte in '#ATT 00 %03d\n' % value:
+        for byte in f'#ATT 00 {value:03d}\n':
             self.system.parse(byte)
         # Get the value
         msg = '#ATT 00?\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1])
-        self.assertEqual(response, '#%s\n' % (value * self.system.att_step))
+        self.assertEqual(response, f'#{value * self.system.att_step}\n')
 
     def test_idn_command(self):
         version = self.system.version
@@ -327,14 +327,14 @@ class TestIFDistributor14Channels(unittest.TestCase):
     def test_rst(self):
         # Set a non-default value
         value = 100
-        for byte in '#ATT 00 %03d\n' % value:
+        for byte in f'#ATT 00 {value:03d}\n':
             self.system.parse(byte)
         # Get the value
         msg = '#ATT 00?\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1])
-        self.assertEqual(response, '#%s\n' % (value * self.system.att_step))
+        self.assertEqual(response, f'#{value * self.system.att_step}\n')
         # Set the default values
         for byte in '#*RST\n':
             self.system.parse(byte)
@@ -344,7 +344,7 @@ class TestIFDistributor14Channels(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         default_value = self.system.max_att_multiplier * self.system.att_step
         response = self.system.parse(msg[-1])
-        self.assertEqual(response, '#%s\n' % default_value)
+        self.assertEqual(response, f'#{default_value}\n')
 
     def test_wrong_command(self):
         for byte in '#abcdefg\n':

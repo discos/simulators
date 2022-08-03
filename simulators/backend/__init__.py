@@ -45,7 +45,7 @@ class System(ListeningSystem):
 
     def system_stop(self):
         self.backend.system_stop()
-        return ListeningSystem.system_stop()
+        return ListeningSystem.system_stop(self)
 
     def _set_default(self):
         self.msg = ''
@@ -76,7 +76,7 @@ class System(ListeningSystem):
                 message_type=grammar.REPLY,
                 name="undefined",
                 code=grammar.INVALID,
-                arguments=["syntax error: %s" % (str(ge),)]
+                arguments=[f'syntax error: {str(ge)}']
             )
             return str(reply_message)
         if message.is_request():
@@ -85,10 +85,8 @@ class System(ListeningSystem):
                     message_type=grammar.REPLY,
                     name=message.name
                 )
-                if message.name not in self.commands.keys():
-                    raise BackendException(
-                        "invalid command '%s'" % (message.name,)
-                    )
+                if message.name not in self.commands:
+                    raise BackendException(f"invalid command '{message.name}'")
                 method = getattr(self, self.commands[message.name])
                 reply_arguments = method(message.arguments)
                 if reply_arguments:
@@ -141,10 +139,10 @@ class System(ListeningSystem):
             _integration = int(args[0])
             if _integration < 0:
                 raise ValueError
-        except ValueError:
+        except ValueError as ex:
             raise BackendException(
                 "integration time must be an integer number"
-            )
+            ) from ex
         return self.backend.set_integration(_integration)
 
     def do_time(self, _):
@@ -155,8 +153,8 @@ class System(ListeningSystem):
             return self.backend.start()
         try:
             timestamp = float(args[0]) / ACS_TO_UNIX_TIME
-        except ValueError:
-            raise BackendException("wrong timestamp '%s'" % (args[0],))
+        except ValueError as ex:
+            raise BackendException(f"wrong timestamp '{args[0]}'") from ex
         return self.backend.start(timestamp)
 
     def do_stop(self, args):
@@ -164,8 +162,8 @@ class System(ListeningSystem):
             return self.backend.stop()
         try:
             timestamp = float(args[0]) / ACS_TO_UNIX_TIME
-        except ValueError:
-            raise BackendException("wrong timestamp '%s'" % (args[0],))
+        except ValueError as ex:
+            raise BackendException(f"wrong timestamp '{args[0]}'") from ex
         return self.backend.stop(timestamp)
 
     def do_set_section(self, args):
@@ -185,8 +183,8 @@ class System(ListeningSystem):
             mode = _get_param(args[4])
             sample_rate = _get_param(args[5], float)
             bins = _get_param(args[6], int)
-        except ValueError:
-            raise BackendException("wrong parameter format")
+        except ValueError as ex:
+            raise BackendException("wrong parameter format") from ex
         reply = self.backend.set_section(
             section,
             start_freq,
@@ -206,17 +204,16 @@ class System(ListeningSystem):
                 _interleave = int(args[0])
                 if _interleave < 0:
                     raise ValueError
-            except ValueError:
+            except ValueError as ex:
                 raise BackendException(
                     "interleave samples must be a positive int"
-                )
+                ) from ex
         return self.backend.cal_on(_interleave)
 
     def do_set_filename(self, args):
         if len(args) < 1:
             raise BackendException("command needs <filename> as argument")
-        else:
-            return self.backend.set_filename(args[0])
+        return self.backend.set_filename(args[0])
 
     def do_convert_data(self, _):
         # Added in version 1.2
@@ -228,6 +225,6 @@ class System(ListeningSystem):
         try:
             _feed1 = int(args[0])
             _feed2 = int(args[1])
-        except ValueError:
-            raise BackendException("wrong parameter format")
+        except ValueError as ex:
+            raise BackendException("wrong parameter format") from ex
         return self.backend.set_enable(_feed1, _feed2)

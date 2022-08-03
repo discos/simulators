@@ -231,11 +231,12 @@ class TestTotalPower(unittest.TestCase):
         # A sample period of 501 allows to receive only
         # one packet in a second, therefore speeding up the test
         sample_period = 501
-        msg = 'X %d 1 0 %s %d\n' % (
+        args = (
             sample_period,
             LISTENING_ADDRESS,
             LISTENING_PORT
         )
+        msg = f'X {args[0]} 1 0 {args[1]} {args[2]}\n'
 
         sock = socket.socket()
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -298,11 +299,12 @@ class TestTotalPower(unittest.TestCase):
         # A sample period of 501 allows to receive only
         # one packet in a second, therefore speeding up the test
         sample_period = 501
-        msg = 'X %d 1 0 %s %d\n' % (
+        args = (
             sample_period,
             LISTENING_ADDRESS,
             LISTENING_PORT
         )
+        msg = f'X {args[0]} 1 0 {args[1]} {args[2]}\n'
 
         sock = socket.socket()
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -329,8 +331,9 @@ class TestTotalPower(unittest.TestCase):
         self.assertEqual(len(data), 64 * int(1000 / sample_period))
 
         t0 = time.time()
-        # Wait up to 2 seconds for the timer to join and be set to None
-        while time.time() - t0 < 2:
+        # Wait up to 5 seconds for the timer to join and be set to None
+        # Usually it takes less than 2 seconds
+        while time.time() - t0 < 5:
             if self.system.data_timer is None:
                 break
             time.sleep(0.01)

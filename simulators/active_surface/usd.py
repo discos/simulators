@@ -3,7 +3,7 @@ from queue import Queue
 from simulators import utils
 
 
-class USD(object):
+class USD:
     """USD actuator driver implementation.
 
     :param usd_index: the index of the USD on its line.
