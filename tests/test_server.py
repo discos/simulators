@@ -4,14 +4,15 @@ import time
 import socket
 import datetime
 import unittest
+import warnings
 
 from types import ModuleType
 from contextlib import contextmanager
 from threading import Thread
 from multiprocessing import Value, Array
 from ctypes import c_bool, c_char
-from Queue import Empty
-from SocketServer import ThreadingTCPServer, ThreadingUDPServer
+from queue import Empty
+from socketserver import ThreadingTCPServer, ThreadingUDPServer
 
 from simulators.server import Server, Simulator
 from simulators.common import ListeningSystem, SendingSystem
@@ -59,7 +60,7 @@ class TestListeningServer(unittest.TestCase):
             greet_msg='This is a greeting message!',
             msg='#wrong_command:foo%%%%%'
         )
-        self.assertRegexpMatches(response, 'you sent a wrong command')
+        self.assertRegex(response, 'you sent a wrong command')
 
     def test_value_error(self):
         """The message of ValueError in the logfile"""
@@ -95,7 +96,7 @@ class TestListeningServer(unittest.TestCase):
             greet_msg='This is a greeting message!',
             msg='$custom_command:a,b,c%%%%%'
         )
-        self.assertRegexpMatches(response, 'ok_abc')
+        self.assertRegex(response, 'ok_abc')
 
     def test_custom_command_without_parameters(self):
         response = get_response(
@@ -103,7 +104,7 @@ class TestListeningServer(unittest.TestCase):
             greet_msg='This is a greeting message!',
             msg='$custom_command%%%%%'
         )
-        self.assertRegexpMatches(response, 'no_params')
+        self.assertRegex(response, 'no_params')
 
 
 class TestListeningUDPServer(unittest.TestCase):
@@ -139,7 +140,7 @@ class TestListeningUDPServer(unittest.TestCase):
         response = get_response(
             self.address, msg='#wrong_command:foo%%%%%', udp=True
         )
-        self.assertRegexpMatches(response, 'you sent a wrong command')
+        self.assertRegex(response, 'you sent a wrong command')
 
     def test_value_error(self):
         """The message of ValueError in the logfile"""
@@ -158,7 +159,7 @@ class TestListeningUDPServer(unittest.TestCase):
         response = get_response(
             self.address, msg='$custom_command:a,b,c%%%%%', udp=True
         )
-        self.assertRegexpMatches(response, 'ok_abc')
+        self.assertRegex(response, 'ok_abc')
 
     def test_custom_command_without_parameters(self):
         response = get_response(
@@ -166,7 +167,7 @@ class TestListeningUDPServer(unittest.TestCase):
             msg='$custom_command%%%%%',
             udp=True
         )
-        self.assertRegexpMatches(response, 'no_params')
+        self.assertRegex(response, 'no_params')
 
 
 class TestSendingServer(unittest.TestCase):
@@ -283,7 +284,7 @@ class TestDuplexServer(unittest.TestCase):
             greet_msg='This is a greeting message!',
             msg='#wrong_command:foo%%%%%'
         )
-        self.assertRegexpMatches(response, 'you sent a wrong command')
+        self.assertRegex(response, 'you sent a wrong command')
 
     def test_custom_command_with_parameters(self):
         response = get_response(
@@ -291,7 +292,7 @@ class TestDuplexServer(unittest.TestCase):
             greet_msg='This is a greeting message!',
             msg='$custom_command:a,b,c%%%%%'
         )
-        self.assertRegexpMatches(response, 'ok_abc')
+        self.assertRegex(response, 'ok_abc')
 
     def test_custom_command_without_parameters(self):
         response = get_response(
@@ -299,7 +300,7 @@ class TestDuplexServer(unittest.TestCase):
             greet_msg='This is a greeting message!',
             msg='$custom_command%%%%%'
         )
-        self.assertRegexpMatches(response, 'no_params')
+        self.assertRegex(response, 'no_params')
 
     def test_get_message(self):
         response = get_response(self.s_address)
@@ -350,7 +351,7 @@ class TestDuplexUDPServer(unittest.TestCase):
         response = get_response(
             self.l_address, msg='#wrong_command:foo%%%%%', udp=True
         )
-        self.assertRegexpMatches(response, 'you sent a wrong command')
+        self.assertRegex(response, 'you sent a wrong command')
 
     def test_custom_command_with_parameters(self):
         response = get_response(
@@ -358,13 +359,13 @@ class TestDuplexUDPServer(unittest.TestCase):
             msg='$custom_command:a,b,c%%%%%',
             udp=True
         )
-        self.assertRegexpMatches(response, 'ok_abc')
+        self.assertRegex(response, 'ok_abc')
 
     def test_custom_command_without_parameters(self):
         response = get_response(
             self.l_address, msg='$custom_command%%%%%', udp=True
         )
-        self.assertRegexpMatches(response, 'no_params')
+        self.assertRegex(response, 'no_params')
 
     def test_get_message(self):
         response = get_response(self.s_address, udp=True)
@@ -382,6 +383,7 @@ class TestSimulator(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        warnings.simplefilter('ignore', category=ResourceWarning)
         cls.mymodulename = 'simulators.mymodule'
         cls.mymodule = ModuleType(cls.mymodulename)
         sys.modules[cls.mymodulename] = cls.mymodule
@@ -394,6 +396,7 @@ class TestSimulator(unittest.TestCase):
 
         simulator = Simulator(self.mymodule)
         simulator.start(daemon=True)
+        time.sleep(5)
         simulator.stop()
 
     def test_create_simulator_from_name(self):
@@ -531,7 +534,7 @@ def get_response(
         timeout=2.0,
         response=True,
         udp=False):
-    retval = b''
+    retval = ''
     if udp:
         socket_type = socket.SOCK_DGRAM
         if not msg:
@@ -543,12 +546,14 @@ def get_response(
         sock.connect(server_address)
         if greet_msg:
             greeting = sock.recv(len(greet_msg))
+            greeting = greeting.decode('raw_unicode_escape')
             if greeting != greet_msg:
                 raise ValueError
         if isinstance(msg, str):
+            msg = msg.encode('raw_unicode_escape')
             sock.sendto(msg, server_address)
         if response:
-            retval = sock.recv(1024)
+            retval = sock.recv(1024).decode('raw_unicode_escape')
     return retval
 
 
@@ -557,36 +562,37 @@ def get_logs():
     now = datetime.datetime.now()
     logs = []
     filename = os.path.join(os.getenv('ACSDATA', ''), 'sim-server.log')
-    for line in open(filename, 'r').readlines():
-        try:
-            line = line.strip()
-            log_date = datetime.datetime.strptime(
-                ' '.join(line.split(' ')[0:2]) + '000',
-                '%Y-%m-%d %H:%M:%S,%f'
-            )
-            log_date += datetime.timedelta(microseconds=25000)
-            if (now - log_date).total_seconds() < 0.01:
-                logs.append(' '.join(line.split(' ')[2:]))
-        except ValueError:  # pragma: no cover
-            continue
+    with open(filename, mode='r', encoding='utf-8') as f:
+        for line in f.readlines():
+            try:
+                line = line.strip()
+                log_date = datetime.datetime.strptime(
+                    ' '.join(line.split(' ')[0:2]) + '000',
+                    '%Y-%m-%d %H:%M:%S,%f'
+                )
+                log_date += datetime.timedelta(microseconds=25000)
+                if (now - log_date).total_seconds() < 0.01:
+                    logs.append(' '.join(line.split(' ')[2:]))
+            except ValueError:  # pragma: no cover
+                continue
     return logs
 
 
-class ListeningTestSystem(ListeningSystem):
+class TestingSystem:
+    pass
 
-    header = b'#'
-    tail = b'%'
+
+class ListeningTestSystem(ListeningSystem, TestingSystem):
+
+    header = '#'
+    tail = '%%%%%'
 
     def __init__(self):
-        self.msg = b''
+        self.msg = ''
         try:
             getattr(self, 'last_cmd')
         except AttributeError:
             self.last_cmd = Array(c_char, b'\x00' * 50)
-
-    @staticmethod
-    def system_greet():
-        return 'This is a greeting message!'
 
     def parse(self, byte):
         # Example of msg: #command_name:par1,par2,par3!
@@ -595,12 +601,14 @@ class ListeningTestSystem(ListeningSystem):
             return True
         elif self.msg.startswith(self.header):
             self.msg += byte
-            if byte == self.tail:
-                self.last_cmd.value = self.msg[1:-1]
-                name, params_str = str(self.last_cmd.value).split(':')
-                self.msg = b''
+            if self.msg.endswith(self.tail):
+                self.msg = self.msg.lstrip(self.header)
+                self.msg = self.msg.rstrip(self.tail)
+                self.last_cmd.value = bytes(self.msg, 'raw_unicode_escape')
+                name, params_str = self.msg.split(':')
+                self.msg = ''
                 if name == 'wrong_command':
-                    return b'you sent a wrong command'
+                    return 'you sent a wrong command'
                 elif name == 'valueerror':
                     raise ValueError('unexpected value')
                 elif name == 'unexpected':
@@ -608,7 +616,7 @@ class ListeningTestSystem(ListeningSystem):
                 elif name == 'unexpected_response':
                     return 0.0  # Nor boolean or str
                 params = params_str.split(',')
-                response = b''
+                response = ''
                 for param in params:
                     response += param * 2
                 return response
@@ -620,17 +628,21 @@ class ListeningTestSystem(ListeningSystem):
     def custom_command(self, *params):
         params_str = ''.join(list(params))
         msg = 'ok_' + params_str if params else 'no_params'
-        return '%s (id: %d)' % (msg, id(self))
+        return f'{msg} (id: {id(self)})'
+
+    @staticmethod
+    def system_greet():
+        return 'This is a greeting message!'
 
 
-class SendingTestSystem(SendingSystem):
+class SendingTestSystem(SendingSystem, TestingSystem):
 
     def __init__(self):
         try:
             getattr(self, 'last_cmd')
         except AttributeError:
             self.last_cmd = Array(c_char, b'\x00' * 50)
-        self.last_cmd.value = 'message'
+        self.last_cmd.value = 'message'.encode('raw_unicode_escape')
         self.t = None
 
     def subscribe(self, q):
@@ -652,7 +664,7 @@ class SendingTestSystem(SendingSystem):
                     q.get_nowait()
                 except Empty:
                     break
-            q.put(str(last_cmd.value))
+            q.put(last_cmd.value)
             time.sleep(sampling_time)
 
     def unsubscribe(self, _):
@@ -663,7 +675,7 @@ class SendingTestSystem(SendingSystem):
         raise Exception('raised by sendingtestsystem')
 
 
-class DuplexTestSystem(ListeningTestSystem, SendingTestSystem):
+class DuplexTestSystem(ListeningTestSystem, SendingTestSystem, TestingSystem):
 
     def __init__(self):
         ListeningTestSystem.__init__(self)
@@ -681,3 +693,4 @@ def socket_context(*args, **kw):
 
 if __name__ == '__main__':
     unittest.main()
+    warnings.resetwarnings()

@@ -30,18 +30,18 @@ class TestGenericBackend(unittest.TestCase):
 
     def test_invalid_command(self):
         command = 'unknown'
-        msg = '?%s\r\n' % command
+        msg = f'?{command}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, reason = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'fail')
         self.assertEqual(reason, "invalid command 'unknown'")
 
     def test_invalid_header(self):
         command = 'status'
-        msg = '&%s\r\n' % command
+        msg = f'&{command}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
@@ -52,7 +52,7 @@ class TestGenericBackend(unittest.TestCase):
 
     def test_invalid_separator(self):
         command = 'set-enable'
-        msg = '?%s foo bar\r\n' % command
+        msg = f'?{command} foo bar\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
@@ -63,23 +63,23 @@ class TestGenericBackend(unittest.TestCase):
 
     def test_greet_message(self):
         msg = self.system.system_greet()
-        expected = '!version,ok,%s\r\n' % PROTOCOL_VERSION
+        expected = f'!version,ok,{PROTOCOL_VERSION}\r\n'
         self.assertEqual(msg, expected)
 
     def test_send_reply_instead_of_request(self):
         command = 'status'  # We use an existing command
-        msg = '!%s,ok\r\n' % command
+        msg = f'!{command},ok\r\n'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
 
     def test_status(self):
         command = 'status'
-        msg = '?%s\r\n' % command
+        msg = f'?{command}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, timestamp, status_code, acquiring = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'ok')
         try:
             timestamp = float(timestamp)
@@ -91,113 +91,113 @@ class TestGenericBackend(unittest.TestCase):
 
     def test_version(self):
         command = 'version'
-        msg = '?%s\r\n' % command
+        msg = f'?{command}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, version = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'ok')
         self.assertEqual(version, PROTOCOL_VERSION)
 
     def test_get_configuration(self):
         command = 'get-configuration'
-        msg = '?%s\r\n' % command
+        msg = f'?{command}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, configuration = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'ok')
         self.assertEqual(configuration, 'unconfigured')
 
     def test_set_valid_configuration(self):
         command = 'set-configuration'
         configuration = 'valid'
-        msg = '?%s,%s\r\n' % (command, configuration)
+        msg = f'?{command},{configuration}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'ok')
 
     def test_set_invalid_configuration(self):
         command = 'set-configuration'
         configuration = 'Invalid'
-        msg = '?%s,%s\r\n' % (command, configuration)
+        msg = f'?{command},{configuration}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, reason = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'fail')
         self.assertEqual(reason, 'invalid configuration')
 
     def test_set_no_configuration(self):
         command = 'set-configuration'
-        msg = '?%s\r\n' % command
+        msg = f'?{command}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, reason = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'fail')
         self.assertEqual(reason, 'missing argument: configuration')
 
     def test_get_integration(self):
         command = 'get-integration'
-        msg = '?%s\r\n' % command
+        msg = f'?{command}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, integration = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'ok')
         self.assertEqual(integration, '0')
 
     def test_set_valid_integration(self):
         command = 'set-integration'
         integration = 10
-        msg = '?%s,%s\r\n' % (command, integration)
+        msg = f'?{command},{integration}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'ok')
 
     def test_set_invalid_integration(self):
         command = 'set-integration'
         integration = -10
-        msg = '?%s,%s\r\n' % (command, integration)
+        msg = f'?{command},{integration}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, reason = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'fail')
         self.assertEqual(reason, 'integration time must be an integer number')
 
     def test_set_no_integration(self):
         command = 'set-integration'
-        msg = '?%s\r\n' % command
+        msg = f'?{command}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, reason = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'fail')
         self.assertEqual(reason, 'missing argument: integration time')
 
     def test_get_tpi(self):
         command = 'get-tpi'
-        msg = '?%s\r\n' % command
+        msg = f'?{command}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, left, right = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'ok')
         try:
             left = float(left)
@@ -207,12 +207,12 @@ class TestGenericBackend(unittest.TestCase):
 
     def test_get_tp0(self):
         command = 'get-tp0'
-        msg = '?%s\r\n' % command
+        msg = f'?{command}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, left, right = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'ok')
         try:
             left = float(left)
@@ -224,12 +224,12 @@ class TestGenericBackend(unittest.TestCase):
 
     def test_time(self):
         command = 'time'
-        msg = '?%s\r\n' % command
+        msg = f'?{command}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, timestamp = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'ok')
         try:
             timestamp = float(timestamp)
@@ -239,93 +239,93 @@ class TestGenericBackend(unittest.TestCase):
 
     def test_start(self):
         command = 'start'
-        msg = '?%s\r\n' % command
+        msg = f'?{command}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'ok')
 
     def test_stop(self):
         command = 'stop'
-        msg = '?%s\r\n' % command
+        msg = f'?{command}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, reason = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'fail')
         self.assertEqual(reason, 'not acquiring')
 
     def test_start_wrong_timestamp(self):
         command = 'start'
         timestamp = 'wrong'
-        msg = '?%s,%s\r\n' % (command, timestamp)
+        msg = f'?{command},{timestamp}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, reason = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'fail')
-        self.assertEqual(reason, "wrong timestamp '%s'" % timestamp)
+        self.assertEqual(reason, f"wrong timestamp '{timestamp}'")
 
     def test_stop_wrong_timestamp(self):
         command = 'stop'
         timestamp = 'wrong'
-        msg = '?%s,%s\r\n' % (command, timestamp)
+        msg = f'?{command},{timestamp}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, reason = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'fail')
-        self.assertEqual(reason, "wrong timestamp '%s'" % timestamp)
+        self.assertEqual(reason, f"wrong timestamp '{timestamp}'")
 
     def test_start_and_stop(self):
         self.test_start()
         command = 'stop'
-        msg = '?%s\r\n' % command
+        msg = f'?{command}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'ok')
 
     def test_start_and_start(self):
         self.test_start()
         command = 'start'
-        msg = '?%s\r\n' % command
+        msg = f'?{command}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, reason = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'fail')
         self.assertEqual(reason, 'already acquiring')
 
     def test_start_elapsed(self):
         command = 'start'
         starting_time = (time.time() - 1) * ACS_TO_UNIX_TIME
-        msg = '?%s,%.7f\r\n' % (command, starting_time)
+        msg = f'?{command},{starting_time:0.7f}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, reason = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'fail')
         self.assertEqual(reason, 'starting time already elapsed')
 
     def test_start_later(self, delay=10):
         command = 'start'
         starting_time = (time.time() + delay) * ACS_TO_UNIX_TIME
-        msg = '?%s,%.7f\r\n' % (command, starting_time)
+        msg = f'?{command},{starting_time:0.7f}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'ok')
 
     def test_start_later_twice(self):
@@ -335,24 +335,24 @@ class TestGenericBackend(unittest.TestCase):
     def test_stop_elapsed(self):
         command = 'stop'
         starting_time = (time.time() - 1) * ACS_TO_UNIX_TIME
-        msg = '?%s,%.7f\r\n' % (command, starting_time)
+        msg = f'?{command},{starting_time:0.7f}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, reason = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'fail')
         self.assertEqual(reason, 'stop time already elapsed')
 
     def test_stop_later(self, delay=10):
         command = 'stop'
         starting_time = (time.time() + delay) * ACS_TO_UNIX_TIME
-        msg = '?%s,%.7f\r\n' % (command, starting_time)
+        msg = f'?{command},{starting_time:0.7f}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'ok')
 
     def test_stop_later_twice(self):
@@ -370,7 +370,7 @@ class TestGenericBackend(unittest.TestCase):
         bins=10
     ):
         command = 'set-section'
-        msg = '?%s,%s,%s,%s,%s,%s,%s,%s\r\n' % (
+        args = (
             command,
             section,
             start_freq,
@@ -380,6 +380,8 @@ class TestGenericBackend(unittest.TestCase):
             sample_rate,
             bins
         )
+        msg = f'?{args[0]},{args[1]},{args[2]},{args[3]},'
+        msg += f'{args[4]},{args[5]},{args[6]},{args[7]}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         return self.system.parse(msg[-1]).strip()
@@ -403,9 +405,8 @@ class TestGenericBackend(unittest.TestCase):
         cmd, answer, reason = response.split(',')
         self.assertEqual(cmd, '!set-section')
         self.assertEqual(answer, 'fail')
-        expected_reason = 'backend supports %d sections' % (
-            self.system.max_sections
-        )
+        expected_reason = 'backend supports '
+        expected_reason += f'{self.system.max_sections} sections'
         self.assertEqual(reason, expected_reason)
 
     def test_set_section_wrong_bandwidth(self):
@@ -413,131 +414,130 @@ class TestGenericBackend(unittest.TestCase):
         cmd, answer, reason = response.split(',')
         self.assertEqual(cmd, '!set-section')
         self.assertEqual(answer, 'fail')
-        expected_reason = 'backend maximum bandwidth is %f' % (
-            self.system.max_bandwidth
-        )
+        expected_reason = 'backend maximum bandwidth is '
+        expected_reason += f'{self.system.max_bandwidth:0.6f}'
         self.assertEqual(reason, expected_reason)
 
     def test_set_section_less_arguments(self):
         command = 'set-section'
         section = 0
-        msg = '?%s,%d\r\n' % (command, section)
+        msg = f'?{command},{section}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, reason = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'fail')
         self.assertEqual(reason, 'set-section needs 7 arguments')
 
     def test_set_section_wrong_arguments(self):
         command = 'set-section'
         section = 0
-        msg = '?%s,%d,w,w,w,w,w,w\r\n' % (command, section)
+        msg = f'?{command},{section},w,w,w,w,w,w\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, reason = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'fail')
         self.assertEqual(reason, 'wrong parameter format')
 
     def test_cal_on(self):
         command = 'cal-on'
-        msg = '?%s\r\n' % command
+        msg = f'?{command}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'ok')
 
     def test_cal_on_with_interleave(self):
         command = 'cal-on'
         interleave = 10
-        msg = '?%s,%s\r\n' % (command, interleave)
+        msg = f'?{command},{interleave}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'ok')
 
     def test_cal_on_negative_interleave(self):
         command = 'cal-on'
         interleave = -10
-        msg = '?%s,%s\r\n' % (command, interleave)
+        msg = f'?{command},{interleave}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, reason = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'fail')
         self.assertEqual(reason, 'interleave samples must be a positive int')
 
     def test_set_filename(self):
         command = 'set-filename'
         filename = 'testfile'
-        msg = '?%s,%s\r\n' % (command, filename)
+        msg = f'?{command},{filename}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'ok')
 
     def test_set_no_filename(self):
         command = 'set-filename'
-        msg = '?%s\r\n' % command
+        msg = f'?{command}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, reason = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'fail')
         self.assertEqual(reason, 'command needs <filename> as argument')
 
     def test_convert_data(self):
         command = 'convert-data'
-        msg = '?%s\r\n' % command
+        msg = f'?{command}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'ok')
 
     def test_set_enable(self):
         command = 'set-enable'
         feed1 = 0
         feed2 = 3
-        msg = '?%s,%d,%d\r\n' % (command, feed1, feed2)
+        msg = f'?{command},{feed1},{feed2}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'ok')
 
     def test_set_enable_less_than_2_feeds(self):
         command = 'set-enable'
-        msg = '?%s\r\n' % command
+        msg = f'?{command}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, reason = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'fail')
         self.assertEqual(reason, 'set-enable needs 2 arguments')
 
     def test_set_enable_wrong_parameter_format(self):
         command = 'set-enable'
-        msg = '?%s,foo,bar\r\n' % command
+        msg = f'?{command},foo,bar\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, reason = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'fail')
         self.assertEqual(reason, 'wrong parameter format')
 
@@ -545,12 +545,12 @@ class TestGenericBackend(unittest.TestCase):
         command = 'set-enable'
         feed1 = 8
         feed2 = 3
-        msg = '?%s,%d,%d\r\n' % (command, feed1, feed2)
+        msg = f'?{command},{feed1},{feed2}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, reason = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'fail')
         self.assertEqual(reason, 'feed1 out of range')
 
@@ -558,12 +558,12 @@ class TestGenericBackend(unittest.TestCase):
         command = 'set-enable'
         feed1 = 0
         feed2 = 8
-        msg = '?%s,%d,%d\r\n' % (command, feed1, feed2)
+        msg = f'?{command},{feed1},{feed2}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
         cmd, answer, reason = response.split(',')
-        self.assertEqual(cmd, '!%s' % command)
+        self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'fail')
         self.assertEqual(reason, 'feed2 out of range')
 

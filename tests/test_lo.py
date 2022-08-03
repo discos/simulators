@@ -11,20 +11,20 @@ class TestLocalOscillator(unittest.TestCase):
         del self.system
 
     def test_set_power(self, power=10):
-        msg = 'POWER %d dBm\n' % power
+        msg = f'POWER {power} dBm\n'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.power, power)
 
     def test_set_wrong_power(self, power=10):
         # dBm suffix missing
-        msg = 'POWER %d\n' % power
+        msg = f'POWER {power}\n'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertNotEqual(self.system.power, power)
 
         # wrong dBm suffix
-        msg = 'POWER %d dbm\n' % power
+        msg = f'POWER {power} dbm\n'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertNotEqual(self.system.power, power)
@@ -42,30 +42,30 @@ class TestLocalOscillator(unittest.TestCase):
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1])
-        self.assertEqual(response, '%s\n' % power)
+        self.assertEqual(response, f'{power}\n')
 
     def test_set_get_power(self, power=10):
-        msg = 'POWER %d dBm;POWER?\n' % power
+        msg = f'POWER {power} dBm;POWER?\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1])
-        self.assertEqual(response, '%s\n' % power)
+        self.assertEqual(response, f'{power}\n')
 
     def test_set_frequency(self, frequency=10):
-        msg = 'FREQ %d MHZ\n' % frequency
+        msg = f'FREQ {frequency} MHZ\n'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.frequency, frequency)
 
     def test_set_wrong_frequency(self, frequency=10):
         # MHZ suffix missing
-        msg = 'FREQ %d\n' % frequency
+        msg = f'FREQ {frequency}\n'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertNotEqual(self.system.frequency, frequency)
 
         # wrong MHZ suffix
-        msg = 'FREQ %d MHz\n' % frequency
+        msg = f'FREQ {frequency} MHz\n'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertNotEqual(self.system.frequency, frequency)
@@ -83,14 +83,14 @@ class TestLocalOscillator(unittest.TestCase):
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1])
-        self.assertEqual(response, '%s\n' % (frequency * 1000000))
+        self.assertEqual(response, f'{frequency * 1000000}\n')
 
     def test_set_get_frequency(self, frequency=10):
-        msg = 'FREQ %d MHZ;FREQ?\n' % frequency
+        msg = f'FREQ {frequency} MHZ;FREQ?\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1])
-        self.assertEqual(response, '%d\n' % (frequency * 1000000))
+        self.assertEqual(response, f'{frequency * 1000000}\n')
 
     def test_read_status(self):
         msg = 'SYST:ERR?\n'

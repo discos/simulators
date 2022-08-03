@@ -1,5 +1,4 @@
 from __future__ import print_function
-import abc
 import os
 import types
 import socket
@@ -7,9 +6,9 @@ import logging
 import importlib
 import threading
 import time
-from Queue import Queue, Empty
+from queue import Queue, Empty
 from multiprocessing import Process
-from SocketServer import (
+from socketserver import (
     ThreadingMixIn, ThreadingTCPServer, ThreadingUDPServer, BaseRequestHandler
 )
 
@@ -36,7 +35,7 @@ class BaseHandler(BaseRequestHandler):
     def setup(self):
         """Method that gets called whenever a client connects to the server."""
         logging.info('Got connection from %s', self.client_address)
-        self.custom_msg = b''
+        self.custom_msg = ''
 
     def _execute_custom_command(self, msg_body):
         """This method accepts a custom command (without the custom header and
@@ -59,14 +58,17 @@ class BaseHandler(BaseRequestHandler):
             method = getattr(self.system, name)
             response = method(*params)
             if isinstance(response, str):
-                self.socket.sendto(response, self.client_address)
+                self.socket.sendto(
+                    response.encode('raw_unicode_escape'),
+                    self.client_address
+                )
                 if response == '$server_shutdown%%%%%':
                     # Wait 10ms
                     time.sleep(0.01)
                     self.server.stop()
         except AttributeError:
             logging.debug('command %s not supported', name)
-        except Exception, ex:
+        except Exception as ex:
             logging.debug('unexpected exception %s', ex)
 
 
@@ -79,7 +81,10 @@ class ListenHandler(BaseHandler):
         if not isinstance(self.socket, tuple):  # TCP client
             greet_msg = self.system.system_greet()
             if greet_msg:
-                self.socket.sendto(greet_msg, self.client_address)
+                self.socket.sendto(
+                    greet_msg.encode('raw_unicode_escape'),
+                    self.client_address
+                )
         else:  # UDP client
             self.connection_oriented = False
 
@@ -95,6 +100,7 @@ class ListenHandler(BaseHandler):
         scenario (i.e. some error condition)."""
         if not self.connection_oriented:  # UDP client
             msg, self.socket = self.socket
+            msg = msg.decode('raw_unicode_escape')
             msg += '\n'
             self._handle(msg)
         else:  # TCP client
@@ -103,6 +109,7 @@ class ListenHandler(BaseHandler):
                     msg = self.socket.recv(1)
                     if not msg:
                         break
+                    msg = msg.decode('raw_unicode_escape')
                     self._handle(msg)
                 except IOError:
                     break
@@ -120,7 +127,7 @@ class ListenHandler(BaseHandler):
         for byte in msg:
             try:
                 response = self.system.parse(byte)
-            except ValueError, ex:
+            except ValueError as ex:
                 logging.debug(ex)
             except Exception:
                 logging.debug('unexpected exception')
@@ -128,6 +135,7 @@ class ListenHandler(BaseHandler):
                 pass
             elif response and isinstance(response, str):
                 try:
+                    response = response.encode('raw_unicode_escape')
                     self.socket.sendto(response, self.client_address)
                 except IOError:  # pragma: no cover
                     # Something went wrong while sending the response,
@@ -143,7 +151,7 @@ class ListenHandler(BaseHandler):
                 self.custom_msg += byte
                 if self.custom_msg.endswith(self.custom_tail):
                     msg_body = self.custom_msg[1:-len(self.custom_tail)]
-                    self.custom_msg = b''
+                    self.custom_msg = ''
                     self._execute_custom_command(msg_body)
 
 
@@ -169,10 +177,11 @@ class SendHandler(BaseHandler):
         while True:
             try:
                 if msg:
-                    custom_msg = msg
+                    custom_msg = msg.decode('raw_unicode_escape')
                     msg = None
                 else:
                     custom_msg = self.socket.recv(1024)
+                    custom_msg = custom_msg.decode('raw_unicode_escape')
                 # Check if the client is sending a custom command
                 if not custom_msg:
                     break
@@ -233,7 +242,7 @@ class Server(ThreadingMixIn):
                 'Provide either the `ThreadingTCPServer` class '
                 + 'or the `ThreadingUDPServer` class!'
             )
-        self.__class__.__bases__ = (ThreadingMixIn, server_type, )
+        self.__class__.__bases__ = (server_type, ThreadingMixIn)
         self.server_type = server_type
         self.server_type.allow_reuse_address = True
         self.system = system
@@ -266,8 +275,14 @@ class Server(ThreadingMixIn):
         """
         if isinstance(self.system, types.ModuleType):
             self.system = self.system.System(**self.system_kwargs)
-        elif isinstance(self.system, abc.ABCMeta):
-            self.system = self.system(**self.system_kwargs)
+        else:
+            try:
+                bases = self.system.__bases__
+                bases = [str(x).split("'")[1].split('.')[-1] for x in bases]
+                if 'TestingSystem' in bases:
+                    self.system = self.system(**self.system_kwargs)
+            except AttributeError:
+                pass
         if not self.RequestHandlerClass.system:
             self.RequestHandlerClass.system = self.system
         if self.child_server:
@@ -292,7 +307,7 @@ class Server(ThreadingMixIn):
         self.shutdown()
 
 
-class Simulator(object):
+class Simulator:
     """This class represents the whole simulator, composed of one
     or more servers.
 
@@ -302,8 +317,7 @@ class Simulator(object):
     def __init__(self, system_module, **kwargs):
         if not isinstance(system_module, types.ModuleType):
             self.system_module = importlib.import_module(
-                'simulators.%s'
-                % system_module
+                f'simulators.{system_module}'
             )
         else:
             self.system_module = system_module
@@ -331,7 +345,7 @@ class Simulator(object):
             p.daemon = daemon
             processes.append(p)
             p.start()
-        print("Simulator '%s' up and running." % self.simulator_name)
+        print(f"Simulator '{self.simulator_name}' up and running.")
 
         if not daemon:
             try:
@@ -361,8 +375,9 @@ class Simulator(object):
                             pass
                     except socket.timeout:
                         pass
-                    sockobj.sendto('$system_stop%%%%%', address)
+                    sockobj.sendto(b'$system_stop%%%%%', address)
                     response = sockobj.recv(1024)
+                    response = response.decode('raw_unicode_escape')
                     if response != '$server_shutdown%%%%%':  # pragma: no cover
                         logging.warning(
                             '%s %s %s',
@@ -370,7 +385,7 @@ class Simulator(object):
                             '$server_shutdown%%%%% string!',
                             'The simulator might still be running!'
                         )
-                except Exception, ex:  # pragma: no cover
+                except Exception as ex:  # pragma: no cover
                     logging.debug(ex)
                 finally:
                     sockobj.close()
@@ -382,4 +397,4 @@ class Simulator(object):
             threads.append(t)
         for t in threads:
             t.join()
-        print("Simulator '%s' stopped." % self.simulator_name)
+        print(f"Simulator '{self.simulator_name}' stopped.")

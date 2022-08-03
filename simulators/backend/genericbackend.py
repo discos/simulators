@@ -62,7 +62,7 @@ class GenericBackendSystem(ListeningSystem):
         if self._stopID:
             self._stopID.cancel()
             self._stopID.join()
-        super(GenericBackendSystem, self).system_stop()
+        super().system_stop()
 
     def _set_default(self):
         self.msg = ''
@@ -78,12 +78,12 @@ class GenericBackendSystem(ListeningSystem):
     def _parse(self, msg):
         try:
             message = grammar.parse_message(msg)
-        except grammar.GrammarException, ge:
+        except grammar.GrammarException as ge:
             reply_message = grammar.Message(
                 message_type=grammar.REPLY,
                 name="undefined",
                 code=grammar.INVALID,
-                arguments=["syntax error: %s" % (ge.message,)]
+                arguments=[f"syntax error: {ge}"]
             )
             return str(reply_message)
 
@@ -93,18 +93,16 @@ class GenericBackendSystem(ListeningSystem):
                     message_type=grammar.REPLY,
                     name=message.name
                 )
-                if message.name not in self.commands.keys():
-                    raise BackendError(
-                        "invalid command '%s'" % (message.name,)
-                    )
+                if message.name not in self.commands:
+                    raise BackendError(f"invalid command '{message.name}'")
                 method = getattr(self, self.commands[message.name])
                 reply_arguments = method(message.arguments)
                 if reply_arguments:
                     reply_message.arguments = map(str, reply_arguments)
                 reply_message.code = grammar.OK
                 return str(reply_message)
-            except BackendError, he:
-                return self._send_fail_reply(message, he.message)
+            except BackendError as he:
+                return self._send_fail_reply(message, str(he))
         else:
             return True
 
@@ -136,8 +134,8 @@ class GenericBackendSystem(ListeningSystem):
             try:
                 timestamp = float(args[0]) / ACS_TO_UNIX_TIME
                 self._start_at(timestamp)
-            except ValueError:
-                raise BackendError("wrong timestamp '%s'" % (args[0],))
+            except ValueError as ex:
+                raise BackendError(f"wrong timestamp '{args[0]}'") from ex
 
     def do_stop(self, args):
         if len(args) < 1:
@@ -146,8 +144,8 @@ class GenericBackendSystem(ListeningSystem):
             try:
                 timestamp = float(args[0]) / ACS_TO_UNIX_TIME
                 self._stop_at(timestamp)
-            except ValueError:
-                raise BackendError("wrong timestamp '%s'" % (args[0],))
+            except ValueError as ex:
+                raise BackendError(f"wrong timestamp '{args[0]}'") from ex
 
     def do_set_configuration(self, args):
         if len(args) < 1:
@@ -171,17 +169,16 @@ class GenericBackendSystem(ListeningSystem):
             _integration = int(args[0])
             if _integration < 0:
                 raise ValueError
-        except ValueError:
+        except ValueError as ex:
             raise BackendError(
                 "integration time must be an integer number"
-            )
+            ) from ex
         self.integration = _integration
 
     def do_set_filename(self, args):
         if len(args) < 1:
             raise BackendError("command needs <filename> as argument")
-        else:
-            self._filename = args[0]
+        self._filename = args[0]
 
     def do_time(self, _):
         return [self._get_time()]
@@ -203,7 +200,7 @@ class GenericBackendSystem(ListeningSystem):
     @staticmethod
     def _get_time():
         # Should ask the backend hardware clock
-        return '%.7f' % time.time()
+        return f'{time.time():.7f}'
 
     def _is_valid_configuration(self, configuration_name):
         return self._valid_conf_re.match(configuration_name)
@@ -266,16 +263,16 @@ class GenericBackendSystem(ListeningSystem):
             mode = _get_param(args[4])
             sample_rate = _get_param(args[5], float)
             bins = _get_param(args[6], int)
-        except ValueError:
-            raise BackendError("wrong parameter format")
+        except ValueError as ex:
+            raise BackendError("wrong parameter format") from ex
 
-        if section > self.max_sections and section != "*":
+        if section != "*" and section > self.max_sections:
             raise BackendError(
-                "backend supports %d sections" % (self.max_sections)
+                f"backend supports {self.max_sections} sections"
             )
-        if bandwidth > self.max_bandwidth and bandwidth != "*":
+        if bandwidth != "*" and bandwidth > self.max_bandwidth:
             raise BackendError(
-                "backend maximum bandwidth is %f" % (self.max_bandwidth)
+                f"backend maximum bandwidth is {self.max_bandwidth:0.6f}"
             )
         self._sections[section] = (
             start_freq,
@@ -294,10 +291,10 @@ class GenericBackendSystem(ListeningSystem):
                 interleave = int(args[0])
                 if interleave < 0:
                     raise ValueError
-            except ValueError:
+            except ValueError as ex:
                 raise BackendError(
                     "interleave samples must be a positive int"
-                )
+                ) from ex
         self.interleave = interleave
 
     def do_set_enable(self, args):
@@ -306,12 +303,12 @@ class GenericBackendSystem(ListeningSystem):
         try:
             feed1 = int(args[0])
             feed2 = int(args[1])
-        except ValueError:
-            raise BackendError("wrong parameter format")
+        except ValueError as ex:
+            raise BackendError("wrong parameter format") from ex
 
-        if feed1 not in range(self.max_sections / 2):
+        if feed1 not in range(int(self.max_sections / 2)):
             raise BackendError("feed1 out of range")
-        if feed2 not in range(self.max_sections / 2):
+        if feed2 not in range(int(self.max_sections / 2)):
             raise BackendError("feed2 out of range")
         self.current_sections = [
             feed1 * 2,

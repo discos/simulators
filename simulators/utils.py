@@ -72,15 +72,13 @@ def binary_complement(bin_string, mask=''):
                 retval += '0'
             else:
                 raise ValueError(
-                    'String %s is not expressed in binary notation.' %
-                    bin_string
+                    f'String {bin_string} is not expressed in binary notation.'
                 )
         elif mask[index] == '0':
             retval += '0'
         else:
             raise ValueError(
-                'Mask %s is not expressed in binary notation.' %
-                mask
+                f'Mask {mask} is not expressed in binary notation.'
             )
 
     return retval
@@ -153,11 +151,10 @@ def int_to_twos(val, n_bytes=4):
 
     if val < min_range or val > max_range:
         raise ValueError(
-            "%d out of range (%d, %d)."
-            % (val, min_range, max_range)
+            f"{val} out of range ({min_range}, {max_range})."
         )
     binary_string = bin(val & int("1" * n_bits, 2))[2:]
-    return ("{0:0>%s}" % n_bits).format(binary_string)
+    return f'{binary_string.zfill(n_bits)}'
 
 
 def binary_to_bytes(binary_string, little_endian=True):
@@ -173,15 +170,35 @@ def binary_to_bytes(binary_string, little_endian=True):
     :rtype: str
 
     >>> binary_to_bytes('0110100001100101011011000110110001101111', False)
-    '\x68\x65\x6C\x6C\x6F'
+    b'\x68\x65\x6C\x6C\x6F'
     """
-
     byte_string = b''
 
     for i in range(0, len(binary_string), 8):
-        byte_string += chr(int(binary_string[i:i + 8], 2))
+        byte_string += bytes([int(binary_string[i:i + 8], 2) & 0xFF])
 
     return byte_string[::-1] if little_endian else byte_string
+
+
+def binary_to_string(binary_string, little_endian=True):
+    """Converts a binary string in a string.
+
+    :param binary_string: the original binary string that has to be converted
+        to a string
+    :param little_endian: boolean indicating whether the returned string should
+        be formatted with little endian or big endian notation
+    :type binary_string: str
+    :type little_endian: bool
+    :return: the string representation of binary_string
+    :rtype: str
+
+    >>> binary_to_string('0110100001100101011011000110110001101111', False)
+    '\x68\x65\x6C\x6C\x6F'
+    """
+    return binary_to_bytes(
+        binary_string,
+        little_endian
+    ).decode('raw_unicode_escape')
 
 
 def bytes_to_int(byte_string, little_endian=True):
@@ -190,7 +207,7 @@ def bytes_to_int(byte_string, little_endian=True):
     :param byte_string: the signed integer represented as bytes
     :param little_endian: boolean indicating whether the byte_string param was
         received with little endian or big endian notation
-    :type byte_string: str
+    :type byte_string: bytes
     :type little_endian: bool
     :return: the value of byte_string, converted to signed integer
     :rtype: int
@@ -198,15 +215,27 @@ def bytes_to_int(byte_string, little_endian=True):
     >>> bytes_to_int(b'hello', False)
     448378203247
     """
-    binary_string = ''
+    return int.from_bytes(
+        byte_string,
+        'little' if little_endian else 'big', signed=True
+    )
 
-    if little_endian:
-        byte_string = byte_string[::-1]
 
-    for char in byte_string:
-        binary_string += bin(ord(char))[2:].zfill(8)
+def string_to_int(string, little_endian=True):
+    """Converts a string to an integer (like C atoi function).
 
-    return twos_to_int(binary_string)
+    :param string: the signed integer represented as bytes
+    :param little_endian: boolean indicating whether the byte_string param was
+        received with little endian or big endian notation
+    :type string: str
+    :type little_endian: bool
+    :return: the value of byte_string, converted to signed integer
+    :rtype: int
+
+    >>> string_to_int('hello', False)
+    448378203247
+    """
+    return bytes_to_int(string.encode('raw_unicode_escape'), little_endian)
 
 
 def bytes_to_binary(byte_string, little_endian=True):
@@ -229,9 +258,26 @@ def bytes_to_binary(byte_string, little_endian=True):
         byte_string = byte_string[::-1]
 
     for char in byte_string:
-        binary_string += bin(ord(char))[2:].zfill(8)
+        binary_string += bin(char)[2:].zfill(8)
 
     return binary_string
+
+
+def string_to_binary(string, little_endian=True):
+    """Converts a string of bytes to a binary string.
+
+    :param byte_string: the byte string to be converted to binary
+    :param little_endian: boolean indicating whether the byte_string param was
+        received with little endian or big endian notation
+    :type byte_string: str
+    :type little_endian: bool
+    :return: the binary representation of byte_string
+    :rtype: str
+
+    >>> string_to_binary('hi', little_endian=False)
+    '0110100001101001'
+    """
+    return bytes_to_binary(string.encode('raw_unicode_escape'), little_endian)
 
 
 def bytes_to_uint(byte_string, little_endian=True):
@@ -249,6 +295,23 @@ def bytes_to_uint(byte_string, little_endian=True):
     26729
     """
     return int(bytes_to_binary(byte_string, little_endian), 2)
+
+
+def string_to_uint(string, little_endian=True):
+    """Converts a string to an unsigned integer.
+
+    :param string: the unsigned integer represented as string
+    :param little_endian: boolean indicating whether the string param was
+        received with little endian or big endian notation
+    :type string: str
+    :little_endian: bool
+    :return: the value of string, converted to unsigned integer
+    :rtype: int
+
+    >>> string_to_uint('hi', little_endian=False)
+    26729
+    """
+    return bytes_to_uint(string.encode('raw_unicode_escape'), little_endian)
 
 
 def real_to_binary(num, precision=1):
@@ -278,19 +341,16 @@ def real_to_binary(num, precision=1):
     """
     if precision == 1:
         return ''.join(
-            bin(ord(c)).replace('0b', '').rjust(8, '0')
+            bin(c).replace('0b', '').rjust(8, '0')
             for c in struct.pack('!f', num)
         )
     elif precision == 2:
         return ''.join(
-            bin(ord(c)).replace('0b', '').rjust(8, '0')
+            bin(c).replace('0b', '').rjust(8, '0')
             for c in struct.pack('!d', num)
         )
     else:
-        raise ValueError(
-            "Unknown precision %d."
-            % (precision)
-        )
+        raise ValueError(f"Unknown precision {precision}.")
 
 
 def real_to_bytes(num, precision=1, little_endian=True):
@@ -308,15 +368,42 @@ def real_to_bytes(num, precision=1, little_endian=True):
     :return: the bytes string of the given floating-point value
     :rtype: str
 
-    >>> [hex(ord(x)) for x in real_to_bytes(436.56, 1, False)]
+    >>> [hex(x) for x in real_to_bytes(436.56, 1, False)]
     ['0x43', '0xda', '0x47', '0xae']
 
-    >>> [hex(ord(x)) for x in real_to_bytes(436.56, 2, False)]
+    >>> [hex(x) for x in real_to_bytes(436.56, 2, False)]
     ['0x40', '0x7b', '0x48', '0xf5', '0xc2', '0x8f', '0x5c', '0x29']
     """
 
     binary_number = real_to_binary(num, precision)
     return binary_to_bytes(binary_number, little_endian=little_endian)
+
+
+def real_to_string(num, precision=1, little_endian=True):
+    """Returns the string representation of a floating-point number
+    (IEEE 754 standard).
+
+    :param num: the floating-point number to be converted
+    :param precision: integer indicating whether the floating-point precision
+        to be adopted should be single (1) or double (2)
+    :param little_endian: boolean indicating whether the byte string should be
+        returned with little endian or big endian notation
+    :type num: float
+    :type precision: int
+    :type little_endian: bool
+    :return: the string of the given floating-point value
+    :rtype: str
+
+    >>> [hex(ord(x)) for x in real_to_string(436.56, 1, False)]
+    ['0x43', '0xda', '0x47', '0xae']
+
+    >>> [hex(ord(x)) for x in real_to_string(436.56, 2, False)]
+    ['0x40', '0x7b', '0x48', '0xf5', '0xc2', '0x8f', '0x5c', '0x29']
+    """
+
+    binary_number = real_to_binary(num, precision)
+    binary_number = binary_to_bytes(binary_number, little_endian=little_endian)
+    return binary_number.decode('raw_unicode_escape')
 
 
 def bytes_to_real(bytes_real, precision=1, little_endian=True):
@@ -328,19 +415,18 @@ def bytes_to_real(bytes_real, precision=1, little_endian=True):
         to be adopted should be single (1) or double (2)
     :param little_endian: boolean indicating whether the bytes_real param was
         received with little endian or big endian notation
-    :type bytes_real: str
+    :type bytes_real: bytes
     :type precision: int
     :type little_endian: bool
     :return: the floating-point value of the given bytes string
     :rtype: float
 
-    >>> round(bytes_to_real('\x44\x77\x2C\x31', 1, False), 2)
+    >>> round(bytes_to_real(b'\x44\x77\x2C\x31', 1, False), 2)
     988.69
 
-    >>> round(bytes_to_real('\x40\x7A\x25\x7D\x2E\x68\x51\x5D', 2, False), 2)
+    >>> round(bytes_to_real(b'\x40\x7A\x25\x7D\x2E\x68\x51\x5D', 2, False), 2)
     418.34
     """
-
     if little_endian:
         bytes_real = bytes_real[::-1]
 
@@ -349,10 +435,32 @@ def bytes_to_real(bytes_real, precision=1, little_endian=True):
     elif precision == 2:
         return struct.unpack('!d', bytes_real)[0]
     else:
-        raise ValueError(
-            "Unknown precision %d."
-            % (precision)
-        )
+        raise ValueError(f"Unknown precision {precision}.")
+
+
+def string_to_real(string_real, precision=1, little_endian=True):
+    """Returns the floating-point representation (IEEE 754 standard) of
+    string number.
+
+    :param string_real: the floating-point number represented as string
+    :param precision: integer indicating whether the floating-point precision
+        to be adopted should be single (1) or double (2)
+    :param little_endian: boolean indicating whether the bytes_real param was
+        received with little endian or big endian notation
+    :type string_real: str
+    :type precision: int
+    :type little_endian: bool
+    :return: the floating-point value of the given bytes string
+    :rtype: float
+
+    >>> round(string_to_real('\x44\x77\x2C\x31', 1, False), 2)
+    988.69
+
+    >>> round(string_to_real('\x40\x7A\x25\x7D\x2E\x68\x51\x5D', 2, False), 2)
+    418.34
+    """
+    bytes_real = bytes(string_real, 'raw_unicode_escape')
+    return bytes_to_real(bytes_real, precision, little_endian)
 
 
 def int_to_bytes(val, n_bytes=4, little_endian=True):
@@ -368,11 +476,36 @@ def int_to_bytes(val, n_bytes=4, little_endian=True):
     :return: the bytes string value of the given signed integer
     :rtype: str
 
-    >>> [hex(ord(x)) for x in int_to_bytes(354, little_endian=False)]
+    >>> [hex(x) for x in int_to_bytes(354, little_endian=False)]
     ['0x0', '0x0', '0x1', '0x62']
     """
+    return val.to_bytes(
+        n_bytes,
+        "little" if little_endian else "big", signed=True
+    )
 
-    return binary_to_bytes(int_to_twos(val, n_bytes), little_endian)
+
+def int_to_string(val, n_bytes=4, little_endian=True):
+    """Returns the string representation of a given signed integer.
+
+    :param val: the signed integer to be converted
+    :param n_bytes: the number of bytes to fit the given unsigned integer to
+    :param little_endian: boolean indicating whether the byte string should be
+        returned with little endian or big endian notation
+    :type val: int
+    :type n_bytes: int
+    :type little_endian: bool
+    :return: the string value of the given signed integer
+    :rtype: str
+
+    >>> [hex(ord(x)) for x in int_to_string(354, little_endian=False)]
+    ['0x0', '0x0', '0x1', '0x62']
+    """
+    return int_to_bytes(
+        val,
+        n_bytes,
+        little_endian
+    ).decode('raw_unicode_escape')
 
 
 def uint_to_bytes(val, n_bytes=4, little_endian=True):
@@ -386,9 +519,9 @@ def uint_to_bytes(val, n_bytes=4, little_endian=True):
     :type n_bytes: int
     :type little_endian: bool
     :return: the bytes string value of the given unsigned integer
-    :rtype: str
+    :rtype: bytes
 
-    >>> [hex(ord(x)) for x in uint_to_bytes(657, little_endian=False)]
+    >>> [hex(x) for x in uint_to_bytes(657, little_endian=False)]
     ['0x0', '0x0', '0x2', '0x91']
     """
 
@@ -397,15 +530,35 @@ def uint_to_bytes(val, n_bytes=4, little_endian=True):
     max_range = int(math.pow(2, n_bits)) - 1
 
     if val < min_range or val > max_range:
-        raise ValueError(
-            "%d out of range (%d, %d)."
-            % (val, min_range, max_range)
-        )
+        raise ValueError(f"{val} out of range ({min_range}, {max_range}).")
 
     return binary_to_bytes(
         bin(val)[2:].zfill(n_bytes * 8),
         little_endian=little_endian
     )
+
+
+def uint_to_string(val, n_bytes=4, little_endian=True):
+    """Returns the string representation of a given unsigned integer.
+
+    :param val: the unsigned integer to be converted
+    :param n_bytes: the number of chars to fit the given unsigned integer to
+    :param little_endian: boolean indicating whether the byte string should be
+        returned with little endian or big endian notation
+    :type val: int
+    :type n_bytes: int
+    :type little_endian: bool
+    :return: the string value of the given unsigned integer
+    :rtype: str
+
+    >>> [hex(ord(x)) for x in uint_to_string(657, little_endian=False)]
+    ['0x0', '0x0', '0x2', '0x91']
+    """
+    return uint_to_bytes(
+        val,
+        n_bytes,
+        little_endian
+    ).decode('raw_unicode_escape')
 
 
 def sign(number):
@@ -426,10 +579,10 @@ def sign(number):
     -1
     """
 
-    if not isinstance(number, (int, long, float)):
+    if not isinstance(number, (int, float)):
         raise ValueError(
-            '%s is not of a valid datatype. ' % str(number)
-            + 'Use only int, long, or float.'
+            f'{str(number)} is not of a valid datatype. '
+            + 'Use only int or float.'
         )
     return int(number and (1, -1)[number < 0])
 
@@ -459,12 +612,9 @@ def mjd(date=None):
     month = date.month
     day = date.day
 
-    if month == 1 or month == 2:
+    if month in [1, 2]:
         year = year - 1
         month = month + 12
-    else:
-        year = year
-        month = month
 
     a = math.trunc(year / 100.)
     b = 2 - a + math.trunc(a / 4.)
@@ -501,12 +651,14 @@ def mjd_to_date(original_mjd_date):
     datetime.datetime(2018, 1, 20, 10, 30, 45, 100000)
     """
     try:
-        if not isinstance(original_mjd_date, (int, long, float)):
+        if not isinstance(original_mjd_date, (int, float)):
             raise ValueError
-        elif original_mjd_date < 0:
+        if original_mjd_date < 0:
             raise ValueError
-    except ValueError:
-        raise ValueError('Provide a non-negative floating-point number!')
+    except ValueError as ex:
+        raise ValueError(
+            'Provide a non-negative floating-point number!'
+        ) from ex
 
     str_d = repr(original_mjd_date)
     mjdate, microsecond = str_d.split('.')
@@ -650,7 +802,7 @@ def get_multitype_systems(path):
                     mod = f.replace(prefix, '')
                     mod = mod.replace('.py', '')
                     mod = mod.replace('/', '.')
-                    mod = importlib.import_module('simulators.%s' % mod)
+                    mod = importlib.import_module(f'simulators.{mod}')
                     for _, obj in inspect.getmembers(mod):
                         if inspect.isclass(obj) and obj.__name__ == 'System':
                             if issubclass(obj, BaseSystem):

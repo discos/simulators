@@ -10,7 +10,7 @@ class TestGaia(unittest.TestCase):
         self.id = random.randint(0, 1023)
 
     def wrap(self, raw_response):
-        return '#%s %s\n' % (raw_response, self.id)
+        return f'#{raw_response} {self.id}\n'
 
     def test_idn(self):
         expected_answer = self.wrap('GAIA Simulator Rev. 1.0.0 / 2022.02.08.1')
@@ -22,7 +22,7 @@ class TestGaia(unittest.TestCase):
     def test_conf(self):
         conf = 5
         expected_answer = self.wrap(5)
-        command = self.wrap('LOADCONF %s' % conf)
+        command = self.wrap(f'LOADCONF {conf}')
         for byte in command[:-1]:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.parse(command[-1]), expected_answer)
@@ -252,7 +252,7 @@ class TestGaia(unittest.TestCase):
         command = 'noheader'
         for byte in command[:-1]:
             self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.msg, b'')
+        self.assertEqual(self.system.msg, '')
 
 
 if __name__ == '__main__':

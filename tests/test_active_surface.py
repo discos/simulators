@@ -14,22 +14,22 @@ class TestCommandLibrary(unittest.TestCase):
     def _compose(command, usd_index=None, address_on_response=True):
         if usd_index is None:
             cmd = '\x00'
-            cmd += utils.int_to_bytes(
+            cmd += utils.int_to_string(
                 val=len(command),
                 n_bytes=1
             )
         else:
             length = bin(len(command))[2:].zfill(3)
             address = bin(usd_index)[2:].zfill(5)
-            cmd = utils.int_to_bytes(
+            cmd = utils.int_to_string(
                 val=utils.twos_to_int(length + address),
                 n_bytes=1
             )
 
         if address_on_response:
-            cmd = b'\xFC' + cmd
+            cmd = '\xFC' + cmd
         else:
-            cmd = b'\xFA' + cmd
+            cmd = '\xFA' + cmd
 
         cmd += command
         cmd += utils.checksum(cmd)
@@ -795,7 +795,7 @@ class TestASParse(unittest.TestCase):
         for i in range(self.min_usd_index, self.max_usd_index + 1):
             binary_index = bin(i)[2:].zfill(5)
             byte_nbyte_address = binary_length + binary_index
-            byte_nbyte_address = utils.binary_to_bytes(byte_nbyte_address)
+            byte_nbyte_address = utils.binary_to_string(byte_nbyte_address)
 
             for header in ['\xFA', '\xFC']:
                 msg = header
@@ -807,7 +807,7 @@ class TestASParse(unittest.TestCase):
         for header in ['\xFA', '\xFC']:
             msg = header
             msg += '\x00'  # Test the broadcast command
-            msg += utils.int_to_bytes(len(command), 1)
+            msg += utils.int_to_string(len(command), 1)
             msg += command
             msg += utils.checksum(msg)
             self.assertTrue(self._send_cmd(msg))
@@ -836,7 +836,7 @@ class TestASParse(unittest.TestCase):
 
     def test_wrong_header(self):
         """Return False when the first byte is not an allowed header."""
-        self.assertFalse(self.system.parse(b'w'))
+        self.assertFalse(self.system.parse('w'))
 
     def test_broadcast(self):
         """Return True in case of broadcast byte (byte_switchall)."""
@@ -855,37 +855,37 @@ class TestASParse(unittest.TestCase):
 
     def test_wrong_message_length(self):
         # Declaring a lenght of 2 but sending 3 bytes
-        msg = b'\xFA\x40\x01\x02\x03'
+        msg = '\xFA\x40\x01\x02\x03'
         msg += utils.checksum(msg)
         with self.assertRaises(ValueError):
             self._send_cmd(msg)
 
     def test_wrong_message_broadcast_length(self):
         # Declaring a lenght of 2 but sending 3 bytes
-        msg = b'\xFA\x00\x02\x01\x02\x03'
+        msg = '\xFA\x00\x02\x01\x02\x03'
         msg += utils.checksum(msg)
         with self.assertRaises(ValueError):
             self._send_cmd(msg)
 
     def test_unknown_command(self):
-        msg = b'\xFA\x20\x00'
+        msg = '\xFA\x20\x00'
         msg += utils.checksum(msg)
         with self.assertRaises(ValueError):
             self._send_cmd(msg)
 
     def test_too_high_message_length(self):
-        msg = b'\xFA\x00\x08'
+        msg = '\xFA\x00\x08'
         with self.assertRaises(ValueError):
             self._send_cmd(msg)
 
     def test_wait_for_header_after_wrong_message_lenght(self):
-        msg = b'\xFA\x40\x01\x02\x01'  # The ckecksum is '0xC2'
+        msg = '\xFA\x40\x01\x02\x01'  # The ckecksum is '0xC2'
         for byte in msg:
             try:
                 self.system.parse(byte)
             except ValueError:
                 pass
-        self.assertFalse(self.system.parse(b'w'))
+        self.assertFalse(self.system.parse('w'))
         self.assertTrue(self.system.parse('\xFA'))
 
     def test_soft_reset(self):
@@ -958,7 +958,7 @@ class TestASParse(unittest.TestCase):
 
                 binary_index = bin(i)[2:].zfill(5)
                 byte_nbyte_address = binary_length + binary_index
-                byte_nbyte_address = utils.binary_to_bytes(byte_nbyte_address)
+                byte_nbyte_address = utils.binary_to_string(byte_nbyte_address)
 
                 if address_on_response:
                     expected_response += '\xFC'
@@ -1019,7 +1019,7 @@ class TestASParse(unittest.TestCase):
 
                 binary_index = bin(i)[2:].zfill(5)
                 byte_nbyte_address = binary_length + binary_index
-                byte_nbyte_address = utils.binary_to_bytes(byte_nbyte_address)
+                byte_nbyte_address = utils.binary_to_string(byte_nbyte_address)
 
                 if address_on_response:
                     expected_response += '\xFC'
@@ -1060,7 +1060,7 @@ class TestASParse(unittest.TestCase):
 
                 binary_index = bin(i)[2:].zfill(5)
                 byte_nbyte_address = binary_length + binary_index
-                byte_nbyte_address = utils.binary_to_bytes(byte_nbyte_address)
+                byte_nbyte_address = utils.binary_to_string(byte_nbyte_address)
 
                 if address_on_response:
                     expected_response += '\xFC'
@@ -1101,7 +1101,7 @@ class TestASParse(unittest.TestCase):
 
                 binary_index = bin(i)[2:].zfill(5)
                 byte_nbyte_address = binary_length + binary_index
-                byte_nbyte_address = utils.binary_to_bytes(byte_nbyte_address)
+                byte_nbyte_address = utils.binary_to_string(byte_nbyte_address)
 
                 if address_on_response:
                     expected_response += '\xFC'
@@ -1165,7 +1165,7 @@ class TestASParse(unittest.TestCase):
             self.assertTrue(self._send_cmd(msg))
 
     def test_wrong_set_min_frequency(self):
-        command = b'\x20\x20'
+        command = '\x20\x20'
         self._test_wrong_cmd(command)
 
     def test_set_exceeding_min_frequency(self):
@@ -1763,7 +1763,7 @@ class TestASParse(unittest.TestCase):
     def test_current_reduction_after_movement(self):
         for i in range(self.min_usd_index, self.max_usd_index + 1):
             byte_value = '11000000'  # 50% of current after 4096microseconds
-            byte_value = utils.binary_to_bytes(byte_value, 1)
+            byte_value = utils.binary_to_string(byte_value, 1)
             for address_on_response in [True, False]:
                 msg = command_library.reduce_current(
                     byte_value=byte_value,

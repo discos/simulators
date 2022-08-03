@@ -6,14 +6,14 @@ class System(ListeningSystem):
     shifts the received signal wave by means of a local oscillator.
     This system is the simulator of the SRT LP band IFDistributor."""
 
-    tail = [b'\x0A', b'\x0D']  # NEWLINE and CR
+    tail = ['\x0A', '\x0D']  # NEWLINE and CR
     ref_freq = 10
     ol_freq = 2300
     max_attenuation = 31.5
-    max_msg_length = 15  # b'S 0 100 2300 1\n'
+    max_msg_length = 15  # 'S 0 100 2300 1\n'
 
-    ack = b'ack\n'
-    nak = b'nak\n'
+    ack = 'ack\n'
+    nak = 'nak\n'
 
     commands = {
         '?': '_get_status',
@@ -34,7 +34,7 @@ class System(ListeningSystem):
         for i in range(5, 21):
             self.boards[i] = self._init_board(i, 5)
 
-        self.msg = b''
+        self.msg = ''
 
     def _init_board(self, address, pcb_type):
         """This method initializes the status of a given board.
@@ -77,24 +77,24 @@ class System(ListeningSystem):
         self.msg += byte
 
         if len(self.msg) == 1:
-            if byte in self.commands.keys():
+            if byte in self.commands:
                 return True
             else:
-                self.msg = b''
+                self.msg = ''
                 return False
         elif len(self.msg) < self.max_msg_length:
             if byte not in self.tail:
                 return True
         elif len(self.msg) == self.max_msg_length:
             if byte not in self.tail:
-                self.msg = b''
+                self.msg = ''
                 raise ValueError(
-                    'Message too long: max length should be %d'
-                    % self.max_msg_length
+                    'Message too long: max length ' +
+                    f'should be {self.max_msg_length}'
                 )
 
         msg = self.msg[:-1]
-        self.msg = b''
+        self.msg = ''
         return self._execute(msg)
 
     def _execute(self, msg):
@@ -125,16 +125,16 @@ class System(ListeningSystem):
                     params.append(float(param))
                 else:
                     params.append(int(param))
-        except ValueError:
+        except ValueError as ex:
             raise ValueError(
                 'Wrong argument format. '
                 + 'Use only integers or floating point numbers.'
-            )
+            ) from ex
 
         if params[0] not in range(len(self.boards)):
             raise IndexError(
-                'Please, specify a board slot in range [0:%d].'
-                % len(self.boards)
+                'Please, specify a board slot in ' +
+                f'range [0:{len(self.boards)}].'
             )
 
         return cmd(params)
@@ -200,7 +200,8 @@ class System(ListeningSystem):
             raise ValueError('Wrong number of arguments for command `S`.')
         if params[1] != self.ref_freq:
             raise ValueError(
-                'Wrong reference frequency. Please, use %d.' % self.ref_freq)
+                f'Wrong reference frequency. Please, use {self.ref_freq}.'
+            )
         if params[3] not in [0, 1]:
             raise ValueError(
                 'Wrong enable parameter for command `S`. Please, use 0 or 1.'

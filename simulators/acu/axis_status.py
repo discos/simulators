@@ -5,7 +5,7 @@ from simulators import utils
 from simulators.acu.motor_status import MotorStatus
 
 
-class SimpleAxisStatus(object):
+class SimpleAxisStatus:
     """
     :param n_motors: The number of motors that move the axis.
     """
@@ -132,7 +132,7 @@ class SimpleAxisStatus(object):
         # True: axis in simulation mode
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[0] = chr(int(value))
+        self.status[0] = value
 
     @property
     def axis_ready(self):
@@ -145,7 +145,7 @@ class SimpleAxisStatus(object):
         # True: axis ready for activating
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[1] = chr(int(value))
+        self.status[1] = value
 
     @property
     def confOk(self):
@@ -158,7 +158,7 @@ class SimpleAxisStatus(object):
         # True: configuration file is read successfully
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[2] = chr(int(value))
+        self.status[2] = value
 
     @property
     def initOk(self):
@@ -171,7 +171,7 @@ class SimpleAxisStatus(object):
         # True: initialization of axis completed
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[3] = chr(int(value))
+        self.status[3] = value
 
     @property
     def override(self):
@@ -184,7 +184,7 @@ class SimpleAxisStatus(object):
         # True: axis is in override mode
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[4] = chr(int(value))
+        self.status[4] = value
 
     @property
     def low_power_mode(self):
@@ -197,11 +197,11 @@ class SimpleAxisStatus(object):
         # True: low power mode is active
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[5] = chr(int(value))
+        self.status[5] = value
 
     @property
     def warnings(self):
-        return utils.bytes_to_binary(str(self.status[6:10]))[::-1]
+        return utils.bytes_to_binary(self.status[6:10])[::-1]
 
     @property
     def Param_Fault(self):
@@ -211,9 +211,9 @@ class SimpleAxisStatus(object):
     def Param_Fault(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[0] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Rate_Mode(self):
@@ -223,9 +223,9 @@ class SimpleAxisStatus(object):
     def Rate_Mode(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[1] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Safety_Chain(self):
@@ -235,9 +235,9 @@ class SimpleAxisStatus(object):
     def Safety_Chain(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[2] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Wrong_Sys_State(self):
@@ -247,9 +247,9 @@ class SimpleAxisStatus(object):
     def Wrong_Sys_State(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[3] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Temp_Enc(self):
@@ -259,9 +259,9 @@ class SimpleAxisStatus(object):
     def Temp_Enc(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[4] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Power_Brakes(self):
@@ -271,9 +271,9 @@ class SimpleAxisStatus(object):
     def Power_Brakes(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[6] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Power_Servo(self):
@@ -283,9 +283,9 @@ class SimpleAxisStatus(object):
     def Power_Servo(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[7] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Fan_Fault(self):
@@ -295,9 +295,9 @@ class SimpleAxisStatus(object):
     def Fan_Fault(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[8] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Servo_DC_Off(self):
@@ -307,9 +307,9 @@ class SimpleAxisStatus(object):
     def Servo_DC_Off(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[9] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Motor_Temp_Warn(self):
@@ -319,9 +319,9 @@ class SimpleAxisStatus(object):
     def Motor_Temp_Warn(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[10] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Servo_DC_Warn(self):
@@ -331,9 +331,9 @@ class SimpleAxisStatus(object):
     def Servo_DC_Warn(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[11] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def M_Max_Exceeded(self):
@@ -343,9 +343,9 @@ class SimpleAxisStatus(object):
     def M_Max_Exceeded(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[12] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Pos_Enc_Fault(self):
@@ -355,9 +355,9 @@ class SimpleAxisStatus(object):
     def Pos_Enc_Fault(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[13] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Em_Limit_Dn(self):
@@ -367,9 +367,9 @@ class SimpleAxisStatus(object):
     def Em_Limit_Dn(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[15] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Em_Limit_Up(self):
@@ -379,9 +379,9 @@ class SimpleAxisStatus(object):
     def Em_Limit_Up(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[16] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Degraded_Mode(self):
@@ -391,9 +391,9 @@ class SimpleAxisStatus(object):
     def Degraded_Mode(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[17] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Override_Act(self):
@@ -403,9 +403,9 @@ class SimpleAxisStatus(object):
     def Override_Act(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[18] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Pre_Limit_Up(self):
@@ -415,21 +415,22 @@ class SimpleAxisStatus(object):
     def Pre_Limit_Up(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[19] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Pre_Limit_Dn(self):
-        return bool(int(self.warnings[20]))
+        retval = bool(int(self.warnings[20]))
+        return retval
 
     @Pre_Limit_Dn.setter
     def Pre_Limit_Dn(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[20] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Fin_Limit_Up(self):
@@ -439,9 +440,9 @@ class SimpleAxisStatus(object):
     def Fin_Limit_Up(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[21] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Fin_Limit_Dn(self):
@@ -451,9 +452,9 @@ class SimpleAxisStatus(object):
     def Fin_Limit_Dn(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[22] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Rate_Limit(self):
@@ -463,9 +464,9 @@ class SimpleAxisStatus(object):
     def Rate_Limit(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[23] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Stow_Fault(self):
@@ -475,9 +476,9 @@ class SimpleAxisStatus(object):
     def Stow_Fault(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[24] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Stowpins_Extracted(self):
@@ -487,9 +488,9 @@ class SimpleAxisStatus(object):
     def Stowpins_Extracted(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[25] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def Low_Power_Act(self):
@@ -499,9 +500,9 @@ class SimpleAxisStatus(object):
     def Low_Power_Act(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[26] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def LimDn_inconsist(self):
@@ -511,9 +512,9 @@ class SimpleAxisStatus(object):
     def LimDn_inconsist(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[29] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def LimUp_inconsist(self):
@@ -523,13 +524,13 @@ class SimpleAxisStatus(object):
     def LimUp_inconsist(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        warnings = bytearray(self.warnings)
+        warnings = list(self.warnings)
         warnings[30] = str(int(value))
-        self.status[6:10] = utils.binary_to_bytes(str(warnings)[::-1])
+        self.status[6:10] = utils.binary_to_bytes(''.join(warnings)[::-1])
 
     @property
     def errors(self):
-        return utils.bytes_to_binary(str(self.status[10:14]))[::-1]
+        return utils.bytes_to_binary(self.status[10:14])[::-1]
 
     @property
     def Error_Active(self):
@@ -539,9 +540,9 @@ class SimpleAxisStatus(object):
     def Error_Active(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[0] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def System_fault(self):
@@ -551,9 +552,9 @@ class SimpleAxisStatus(object):
     def System_fault(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[1] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def Em_Stop(self):
@@ -563,9 +564,9 @@ class SimpleAxisStatus(object):
     def Em_Stop(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[2] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def Em_Limit_Dn_Act(self):
@@ -575,9 +576,9 @@ class SimpleAxisStatus(object):
     def Em_Limit_Dn_Act(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[3] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def Em_Limit_Up_Act(self):
@@ -587,9 +588,9 @@ class SimpleAxisStatus(object):
     def Em_Limit_Up_Act(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[4] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def Brake_Error(self):
@@ -599,9 +600,9 @@ class SimpleAxisStatus(object):
     def Brake_Error(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[6] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def Power_Error(self):
@@ -611,9 +612,9 @@ class SimpleAxisStatus(object):
     def Power_Error(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[7] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def Servo_Error(self):
@@ -623,9 +624,9 @@ class SimpleAxisStatus(object):
     def Servo_Error(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[8] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def Servo_Timeout(self):
@@ -635,9 +636,9 @@ class SimpleAxisStatus(object):
     def Servo_Timeout(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[9] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def v_Motor_Exceed(self):
@@ -647,9 +648,9 @@ class SimpleAxisStatus(object):
     def v_Motor_Exceed(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[11] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def Servo_Overload(self):
@@ -659,9 +660,9 @@ class SimpleAxisStatus(object):
     def Servo_Overload(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[12] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def Pos_Enc_Error(self):
@@ -671,9 +672,9 @@ class SimpleAxisStatus(object):
     def Pos_Enc_Error(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[13] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def Pos_Enc_Step(self):
@@ -683,9 +684,9 @@ class SimpleAxisStatus(object):
     def Pos_Enc_Step(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[14] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def p_Range_Exceed(self):
@@ -695,9 +696,9 @@ class SimpleAxisStatus(object):
     def p_Range_Exceed(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[15] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def p_Dev_Exceed(self):
@@ -707,9 +708,9 @@ class SimpleAxisStatus(object):
     def p_Dev_Exceed(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[16] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def Servo_DC_Error(self):
@@ -719,9 +720,9 @@ class SimpleAxisStatus(object):
     def Servo_DC_Error(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[17] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def Override_Error(self):
@@ -731,9 +732,9 @@ class SimpleAxisStatus(object):
     def Override_Error(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[18] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def Cmd_Timeout(self):
@@ -743,9 +744,9 @@ class SimpleAxisStatus(object):
     def Cmd_Timeout(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[19] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def Rate_Loop_Err(self):
@@ -755,9 +756,9 @@ class SimpleAxisStatus(object):
     def Rate_Loop_Err(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[22] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def v_Dev_Exceed(self):
@@ -767,9 +768,9 @@ class SimpleAxisStatus(object):
     def v_Dev_Exceed(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[23] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def Stow_Error(self):
@@ -779,9 +780,9 @@ class SimpleAxisStatus(object):
     def Stow_Error(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[24] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def Stow_Timeout(self):
@@ -791,9 +792,9 @@ class SimpleAxisStatus(object):
     def Stow_Timeout(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[25] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def Extern_Error(self):
@@ -803,9 +804,9 @@ class SimpleAxisStatus(object):
     def Extern_Error(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[26] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def Safety_Dev_Error(self):
@@ -815,9 +816,9 @@ class SimpleAxisStatus(object):
     def Safety_Dev_Error(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[27] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def Com_Error(self):
@@ -827,9 +828,9 @@ class SimpleAxisStatus(object):
     def Com_Error(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[29] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def Pre_Limit_Err(self):
@@ -839,9 +840,9 @@ class SimpleAxisStatus(object):
     def Pre_Limit_Err(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[30] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def Fin_Limit_Err(self):
@@ -851,13 +852,13 @@ class SimpleAxisStatus(object):
     def Fin_Limit_Err(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        errors = bytearray(self.errors)
+        errors = list(self.errors)
         errors[31] = str(int(value))
-        self.status[10:14] = utils.binary_to_bytes(str(errors)[::-1])
+        self.status[10:14] = utils.binary_to_bytes(''.join(errors)[::-1])
 
     @property
     def axis_state(self):
-        return utils.bytes_to_uint(str(self.status[14:16]))
+        return utils.bytes_to_uint(self.status[14:16])
 
     @axis_state.setter
     def axis_state(self, value):
@@ -872,7 +873,7 @@ class SimpleAxisStatus(object):
 
     @property
     def axis_trajectory_state(self):
-        return utils.bytes_to_uint(str(self.status[16:18]))
+        return utils.bytes_to_uint(self.status[16:18])
 
     @axis_trajectory_state.setter
     def axis_trajectory_state(self, value):
@@ -884,7 +885,7 @@ class SimpleAxisStatus(object):
         # 4: slewing velocity
         # 6: position
         # 7: tracking
-        if not isinstance(value, int) or value not in range(5) + [6, 7]:
+        if not isinstance(value, int) or value not in [0, 1, 2, 3, 4, 6, 7]:
             raise ValueError(
                 'Provide an integer beween [0, 1, 2, 3, 4, 6, 7]!'
             )
@@ -892,7 +893,7 @@ class SimpleAxisStatus(object):
 
     @property
     def p_Soll(self):
-        return utils.bytes_to_int(str(self.status[18:22]))
+        return utils.bytes_to_int(self.status[18:22])
 
     @p_Soll.setter
     def p_Soll(self, value):
@@ -903,7 +904,7 @@ class SimpleAxisStatus(object):
 
     @property
     def p_Bahn(self):
-        return utils.bytes_to_int(str(self.status[22:26]))
+        return utils.bytes_to_int(self.status[22:26])
 
     @p_Bahn.setter
     def p_Bahn(self, value):
@@ -914,7 +915,7 @@ class SimpleAxisStatus(object):
 
     @property
     def p_Ist(self):
-        return utils.bytes_to_int(str(self.status[26:30]))
+        return utils.bytes_to_int(self.status[26:30])
 
     @p_Ist.setter
     def p_Ist(self, value):
@@ -925,7 +926,7 @@ class SimpleAxisStatus(object):
 
     @property
     def p_AbwFil(self):
-        return utils.bytes_to_int(str(self.status[30:34]))
+        return utils.bytes_to_int(self.status[30:34])
 
     @p_AbwFil.setter
     def p_AbwFil(self, value):
@@ -936,7 +937,7 @@ class SimpleAxisStatus(object):
 
     @property
     def v_Soll(self):
-        return utils.bytes_to_int(str(self.status[34:38]))
+        return utils.bytes_to_int(self.status[34:38])
 
     @v_Soll.setter
     def v_Soll(self, value):
@@ -947,7 +948,7 @@ class SimpleAxisStatus(object):
 
     @property
     def v_Bahn(self):
-        return utils.bytes_to_int(str(self.status[38:42]))
+        return utils.bytes_to_int(self.status[38:42])
 
     @v_Bahn.setter
     def v_Bahn(self, value):
@@ -958,7 +959,7 @@ class SimpleAxisStatus(object):
 
     @property
     def v_Ist(self):
-        return utils.bytes_to_int(str(self.status[42:46]))
+        return utils.bytes_to_int(self.status[42:46])
 
     @v_Ist.setter
     def v_Ist(self, value):
@@ -969,7 +970,7 @@ class SimpleAxisStatus(object):
 
     @property
     def a_Bahn(self):
-        return utils.bytes_to_int(str(self.status[46:50]))
+        return utils.bytes_to_int(self.status[46:50])
 
     @a_Bahn.setter
     def a_Bahn(self, value):
@@ -980,7 +981,7 @@ class SimpleAxisStatus(object):
 
     @property
     def p_Offset(self):
-        return utils.bytes_to_int(str(self.status[50:54]))
+        return utils.bytes_to_int(self.status[50:54])
 
     @p_Offset.setter
     def p_Offset(self, value):
@@ -992,7 +993,7 @@ class SimpleAxisStatus(object):
     @property
     def motor_selection(self):
         motor_selection = []
-        for motor in utils.bytes_to_binary(str(self.status[54:56]))[::-1]:
+        for motor in utils.bytes_to_binary(self.status[54:56])[::-1]:
             motor_selection.append(bool(int(motor)))
         return motor_selection
 
@@ -1002,23 +1003,22 @@ class SimpleAxisStatus(object):
         try:
             if not isinstance(value, (list, tuple)) or len(value) != 16:
                 raise ValueError
-            else:
-                for motor in value:
-                    if not isinstance(motor, bool):
-                        raise ValueError
-        except ValueError:
+            for motor in value:
+                if not isinstance(motor, bool):
+                    raise ValueError
+        except ValueError as ex:
             raise ValueError(
                 'Provide a list/tuple of booleans of length = 16!'
-            )
+            ) from ex
         motor_selection = ''
         for motor in value:
             motor_selection += str(int(motor))
-        self.status[54:56] = utils.binary_to_bytes(motor_selection[::-1])
+        self.status[54:56] = utils.binary_to_bytes(motor_selection, False)
 
     @property
     def brakes_open(self):
         brakes_open = []
-        for brake in utils.bytes_to_binary(str(self.status[56:58]))[::-1]:
+        for brake in utils.bytes_to_binary(self.status[56:58])[::-1]:
             brakes_open.append(bool(int(brake)))
         return brakes_open
 
@@ -1028,14 +1028,13 @@ class SimpleAxisStatus(object):
         try:
             if not isinstance(value, (list, tuple)) or len(value) != 16:
                 raise ValueError
-            else:
-                for motor in value:
-                    if not isinstance(motor, bool):
-                        raise ValueError
-        except ValueError:
+            for motor in value:
+                if not isinstance(motor, bool):
+                    raise ValueError
+        except ValueError as ex:
             raise ValueError(
                 'Provide a list/tuple of booleans of length = 16!'
-            )
+            ) from ex
         brakes_open = ''
         for brake in value:
             brakes_open += str(int(brake))
@@ -1044,7 +1043,7 @@ class SimpleAxisStatus(object):
     @property
     def power_module_ok(self):
         power_module_ok = []
-        power_modules = utils.bytes_to_binary(str(self.status[58:60]))[::-1]
+        power_modules = utils.bytes_to_binary(self.status[58:60])[::-1]
         for power_module in power_modules:
             power_module_ok.append(bool(int(power_module)))
         return power_module_ok
@@ -1056,14 +1055,13 @@ class SimpleAxisStatus(object):
         try:
             if not isinstance(value, (list, tuple)) or len(value) != 16:
                 raise ValueError
-            else:
-                for motor in value:
-                    if not isinstance(motor, bool):
-                        raise ValueError
-        except ValueError:
+            for motor in value:
+                if not isinstance(motor, bool):
+                    raise ValueError
+        except ValueError as ex:
             raise ValueError(
                 'Provide a list/tuple of booleans of length = 16!'
-            )
+            ) from ex
         power_module_ok = ''
         for power_module in value:
             power_module_ok += str(int(power_module))
@@ -1080,7 +1078,7 @@ class SimpleAxisStatus(object):
         # True: axis stowed
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[60] = chr(int(value))
+        self.status[60] = value
 
     @property
     def stowPosOk(self):
@@ -1093,12 +1091,12 @@ class SimpleAxisStatus(object):
         # True: actual position is stow position
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[61] = chr(int(value))
+        self.status[61] = value
 
     @property
     def stow_pin_in(self):
         stow_pin_in = []
-        for stow_pin in utils.bytes_to_binary(str(self.status[62:64]))[::-1]:
+        for stow_pin in utils.bytes_to_binary(self.status[62:64])[::-1]:
             stow_pin_in.append(bool(int(stow_pin)))
         return stow_pin_in
 
@@ -1108,14 +1106,13 @@ class SimpleAxisStatus(object):
         try:
             if not isinstance(value, (list, tuple)) or len(value) != 16:
                 raise ValueError
-            else:
-                for motor in value:
-                    if not isinstance(motor, bool):
-                        raise ValueError
-        except ValueError:
+            for motor in value:
+                if not isinstance(motor, bool):
+                    raise ValueError
+        except ValueError as ex:
             raise ValueError(
                 'Provide a list/tuple of booleans of length = 16!'
-            )
+            ) from ex
         stow_pin_in = ''
         for stow_pin in value:
             stow_pin_in += str(int(stow_pin))
@@ -1124,7 +1121,7 @@ class SimpleAxisStatus(object):
     @property
     def stow_pin_out(self):
         stow_pin_out = []
-        for stow_pin in utils.bytes_to_binary(str(self.status[64:66]))[::-1]:
+        for stow_pin in utils.bytes_to_binary(self.status[64:66])[::-1]:
             stow_pin_out.append(bool(int(stow_pin)))
         return stow_pin_out
 
@@ -1134,14 +1131,13 @@ class SimpleAxisStatus(object):
         try:
             if not isinstance(value, (list, tuple)) or len(value) != 16:
                 raise ValueError
-            else:
-                for motor in value:
-                    if not isinstance(motor, bool):
-                        raise ValueError
-        except ValueError:
+            for motor in value:
+                if not isinstance(motor, bool):
+                    raise ValueError
+        except ValueError as ex:
             raise ValueError(
                 'Provide a list/tuple of booleans of length = 16!'
-            )
+            ) from ex
         stow_pin_out = ''
         for stow_pin in value:
             stow_pin_out += str(int(stow_pin))
@@ -1150,7 +1146,7 @@ class SimpleAxisStatus(object):
     @property
     def stow_pin_selection(self):
         stow_pin_selection = []
-        for stow_pin in utils.bytes_to_binary(str(self.status[66:68]))[::-1]:
+        for stow_pin in utils.bytes_to_binary(self.status[66:68])[::-1]:
             stow_pin_selection.append(bool(int(stow_pin)))
         return stow_pin_selection
 
@@ -1160,14 +1156,13 @@ class SimpleAxisStatus(object):
         try:
             if not isinstance(value, (list, tuple)) or len(value) != 16:
                 raise ValueError
-            else:
-                for motor in value:
-                    if not isinstance(motor, bool):
-                        raise ValueError
-        except ValueError:
+            for motor in value:
+                if not isinstance(motor, bool):
+                    raise ValueError
+        except ValueError as ex:
             raise ValueError(
                 'Provide a list/tuple of booleans of length = 16!'
-            )
+            ) from ex
         stow_pin_selection = ''
         for stow_pin in value:
             stow_pin_selection += str(int(stow_pin))
@@ -1175,15 +1170,15 @@ class SimpleAxisStatus(object):
 
     @property
     def mode_command_status(self):
-        return str(self.status[68:84])
+        return self.status[68:84]
 
     @property
     def received_mode_command_status(self):
-        return str(self.status[68:76])
+        return self.status[68:76]
 
     @property
     def received_mode_command_counter(self):
-        return utils.bytes_to_uint(str(self.status[68:72]))
+        return utils.bytes_to_uint(self.status[68:72])
 
     @received_mode_command_counter.setter
     def received_mode_command_counter(self, value):
@@ -1194,7 +1189,7 @@ class SimpleAxisStatus(object):
 
     @property
     def received_mode_command(self):
-        return utils.bytes_to_uint(str(self.status[72:74]))
+        return utils.bytes_to_uint(self.status[72:74])
 
     @received_mode_command.setter
     def received_mode_command(self, value):
@@ -1218,7 +1213,7 @@ class SimpleAxisStatus(object):
 
     @property
     def received_mode_command_answer(self):
-        return utils.bytes_to_uint(str(self.status[74:76]))
+        return utils.bytes_to_uint(self.status[74:76])
 
     @received_mode_command_answer.setter
     def received_mode_command_answer(self, value):
@@ -1234,11 +1229,11 @@ class SimpleAxisStatus(object):
 
     @property
     def executed_mode_command_status(self):
-        return str(self.status[76:84])
+        return self.status[76:84]
 
     @property
     def executed_mode_command_counter(self):
-        return utils.bytes_to_uint(str(self.status[76:80]))
+        return utils.bytes_to_uint(self.status[76:80])
 
     @executed_mode_command_counter.setter
     def executed_mode_command_counter(self, value):
@@ -1249,7 +1244,7 @@ class SimpleAxisStatus(object):
 
     @property
     def executed_mode_command(self):
-        return utils.bytes_to_uint(str(self.status[80:82]))
+        return utils.bytes_to_uint(self.status[80:82])
 
     @executed_mode_command.setter
     def executed_mode_command(self, value):
@@ -1273,7 +1268,7 @@ class SimpleAxisStatus(object):
 
     @property
     def executed_mode_command_answer(self):
-        return utils.bytes_to_uint(str(self.status[82:84]))
+        return utils.bytes_to_uint(self.status[82:84])
 
     @executed_mode_command_answer.setter
     def executed_mode_command_answer(self, value):
@@ -1289,11 +1284,11 @@ class SimpleAxisStatus(object):
 
     @property
     def parameter_command_status(self):
-        return str(self.status[84:92])
+        return self.status[84:92]
 
     @property
     def parameter_command_counter(self):
-        return utils.bytes_to_uint(str(self.status[84:88]))
+        return utils.bytes_to_uint(self.status[84:88])
 
     @parameter_command_counter.setter
     def parameter_command_counter(self, value):
@@ -1304,7 +1299,7 @@ class SimpleAxisStatus(object):
 
     @property
     def parameter_command(self):
-        return utils.bytes_to_uint(str(self.status[88:90]))
+        return utils.bytes_to_uint(self.status[88:90])
 
     @parameter_command.setter
     def parameter_command(self, value):
@@ -1322,7 +1317,7 @@ class SimpleAxisStatus(object):
 
     @property
     def parameter_command_answer(self):
-        return utils.bytes_to_uint(str(self.status[90:92]))
+        return utils.bytes_to_uint(self.status[90:92])
 
     @parameter_command_answer.setter
     def parameter_command_answer(self, value):
@@ -1505,10 +1500,10 @@ class MasterAxisStatus(SimpleAxisStatus):
 
         :param cmd: the received mode command.
         """
-        cmd_cnt = utils.bytes_to_int(cmd[4:8])
-        mode_id = utils.bytes_to_int(cmd[8:10])
-        par_1 = utils.bytes_to_real(cmd[10:18], 2)
-        par_2 = utils.bytes_to_real(cmd[18:26], 2)
+        cmd_cnt = utils.string_to_int(cmd[4:8])
+        mode_id = utils.string_to_int(cmd[8:10])
+        par_1 = utils.string_to_real(cmd[10:18], 2)
+        par_2 = utils.string_to_real(cmd[18:26], 2)
 
         command = self.mode_commands.get(mode_id)
 
@@ -1728,8 +1723,7 @@ class MasterAxisStatus(SimpleAxisStatus):
             if counter != self.curr_mode_counter:
                 if self.axis_trajectory_state != 7:
                     break
-                else:
-                    counter = self.curr_mode_counter
+                counter = self.curr_mode_counter
 
             self.axis_trajectory_state = 7  # 7: tracking
 
@@ -1917,11 +1911,11 @@ class MasterAxisStatus(SimpleAxisStatus):
 
         :param cmd: the received command.
         """
-        self.parameter_command_counter = utils.bytes_to_uint(cmd[4:8])
+        self.parameter_command_counter = utils.string_to_uint(cmd[4:8])
 
-        parameter_id = utils.bytes_to_uint(cmd[8:10])
-        parameter_1 = utils.bytes_to_real(cmd[10:18], 2)
-        parameter_2 = utils.bytes_to_real(cmd[18:26], 2)
+        parameter_id = utils.string_to_uint(cmd[8:10])
+        parameter_1 = utils.string_to_real(cmd[10:18], 2)
+        parameter_2 = utils.string_to_real(cmd[18:26], 2)
 
         self.parameter_command = parameter_id
 

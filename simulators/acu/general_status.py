@@ -3,7 +3,7 @@ from ctypes import c_char
 from simulators import utils
 
 
-class GeneralStatus(object):
+class GeneralStatus:
     """General status of the ACU. This status holds generic informations
     about the ACU, like its firmware version, the interlock statuses and
     human-machine interfaces status."""
@@ -85,7 +85,7 @@ class GeneralStatus(object):
 
     @property
     def master(self):
-        return utils.bytes_to_uint(str(self.status[2]))
+        return utils.bytes_to_uint(self.status[2])
 
     @master.setter
     def master(self, value=2):
@@ -103,7 +103,7 @@ class GeneralStatus(object):
     @property
     def status_HMI(self):
         status_HMI = []
-        for value in utils.bytes_to_binary(str(self.status[3:5]))[::-1]:
+        for value in utils.bytes_to_binary(self.status[3:5])[::-1]:
             status_HMI.append(bool(int(value)))
         return status_HMI
 
@@ -116,10 +116,10 @@ class GeneralStatus(object):
             for v in value:
                 if not isinstance(v, bool):
                     raise ValueError
-        except ValueError:
+        except ValueError as ex:
             raise ValueError(
                 'Provide a list/tuple of booleans of length = 6!'
-            )
+            ) from ex
 
         LCP_connected = int(value[0])
         remote_computer_connected = int(value[1])
@@ -150,7 +150,7 @@ class GeneralStatus(object):
         # BOOL, False: LCP inactive, True: active
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[5] = chr(int(value))
+        self.status[5] = value
 
     @property
     def simulation(self):
@@ -161,7 +161,7 @@ class GeneralStatus(object):
         # BOOL, False: simulation inactive, True: active
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[6] = chr(int(value))
+        self.status[6] = value
 
     @property
     def control_system_on(self):
@@ -172,7 +172,7 @@ class GeneralStatus(object):
         # BOOL, False: control system off, True: on
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[7] = chr(int(value))
+        self.status[7] = value
 
     @property
     def service(self):
@@ -183,11 +183,11 @@ class GeneralStatus(object):
         # BOOL, False: service mode off, True: on
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[8] = chr(int(value))
+        self.status[8] = value
 
     @property
     def HW_interlock(self):
-        return utils.bytes_to_binary(str(self.status[9:13]))[::-1]
+        return utils.bytes_to_binary(self.status[9:13][::-1])
 
     @property
     def EStop_Device(self):
@@ -197,9 +197,9 @@ class GeneralStatus(object):
     def EStop_Device(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        HW_interlock = bytearray(self.HW_interlock)
+        HW_interlock = list(self.HW_interlock)
         HW_interlock[0] = str(int(value))
-        self.status[9:13] = utils.binary_to_bytes(str(HW_interlock)[::-1])
+        self.status[9:13] = utils.binary_to_bytes(''.join(HW_interlock)[::-1])
 
     @property
     def ES_SP(self):
@@ -209,9 +209,9 @@ class GeneralStatus(object):
     def ES_SP(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        HW_interlock = bytearray(self.HW_interlock)
+        HW_interlock = list(self.HW_interlock)
         HW_interlock[1] = str(int(value))
-        self.status[9:13] = utils.binary_to_bytes(str(HW_interlock)[::-1])
+        self.status[9:13] = utils.binary_to_bytes(''.join(HW_interlock)[::-1])
 
     @property
     def ES_Drive_AZ1_2(self):
@@ -221,9 +221,9 @@ class GeneralStatus(object):
     def ES_Drive_AZ1_2(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        HW_interlock = bytearray(self.HW_interlock)
+        HW_interlock = list(self.HW_interlock)
         HW_interlock[2] = str(int(value))
-        self.status[9:13] = utils.binary_to_bytes(str(HW_interlock)[::-1])
+        self.status[9:13] = utils.binary_to_bytes(''.join(HW_interlock)[::-1])
 
     @property
     def ES_Drive_AZ3_4(self):
@@ -233,9 +233,9 @@ class GeneralStatus(object):
     def ES_Drive_AZ3_4(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        HW_interlock = bytearray(self.HW_interlock)
+        HW_interlock = list(self.HW_interlock)
         HW_interlock[3] = str(int(value))
-        self.status[9:13] = utils.binary_to_bytes(str(HW_interlock)[::-1])
+        self.status[9:13] = utils.binary_to_bytes(''.join(HW_interlock)[::-1])
 
     @property
     def ES_Drive_AZ5_6(self):
@@ -245,9 +245,9 @@ class GeneralStatus(object):
     def ES_Drive_AZ5_6(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        HW_interlock = bytearray(self.HW_interlock)
+        HW_interlock = list(self.HW_interlock)
         HW_interlock[4] = str(int(value))
-        self.status[9:13] = utils.binary_to_bytes(str(HW_interlock)[::-1])
+        self.status[9:13] = utils.binary_to_bytes(''.join(HW_interlock)[::-1])
 
     @property
     def ES_Drive_AZ7_8(self):
@@ -257,9 +257,9 @@ class GeneralStatus(object):
     def ES_Drive_AZ7_8(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        HW_interlock = bytearray(self.HW_interlock)
+        HW_interlock = list(self.HW_interlock)
         HW_interlock[5] = str(int(value))
-        self.status[9:13] = utils.binary_to_bytes(str(HW_interlock)[::-1])
+        self.status[9:13] = utils.binary_to_bytes(''.join(HW_interlock)[::-1])
 
     @property
     def ES_Drive_EL1_2(self):
@@ -269,9 +269,9 @@ class GeneralStatus(object):
     def ES_Drive_EL1_2(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        HW_interlock = bytearray(self.HW_interlock)
+        HW_interlock = list(self.HW_interlock)
         HW_interlock[6] = str(int(value))
-        self.status[9:13] = utils.binary_to_bytes(str(HW_interlock)[::-1])
+        self.status[9:13] = utils.binary_to_bytes(''.join(HW_interlock)[::-1])
 
     @property
     def ES_Drive_EL3_4(self):
@@ -281,9 +281,9 @@ class GeneralStatus(object):
     def ES_Drive_EL3_4(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        HW_interlock = bytearray(self.HW_interlock)
+        HW_interlock = list(self.HW_interlock)
         HW_interlock[7] = str(int(value))
-        self.status[9:13] = utils.binary_to_bytes(str(HW_interlock)[::-1])
+        self.status[9:13] = utils.binary_to_bytes(''.join(HW_interlock)[::-1])
 
     @property
     def ES_LCP(self):
@@ -293,9 +293,9 @@ class GeneralStatus(object):
     def ES_LCP(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        HW_interlock = bytearray(self.HW_interlock)
+        HW_interlock = list(self.HW_interlock)
         HW_interlock[8] = str(int(value))
-        self.status[9:13] = utils.binary_to_bytes(str(HW_interlock)[::-1])
+        self.status[9:13] = utils.binary_to_bytes(''.join(HW_interlock)[::-1])
 
     @property
     def ES_Cablewrap(self):
@@ -305,9 +305,9 @@ class GeneralStatus(object):
     def ES_Cablewrap(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        HW_interlock = bytearray(self.HW_interlock)
+        HW_interlock = list(self.HW_interlock)
         HW_interlock[9] = str(int(value))
-        self.status[9:13] = utils.binary_to_bytes(str(HW_interlock)[::-1])
+        self.status[9:13] = utils.binary_to_bytes(''.join(HW_interlock)[::-1])
 
     @property
     def ES_AER1(self):
@@ -317,9 +317,9 @@ class GeneralStatus(object):
     def ES_AER1(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        HW_interlock = bytearray(self.HW_interlock)
+        HW_interlock = list(self.HW_interlock)
         HW_interlock[10] = str(int(value))
-        self.status[9:13] = utils.binary_to_bytes(str(HW_interlock)[::-1])
+        self.status[9:13] = utils.binary_to_bytes(''.join(HW_interlock)[::-1])
 
     @property
     def ES_AER2(self):
@@ -329,9 +329,9 @@ class GeneralStatus(object):
     def ES_AER2(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        HW_interlock = bytearray(self.HW_interlock)
+        HW_interlock = list(self.HW_interlock)
         HW_interlock[11] = str(int(value))
-        self.status[9:13] = utils.binary_to_bytes(str(HW_interlock)[::-1])
+        self.status[9:13] = utils.binary_to_bytes(''.join(HW_interlock)[::-1])
 
     @property
     def ES_HHP(self):
@@ -341,9 +341,9 @@ class GeneralStatus(object):
     def ES_HHP(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        HW_interlock = bytearray(self.HW_interlock)
+        HW_interlock = list(self.HW_interlock)
         HW_interlock[12] = str(int(value))
-        self.status[9:13] = utils.binary_to_bytes(str(HW_interlock)[::-1])
+        self.status[9:13] = utils.binary_to_bytes(''.join(HW_interlock)[::-1])
 
     @property
     def ES_PCP(self):
@@ -353,9 +353,9 @@ class GeneralStatus(object):
     def ES_PCP(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        HW_interlock = bytearray(self.HW_interlock)
+        HW_interlock = list(self.HW_interlock)
         HW_interlock[13] = str(int(value))
-        self.status[9:13] = utils.binary_to_bytes(str(HW_interlock)[::-1])
+        self.status[9:13] = utils.binary_to_bytes(''.join(HW_interlock)[::-1])
 
     @property
     def ES_EER(self):
@@ -365,9 +365,9 @@ class GeneralStatus(object):
     def ES_EER(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        HW_interlock = bytearray(self.HW_interlock)
+        HW_interlock = list(self.HW_interlock)
         HW_interlock[14] = str(int(value))
-        self.status[9:13] = utils.binary_to_bytes(str(HW_interlock)[::-1])
+        self.status[9:13] = utils.binary_to_bytes(''.join(HW_interlock)[::-1])
 
     @property
     def ES_EER_Key(self):
@@ -377,9 +377,9 @@ class GeneralStatus(object):
     def ES_EER_Key(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        HW_interlock = bytearray(self.HW_interlock)
+        HW_interlock = list(self.HW_interlock)
         HW_interlock[15] = str(int(value))
-        self.status[9:13] = utils.binary_to_bytes(str(HW_interlock)[::-1])
+        self.status[9:13] = utils.binary_to_bytes(''.join(HW_interlock)[::-1])
 
     @property
     def ES_EER_Door(self):
@@ -389,9 +389,9 @@ class GeneralStatus(object):
     def ES_EER_Door(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        HW_interlock = bytearray(self.HW_interlock)
+        HW_interlock = list(self.HW_interlock)
         HW_interlock[16] = str(int(value))
-        self.status[9:13] = utils.binary_to_bytes(str(HW_interlock)[::-1])
+        self.status[9:13] = utils.binary_to_bytes(''.join(HW_interlock)[::-1])
 
     @property
     def ES_BOX_10(self):
@@ -401,9 +401,9 @@ class GeneralStatus(object):
     def ES_BOX_10(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        HW_interlock = bytearray(self.HW_interlock)
+        HW_interlock = list(self.HW_interlock)
         HW_interlock[17] = str(int(value))
-        self.status[9:13] = utils.binary_to_bytes(str(HW_interlock)[::-1])
+        self.status[9:13] = utils.binary_to_bytes(''.join(HW_interlock)[::-1])
 
     @property
     def ES_SFR_1(self):
@@ -413,9 +413,9 @@ class GeneralStatus(object):
     def ES_SFR_1(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        HW_interlock = bytearray(self.HW_interlock)
+        HW_interlock = list(self.HW_interlock)
         HW_interlock[18] = str(int(value))
-        self.status[9:13] = utils.binary_to_bytes(str(HW_interlock)[::-1])
+        self.status[9:13] = utils.binary_to_bytes(''.join(HW_interlock)[::-1])
 
     @property
     def ES_SFR_2(self):
@@ -425,13 +425,13 @@ class GeneralStatus(object):
     def ES_SFR_2(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        HW_interlock = bytearray(self.HW_interlock)
+        HW_interlock = list(self.HW_interlock)
         HW_interlock[19] = str(int(value))
-        self.status[9:13] = utils.binary_to_bytes(str(HW_interlock)[::-1])
+        self.status[9:13] = utils.binary_to_bytes(''.join(HW_interlock)[::-1])
 
     @property
     def SW_interlock(self):
-        return utils.bytes_to_binary(str(self.status[13:17]))[::-1]
+        return utils.bytes_to_binary(self.status[13:17][::-1])
 
     @property
     def Control_System_Off(self):
@@ -441,9 +441,9 @@ class GeneralStatus(object):
     def Control_System_Off(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        SW_interlock = bytearray(self.SW_interlock)
+        SW_interlock = list(self.SW_interlock)
         SW_interlock[0] = str(int(value))
-        self.status[13:17] = utils.binary_to_bytes(str(SW_interlock)[::-1])
+        self.status[13:17] = utils.binary_to_bytes(''.join(SW_interlock)[::-1])
 
     @property
     def Power_Control_Sys(self):
@@ -453,9 +453,9 @@ class GeneralStatus(object):
     def Power_Control_Sys(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        SW_interlock = bytearray(self.SW_interlock)
+        SW_interlock = list(self.SW_interlock)
         SW_interlock[1] = str(int(value))
-        self.status[13:17] = utils.binary_to_bytes(str(SW_interlock)[::-1])
+        self.status[13:17] = utils.binary_to_bytes(''.join(SW_interlock)[::-1])
 
     @property
     def Power_Drive_Cab(self):
@@ -465,9 +465,9 @@ class GeneralStatus(object):
     def Power_Drive_Cab(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        SW_interlock = bytearray(self.SW_interlock)
+        SW_interlock = list(self.SW_interlock)
         SW_interlock[2] = str(int(value))
-        self.status[13:17] = utils.binary_to_bytes(str(SW_interlock)[::-1])
+        self.status[13:17] = utils.binary_to_bytes(''.join(SW_interlock)[::-1])
 
     @property
     def Power_Supply_DC(self):
@@ -477,9 +477,9 @@ class GeneralStatus(object):
     def Power_Supply_DC(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        SW_interlock = bytearray(self.SW_interlock)
+        SW_interlock = list(self.SW_interlock)
         SW_interlock[3] = str(int(value))
-        self.status[13:17] = utils.binary_to_bytes(str(SW_interlock)[::-1])
+        self.status[13:17] = utils.binary_to_bytes(''.join(SW_interlock)[::-1])
 
     @property
     def Fieldbus_Error(self):
@@ -489,9 +489,9 @@ class GeneralStatus(object):
     def Fieldbus_Error(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        SW_interlock = bytearray(self.SW_interlock)
+        SW_interlock = list(self.SW_interlock)
         SW_interlock[5] = str(int(value))
-        self.status[13:17] = utils.binary_to_bytes(str(SW_interlock)[::-1])
+        self.status[13:17] = utils.binary_to_bytes(''.join(SW_interlock)[::-1])
 
     @property
     def Interlock_Cmd(self):
@@ -501,9 +501,9 @@ class GeneralStatus(object):
     def Interlock_Cmd(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        SW_interlock = bytearray(self.SW_interlock)
+        SW_interlock = list(self.SW_interlock)
         SW_interlock[6] = str(int(value))
-        self.status[13:17] = utils.binary_to_bytes(str(SW_interlock)[::-1])
+        self.status[13:17] = utils.binary_to_bytes(''.join(SW_interlock)[::-1])
 
     @property
     def SaDev_ES_FbErr(self):
@@ -513,9 +513,9 @@ class GeneralStatus(object):
     def SaDev_ES_FbErr(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        SW_interlock = bytearray(self.SW_interlock)
+        SW_interlock = list(self.SW_interlock)
         SW_interlock[7] = str(int(value))
-        self.status[13:17] = utils.binary_to_bytes(str(SW_interlock)[::-1])
+        self.status[13:17] = utils.binary_to_bytes(''.join(SW_interlock)[::-1])
 
     @property
     def SaDev_ES_CommErr(self):
@@ -525,9 +525,9 @@ class GeneralStatus(object):
     def SaDev_ES_CommErr(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        SW_interlock = bytearray(self.SW_interlock)
+        SW_interlock = list(self.SW_interlock)
         SW_interlock[8] = str(int(value))
-        self.status[13:17] = utils.binary_to_bytes(str(SW_interlock)[::-1])
+        self.status[13:17] = utils.binary_to_bytes(''.join(SW_interlock)[::-1])
 
     @property
     def SaDev_ES_OutErr(self):
@@ -537,9 +537,9 @@ class GeneralStatus(object):
     def SaDev_ES_OutErr(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        SW_interlock = bytearray(self.SW_interlock)
+        SW_interlock = list(self.SW_interlock)
         SW_interlock[9] = str(int(value))
-        self.status[13:17] = utils.binary_to_bytes(str(SW_interlock)[::-1])
+        self.status[13:17] = utils.binary_to_bytes(''.join(SW_interlock)[::-1])
 
     @property
     def SaDev_MD_FbErr(self):
@@ -549,9 +549,9 @@ class GeneralStatus(object):
     def SaDev_MD_FbErr(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        SW_interlock = bytearray(self.SW_interlock)
+        SW_interlock = list(self.SW_interlock)
         SW_interlock[10] = str(int(value))
-        self.status[13:17] = utils.binary_to_bytes(str(SW_interlock)[::-1])
+        self.status[13:17] = utils.binary_to_bytes(''.join(SW_interlock)[::-1])
 
     @property
     def SaDev_MD_CommErr(self):
@@ -561,9 +561,9 @@ class GeneralStatus(object):
     def SaDev_MD_CommErr(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        SW_interlock = bytearray(self.SW_interlock)
+        SW_interlock = list(self.SW_interlock)
         SW_interlock[11] = str(int(value))
-        self.status[13:17] = utils.binary_to_bytes(str(SW_interlock)[::-1])
+        self.status[13:17] = utils.binary_to_bytes(''.join(SW_interlock)[::-1])
 
     @property
     def SaDev_MD_OutErr(self):
@@ -573,9 +573,9 @@ class GeneralStatus(object):
     def SaDev_MD_OutErr(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        SW_interlock = bytearray(self.SW_interlock)
+        SW_interlock = list(self.SW_interlock)
         SW_interlock[12] = str(int(value))
-        self.status[13:17] = utils.binary_to_bytes(str(SW_interlock)[::-1])
+        self.status[13:17] = utils.binary_to_bytes(''.join(SW_interlock)[::-1])
 
     @property
     def Emergency_Stop(self):
@@ -585,9 +585,9 @@ class GeneralStatus(object):
     def Emergency_Stop(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        SW_interlock = bytearray(self.SW_interlock)
+        SW_interlock = list(self.SW_interlock)
         SW_interlock[13] = str(int(value))
-        self.status[13:17] = utils.binary_to_bytes(str(SW_interlock)[::-1])
+        self.status[13:17] = utils.binary_to_bytes(''.join(SW_interlock)[::-1])
 
     @property
     def Power_UPS(self):
@@ -597,9 +597,9 @@ class GeneralStatus(object):
     def Power_UPS(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        SW_interlock = bytearray(self.SW_interlock)
+        SW_interlock = list(self.SW_interlock)
         SW_interlock[15] = str(int(value))
-        self.status[13:17] = utils.binary_to_bytes(str(SW_interlock)[::-1])
+        self.status[13:17] = utils.binary_to_bytes(''.join(SW_interlock)[::-1])
 
     @property
     def Power_UPS_Alarm(self):
@@ -609,9 +609,9 @@ class GeneralStatus(object):
     def Power_UPS_Alarm(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        SW_interlock = bytearray(self.SW_interlock)
+        SW_interlock = list(self.SW_interlock)
         SW_interlock[16] = str(int(value))
-        self.status[13:17] = utils.binary_to_bytes(str(SW_interlock)[::-1])
+        self.status[13:17] = utils.binary_to_bytes(''.join(SW_interlock)[::-1])
 
     @property
     def ACU_DI_Power(self):
@@ -621,9 +621,9 @@ class GeneralStatus(object):
     def ACU_DI_Power(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        SW_interlock = bytearray(self.SW_interlock)
+        SW_interlock = list(self.SW_interlock)
         SW_interlock[17] = str(int(value))
-        self.status[13:17] = utils.binary_to_bytes(str(SW_interlock)[::-1])
+        self.status[13:17] = utils.binary_to_bytes(''.join(SW_interlock)[::-1])
 
     @property
     def ECU_DI_Power(self):
@@ -633,9 +633,9 @@ class GeneralStatus(object):
     def ECU_DI_Power(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        SW_interlock = bytearray(self.SW_interlock)
+        SW_interlock = list(self.SW_interlock)
         SW_interlock[18] = str(int(value))
-        self.status[13:17] = utils.binary_to_bytes(str(SW_interlock)[::-1])
+        self.status[13:17] = utils.binary_to_bytes(''.join(SW_interlock)[::-1])
 
     @property
     def Power_DO_Int(self):
@@ -645,9 +645,9 @@ class GeneralStatus(object):
     def Power_DO_Int(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        SW_interlock = bytearray(self.SW_interlock)
+        SW_interlock = list(self.SW_interlock)
         SW_interlock[19] = str(int(value))
-        self.status[13:17] = utils.binary_to_bytes(str(SW_interlock)[::-1])
+        self.status[13:17] = utils.binary_to_bytes(''.join(SW_interlock)[::-1])
 
     @property
     def Main_Power(self):
@@ -657,9 +657,9 @@ class GeneralStatus(object):
     def Main_Power(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        SW_interlock = bytearray(self.SW_interlock)
+        SW_interlock = list(self.SW_interlock)
         SW_interlock[20] = str(int(value))
-        self.status[13:17] = utils.binary_to_bytes(str(SW_interlock)[::-1])
+        self.status[13:17] = utils.binary_to_bytes(''.join(SW_interlock)[::-1])
 
     @property
     def Overvoltage_Prot(self):
@@ -669,9 +669,9 @@ class GeneralStatus(object):
     def Overvoltage_Prot(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        SW_interlock = bytearray(self.SW_interlock)
+        SW_interlock = list(self.SW_interlock)
         SW_interlock[21] = str(int(value))
-        self.status[13:17] = utils.binary_to_bytes(str(SW_interlock)[::-1])
+        self.status[13:17] = utils.binary_to_bytes(''.join(SW_interlock)[::-1])
 
     @property
     def Temp_Error_Rack(self):
@@ -681,9 +681,9 @@ class GeneralStatus(object):
     def Temp_Error_Rack(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        SW_interlock = bytearray(self.SW_interlock)
+        SW_interlock = list(self.SW_interlock)
         SW_interlock[22] = str(int(value))
-        self.status[13:17] = utils.binary_to_bytes(str(SW_interlock)[::-1])
+        self.status[13:17] = utils.binary_to_bytes(''.join(SW_interlock)[::-1])
 
     @property
     def diag_signal(self):

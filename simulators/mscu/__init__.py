@@ -2,7 +2,7 @@
 #   Marco Buttu <marco.buttu@inaf.it>
 #   Giuseppe Carboni <giuseppe.carboni@inaf.it>
 from multiprocessing import Value
-from SocketServer import ThreadingTCPServer
+from socketserver import ThreadingTCPServer
 from simulators.common import ListeningSystem
 from simulators.mscu.servo import Servo
 from simulators.mscu.parameters import headers, closers, app_nr
@@ -69,8 +69,8 @@ class System(ListeningSystem):
                     param = int(param.strip())
                 all_params.append(param)
             address, params = all_params[0], all_params[1:]
-        except Exception:
-            raise ValueError("Invalid message: %s" % msg)
+        except Exception as ex:
+            raise ValueError(f"Invalid message: {msg}") from ex
 
         servo = self.servos[address]
         if self.setpos_NAK[address].value:
@@ -80,9 +80,9 @@ class System(ListeningSystem):
 
         try:
             method = getattr(servo, cmd)
-        except AttributeError:
+        except AttributeError as ex:
             # Print a general error message if we received an unknown command
-            raise ValueError('Command %s unknown!' % cmd)
+            raise ValueError(f'Command {cmd} unknown!') from ex
 
         # Call the appropriate command whose name is the string cmd
         answers = method(cmd_num, *params)

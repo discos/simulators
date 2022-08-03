@@ -12,7 +12,7 @@ class TestUtils(unittest.TestCase):
 
     def test_wrong_checksum(self):
         """Compare the actual checksum with a wrong one."""
-        self.assertNotEqual(utils.checksum('fooo'), 'A')
+        self.assertNotEqual(utils.checksum('fooo'), b'A')
 
     def test_right_binary_complement(self):
         """Performs the one's complement of a given binary string."""
@@ -191,7 +191,7 @@ class TestUtils(unittest.TestCase):
 
     def test_int_to_bytes_out_of_range(self):
         number = 36273463
-        with self.assertRaises(ValueError):
+        with self.assertRaises(OverflowError):
             utils.int_to_bytes(number, 2)
 
     def test_int_to_bytes_wrong(self):

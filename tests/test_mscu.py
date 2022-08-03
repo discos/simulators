@@ -16,8 +16,8 @@ class TestMSCU(unittest.TestCase):
 
     def test_clean(self):
         for servo in range(4):
-            msg = '#clean:0=%s\r\n' % servo
-            exp_response = '?%s@%s' % (msg[1:], msg[1:])
+            msg = f'#clean:0={servo}\r\n'
+            exp_response = f'?{msg[1:]}@{msg[1:]}'
             for byte in msg[:-1]:
                 self.assertTrue(self.system.parse(byte))
             response = self.system.parse(msg[-1])
@@ -25,9 +25,9 @@ class TestMSCU(unittest.TestCase):
 
     def test_clean_with_params(self):
         for servo in range(4):
-            msg = '#clean:0=%s,0,1.1,0x0002\r\n' % servo
-            exp_response = 'clean:0=%s,0,1.1,2\r\n' % servo
-            exp_response = '?%s@%s' % (exp_response, exp_response)
+            msg = f'#clean:0={servo},0,1.1,0x0002\r\n'
+            exp_response = f'clean:0={servo},0,1.1,2\r\n'
+            exp_response = f'?{exp_response}@{exp_response}'
             for byte in msg[:-1]:
                 self.assertTrue(self.system.parse(byte))
             response = self.system.parse(msg[-1])
@@ -35,8 +35,8 @@ class TestMSCU(unittest.TestCase):
 
     def test_disable(self):
         for servo in range(4):
-            msg = '#disable:0=%s\r\n' % servo
-            exp_response = '?%s@%s' % (msg[1:], msg[1:])
+            msg = f'#disable:0={servo}\r\n'
+            exp_response = f'?{msg[1:]}@{msg[1:]}'
             for byte in msg[:-1]:
                 self.assertTrue(self.system.parse(byte))
             response = self.system.parse(msg[-1])
@@ -44,9 +44,9 @@ class TestMSCU(unittest.TestCase):
 
     def test_disable_with_params(self):
         for servo in range(4):
-            msg = '#disable:0=%s,0,1.1,0x0002\r\n' % servo
-            exp_response = 'disable:0=%s,0,1.1,2\r\n' % servo
-            exp_response = '?%s@%s' % (exp_response, exp_response)
+            msg = f'#disable:0={servo},0,1.1,0x0002\r\n'
+            exp_response = f'disable:0={servo},0,1.1,2\r\n'
+            exp_response = f'?{exp_response}@{exp_response}'
             for byte in msg[:-1]:
                 self.assertTrue(self.system.parse(byte))
             response = self.system.parse(msg[-1])
@@ -54,8 +54,8 @@ class TestMSCU(unittest.TestCase):
 
     def test_getappstatus(self):
         for servo in range(4):
-            msg = '#getappstatus:0=%s\r\n' % servo
-            exp_response = '?getappstatus:0=%s> 0000030D\r\n' % servo
+            msg = f'#getappstatus:0={servo}\r\n'
+            exp_response = f'?getappstatus:0={servo}> 0000030D\r\n'
             for byte in msg[:-1]:
                 self.assertTrue(self.system.parse(byte))
             response = self.system.parse(msg[-1])
@@ -63,7 +63,7 @@ class TestMSCU(unittest.TestCase):
 
     def test_getpos(self):
         for servo in range(4):
-            msg = '#getpos:0=%s\r\n' % servo
+            msg = f'#getpos:0={servo}\r\n'
             for byte in msg[:-1]:
                 self.assertTrue(self.system.parse(byte))
             response = self.system.parse(msg[-1])
@@ -76,13 +76,13 @@ class TestMSCU(unittest.TestCase):
             exp_time = Servo.ctime()
             self.assertTrue(abs(recv_time - exp_time) < 1000)
             data = self.system.servos[servo].history.get()[1:]
-            for i, _ in enumerate(data):
-                self.assertEqual(float(params[1 + i]), data[i])
+            for i, d in enumerate(data):
+                self.assertEqual(float(params[1 + i]), d)
 
     def test_getspar(self):
         for servo in range(4):
-            msg = '#getspar:0=%s' % servo
-            exp_response = '?%s> 0\r\n' % msg[1:]
+            msg = f'#getspar:0={servo}'
+            exp_response = f'?{msg[1:]}> 0\r\n'
             msg += '\r\n'
             for byte in msg[:-1]:
                 self.assertTrue(self.system.parse(byte))
@@ -91,8 +91,8 @@ class TestMSCU(unittest.TestCase):
 
     def test_getspar_acceleration(self):
         for servo in range(4):
-            msg = '#getspar:0=%s' % servo
-            exp_response = '?%s> 3\r\n' % msg[1:]
+            msg = f'#getspar:0={servo}'
+            exp_response = f'?{msg[1:]}> 3\r\n'
             msg += ',1250,0\r\n'
             for byte in msg[:-1]:
                 self.assertTrue(self.system.parse(byte))
@@ -101,8 +101,8 @@ class TestMSCU(unittest.TestCase):
 
     def test_getspar_max_speed(self):
         for servo in range(4):
-            msg = '#getspar:0=%s' % servo
-            exp_response = '?%s> 10\r\n' % msg[1:]
+            msg = f'#getspar:0={servo}'
+            exp_response = f'?{msg[1:]}> 10\r\n'
             msg += ',1240,0\r\n'
             for byte in msg[:-1]:
                 self.assertTrue(self.system.parse(byte))
@@ -111,7 +111,7 @@ class TestMSCU(unittest.TestCase):
 
     def test_getstatus(self):
         for servo in range(4):
-            msg = '#getstatus:0=%s\r\n' % servo
+            msg = f'#getstatus:0={servo}\r\n'
             for byte in msg[:-1]:
                 self.assertTrue(self.system.parse(byte))
             response = self.system.parse(msg[-1])
@@ -130,13 +130,13 @@ class TestMSCU(unittest.TestCase):
             recv_cab_state = int(params[3])
             self.assertEqual(recv_cab_state, 3)  # 3: stow, parked
             data = self.system.servos[servo].history.get()[1:]
-            for i, _ in enumerate(data):
-                self.assertEqual(float(params[4 + i]), data[i])
+            for i, d in enumerate(data):
+                self.assertEqual(float(params[4 + i]), d)
 
     def test_setsdatbitb16(self):
         for servo in range(4):
-            msg = '#setsdatbitb16:0=%s\r\n' % servo
-            exp_response = '@%s' % msg[1:]
+            msg = f'#setsdatbitb16:0={servo}\r\n'
+            exp_response = f'@{msg[1:]}'
             for byte in msg[:-1]:
                 self.assertTrue(self.system.parse(byte))
             response = self.system.parse(msg[-1])
@@ -144,8 +144,8 @@ class TestMSCU(unittest.TestCase):
 
     def test_setsdatbitb16_with_params(self):
         for servo in range(4):
-            msg = '#setsdatbitb16:0=%s,0,1.1,0x0002\r\n' % servo
-            exp_response = '@setsdatbitb16:0=%s,0,1.1,2\r\n' % servo
+            msg = f'#setsdatbitb16:0={servo},0,1.1,0x0002\r\n'
+            exp_response = f'@setsdatbitb16:0={servo},0,1.1,2\r\n'
             for byte in msg[:-1]:
                 self.assertTrue(self.system.parse(byte))
             response = self.system.parse(msg[-1])
@@ -153,13 +153,13 @@ class TestMSCU(unittest.TestCase):
 
     def test_setpos(self, pos=0):
         for servo in range(4):
-            msg = '#setpos:0=%s,0,0,0' % servo
-            msg += (',%s' % pos) * self.system.servos[servo].axes
+            msg = f'#setpos:0={servo},0,0,0'
+            msg += f',{pos}' * self.system.servos[servo].axes
             msg += '\r\n'
-            exp_response = 'setpos:0=%s,0,0,0' % servo
-            exp_response += (',%s' % pos) * self.system.servos[servo].axes
+            exp_response = f'setpos:0={servo},0,0,0'
+            exp_response += f',{pos}' * self.system.servos[servo].axes
             exp_response += '\r\n'
-            exp_response = '?%s@%s' % (exp_response, exp_response)
+            exp_response = f'?{exp_response}@{exp_response}'
             for byte in msg[:-1]:
                 self.assertTrue(self.system.parse(byte))
             response = self.system.parse(msg[-1])
@@ -167,11 +167,11 @@ class TestMSCU(unittest.TestCase):
 
     def test_setpos_wrong_axes_number(self):
         for servo in range(4):
-            exp_response = '!NAK_setpos:0=%s' % servo
+            exp_response = f'!NAK_setpos:0={servo}'
             exp_response += ',cannot set the position\r\n'
             exp_response = exp_response * 2
 
-            msg = '#setpos:0=%s,0,0' % servo
+            msg = f'#setpos:0={servo},0,0'
             msg += ',0' * 15  # Too many axes
             msg += '\r\n'
             for byte in msg[:-1]:
@@ -179,7 +179,7 @@ class TestMSCU(unittest.TestCase):
             response = self.system.parse(msg[-1])
             self.assertEqual(response, exp_response)
 
-            msg = '#setpos:0=%s,0,0,0\r\n' % servo  # No positions
+            msg = f'#setpos:0={servo},0,0,0\r\n'  # No positions
             for byte in msg[:-1]:
                 self.assertTrue(self.system.parse(byte))
             response = self.system.parse(msg[-1])
@@ -188,8 +188,8 @@ class TestMSCU(unittest.TestCase):
     def test_setpos_nak(self):
         servo = 1
         self.system.system_setpos_NAK()
-        msg = '#setpos:0=%s,0,1.1,0x0002\r\n' % servo
-        exp_response = '!NAK_setpos:0=%s' % servo
+        msg = f'#setpos:0={servo},0,1.1,0x0002\r\n'
+        exp_response = f'!NAK_setpos:0={servo}'
         exp_response += ',cannot set the position\r\n'
         exp_response = exp_response * 2
         for byte in msg[:-1]:
@@ -204,8 +204,8 @@ class TestMSCU(unittest.TestCase):
 
     def test_setup(self):
         for servo in range(4):
-            msg = '#setup:0=%s\r\n' % servo
-            exp_response = '?%s@%s' % (msg[1:], msg[1:])
+            msg = f'#setup:0={servo}\r\n'
+            exp_response = f'?{msg[1:]}@{msg[1:]}'
             for byte in msg[:-1]:
                 self.assertTrue(self.system.parse(byte))
             response = self.system.parse(msg[-1])
@@ -214,8 +214,8 @@ class TestMSCU(unittest.TestCase):
     def test_multiple_setup_timer_restarted(self):
         for servo in range(4):
             for _ in range(2):
-                msg = '#setup:0=%s\r\n' % servo
-                exp_response = '?%s@%s' % (msg[1:], msg[1:])
+                msg = f'#setup:0={servo}\r\n'
+                exp_response = f'?{msg[1:]}@{msg[1:]}'
                 for byte in msg[:-1]:
                     self.assertTrue(self.system.parse(byte))
                 response = self.system.parse(msg[-1])
@@ -223,9 +223,9 @@ class TestMSCU(unittest.TestCase):
 
     def test_setup_with_params(self):
         for servo in range(4):
-            msg = '#setup:0=%s,0,1.1,0x0002\r\n' % servo
-            exp_response = 'setup:0=%s,0,1.1,2\r\n' % servo
-            exp_response = '?%s@%s' % (exp_response, exp_response)
+            msg = f'#setup:0={servo},0,1.1,0x0002\r\n'
+            exp_response = f'setup:0={servo},0,1.1,2\r\n'
+            exp_response = f'?{exp_response}@{exp_response}'
             for byte in msg[:-1]:
                 self.assertTrue(self.system.parse(byte))
             response = self.system.parse(msg[-1])
@@ -233,8 +233,8 @@ class TestMSCU(unittest.TestCase):
 
     def test_stow(self):
         for servo in range(4):
-            msg = '#stow:0=%s\r\n' % servo
-            exp_response = '?%s@%s' % (msg[1:], msg[1:])
+            msg = f'#stow:0={servo}\r\n'
+            exp_response = f'?{msg[1:]}@{msg[1:]}'
             for byte in msg[:-1]:
                 self.assertTrue(self.system.parse(byte))
             response = self.system.parse(msg[-1])
@@ -242,9 +242,9 @@ class TestMSCU(unittest.TestCase):
 
     def test_stow_with_params(self):
         for servo in range(4):
-            msg = '#stow:0=%s,0,1.1,0x0002\r\n' % servo
-            exp_response = 'stow:0=%s,0,1.1,2\r\n' % servo
-            exp_response = '?%s@%s' % (exp_response, exp_response)
+            msg = f'#stow:0={servo},0,1.1,0x0002\r\n'
+            exp_response = f'stow:0={servo},0,1.1,2\r\n'
+            exp_response = f'?{exp_response}@{exp_response}'
             for byte in msg[:-1]:
                 self.assertTrue(self.system.parse(byte))
             response = self.system.parse(msg[-1])
@@ -256,7 +256,7 @@ class TestMSCU(unittest.TestCase):
 
     def test_unknown_command(self):
         for servo in range(4):
-            msg = '#unknown:0=%s\r\n' % servo
+            msg = f'#unknown:0={servo}\r\n'
             for byte in msg[:-1]:
                 self.assertTrue(self.system.parse(byte))
             with self.assertRaises(ValueError):
@@ -264,7 +264,7 @@ class TestMSCU(unittest.TestCase):
 
     def test_wrong_parameters(self):
         for servo in range(4):
-            msg = '#getstatus:0=%s,dummy\r\n' % servo
+            msg = f'#getstatus:0={servo},dummy\r\n'
             for byte in msg[:-1]:
                 self.assertTrue(self.system.parse(byte))
             with self.assertRaises(ValueError):
@@ -278,7 +278,7 @@ class TestMSCU(unittest.TestCase):
             # Check if interpolation is correct
             t0 = self.system.servos[servo].history.history[-2][0]
             t1 = self.system.servos[servo].history.history[-1][0]
-            midtime = (t0 + t1) / 2
+            midtime = int((t1 - t0) / 2) + t0
             response = self.system.servos[servo].history.get(midtime)
             timestamp = response[0]
             self.assertEqual(midtime, timestamp)

@@ -426,7 +426,7 @@ PORT_NUMBER_00_95 = '\x75'
 PORT_NUMBERS = []
 for x in range(96):
     PORT_NUMBERS.append(
-        getattr(sys.modules[__name__], 'PORT_NUMBER_%s' % str(x).zfill(2))
+        getattr(sys.modules[__name__], f'PORT_NUMBER_{str(x).zfill(2)}')
     )
 PORT_NUMBERS.append(PORT_NUMBER_00_07)
 PORT_NUMBERS.append(PORT_NUMBER_08_15)

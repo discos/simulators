@@ -3,7 +3,7 @@ from simulators import utils
 from simulators.receiver import DEFINITIONS as DEF
 
 
-class Slave(object):
+class Slave:
 
     def __init__(self, address):
         self.address = address
@@ -121,7 +121,7 @@ class Slave(object):
             if len(time) != 8:
                 raise IndexError
             date = datetime(
-                int('%.2d%.2d' % (ord(time[0]), ord(time[1]))),
+                int(f'{ord(time[0]):02d}{ord(time[1]):02d}'),
                 ord(time[2]),
                 ord(time[3]),
                 ord(time[4]),
@@ -425,7 +425,7 @@ class Dewar(Slave):
         return retval
 
 
-class Feed(object):
+class Feed:
 
     def __init__(self):
         # The following lists represent:
@@ -481,31 +481,31 @@ class LNA(Slave):
                             try:
                                 if value == 0:
                                     # VD
-                                    data += utils.real_to_bytes(
+                                    data += utils.real_to_string(
                                         self.feeds[index].VDL[stage],
                                         little_endian=False
                                     )
-                                    data += utils.real_to_bytes(
+                                    data += utils.real_to_string(
                                         self.feeds[index].VDR[stage],
                                         little_endian=False
                                     )
                                 elif value == 1:
                                     # ID
-                                    data += utils.real_to_bytes(
+                                    data += utils.real_to_string(
                                         self.feeds[index].IDL[stage],
                                         little_endian=False
                                     )
-                                    data += utils.real_to_bytes(
+                                    data += utils.real_to_string(
                                         self.feeds[index].IDR[stage],
                                         little_endian=False
                                     )
                                 elif value == 2:
                                     # VG
-                                    data += utils.real_to_bytes(
+                                    data += utils.real_to_string(
                                         self.feeds[index].VGL[stage],
                                         little_endian=False
                                     )
-                                    data += utils.real_to_bytes(
+                                    data += utils.real_to_string(
                                         self.feeds[index].VGR[stage],
                                         little_endian=False
                                     )
@@ -555,7 +555,7 @@ class LNA(Slave):
                     if len(port_setting) != 1:
                         retval = DEF.CMD_ERR_DATA
                     if port_number == DEF.PORT_NUMBER_00_07:
-                        port_setting = utils.bytes_to_binary(
+                        port_setting = utils.string_to_binary(
                             port_setting,
                             little_endian=False
                         )

@@ -1,5 +1,6 @@
+import codecs
 from random import randint
-from SocketServer import ThreadingUDPServer
+from socketserver import ThreadingUDPServer
 from simulators.common import ListeningSystem
 
 
@@ -110,16 +111,16 @@ class System(ListeningSystem):
         self.VD = 10 * [0]
         self.VG = 10 * [0]
         self.conf = 0
-        self.msg = b''
-        self.cmd_id = b''
+        self.msg = ''
+        self.cmd_id = ''
 
     def parse(self, byte):
         self.msg += byte
         if not self.msg.startswith(self.header):
-            self.msg = b''
+            self.msg = ''
         elif byte == self.tail:
             msg = self.msg[:-1]
-            self.msg = b''
+            self.msg = ''
             return self._execute(msg)
         return True
 
@@ -164,19 +165,18 @@ class System(ListeningSystem):
                 return self._error(1010)
         cmd = getattr(self, cmd)
         raw_response = cmd(args)
-        tail = ' %s%s' % (self.cmd_id, self.tail)
+        tail = f' {self.cmd_id}{self.tail}'
         return self.header + str(raw_response) + tail
 
     def _error(self, error_code):
         error_string = self.errors.get(error_code)
-        return '%sERROR(%d)[%s](%s) %s%c' % (
-            self.header,
-            error_code,
-            error_string,
-            error_string.encode('hex'),
-            self.cmd_id,
-            self.tail
+        hex_string = codecs.encode(
+            error_string.encode('raw_unicode_escape'),
+            'hex'
         )
+        retval = f'{self.header}ERROR({error_code})[{error_string}]'
+        retval += f'({hex_string}) {self.cmd_id}{self.tail}'
+        return retval
 
     def _idn(self, _):
         return self.firmware_string

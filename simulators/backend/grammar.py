@@ -7,23 +7,23 @@ OK = "ok"
 FAIL = "fail"
 INVALID = "invalid"
 
-type_re = r"(?P<type>(\%s|\%s))" % (REQUEST, REPLY)
+type_re = fr"(?P<type>(\{REQUEST}|\{REPLY}))"
 type_pattern = re.compile(type_re)
 name_re = r"(?P<name>[a-zA-Z][a-zA-Z0-9-]*)"
 name_pattern = re.compile(name_re)
-code_re = r",(?P<code>(%s|%s|%s))" % (OK, FAIL, INVALID)
+code_re = fr",(?P<code>({OK}|{FAIL}|{INVALID}))"
 code_pattern = re.compile(code_re)
 arguments_re = r"(,(?P<arguments>[^\r\n]+))?"
 arguments_pattern = re.compile(arguments_re)
 linefeed_re = r"(?P<linefeed>\r\n)?"
 linefeed_pattern = re.compile(linefeed_re)
-request_re = r"^(?P<type>\%s)" % (REQUEST,) + \
+request_re = fr"^(?P<type>\{REQUEST})" + \
     name_re + \
     arguments_re + \
     linefeed_re + \
     "$"
 request_pattern = re.compile(request_re)
-reply_re = r"^(?P<type>\%s)" % (REPLY,) + \
+reply_re = fr"^(?P<type>\{REPLY})" + \
     name_re + \
     code_re + \
     arguments_re + \
@@ -38,7 +38,7 @@ class GrammarException(Exception):
     pass
 
 
-class Message(object):
+class Message:
     def __init__(self, **kwargs):
         self.message_type = kwargs["message_type"]
         self.name = kwargs["name"]
@@ -57,18 +57,20 @@ class Message(object):
         return_str = ""
         args_str = "," + ",".join(self.arguments) if self.arguments else ""
         if self.is_reply():
-            return_str = "%s%s,%s%s" % (
+            args = (
                 self.message_type,
                 self.name,
                 self.code,
                 args_str
             )
+            return_str = f"{args[0]}{args[1]},{args[2]}{args[3]}"
         else:
-            return_str = "%s%s%s" % (
+            args = (
                 self.message_type,
                 self.name,
                 args_str
             )
+            return_str = f"{args[0]}{args[1]}{args[2]}"
         return return_str + '\r\n'
 
 
@@ -86,9 +88,7 @@ def parse_message(message_string):
     elif message_string.startswith(REQUEST):
         match = request_pattern.match(message_string)
     else:
-        raise GrammarException(
-            "invalid message type '%s'" % (message_string[0],)
-        )
+        raise GrammarException(f"invalid message type '{message_string[0]}'")
     if not match:
         raise GrammarException("invalid syntax")
     if match.groupdict()["arguments"]:

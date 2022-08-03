@@ -3,7 +3,7 @@ from ctypes import c_char
 from simulators import utils
 
 
-class MotorStatus(object):
+class MotorStatus:
     """This class holds the status of a generic axis motor."""
 
     def __init__(self):
@@ -88,7 +88,7 @@ class MotorStatus(object):
 
     @property
     def active(self):
-        return utils.bytes_to_uint(str(self.status[16]))
+        return utils.bytes_to_uint(self.status[16])
 
     @active.setter
     def active(self, value):
@@ -99,7 +99,7 @@ class MotorStatus(object):
 
     @property
     def speed_of_rotation(self):
-        return utils.bytes_to_uint(str(self.status[17]))
+        return utils.bytes_to_uint(self.status[17])
 
     @speed_of_rotation.setter
     def speed_of_rotation(self, value):
@@ -110,7 +110,7 @@ class MotorStatus(object):
 
     @property
     def speed_of_rotation_OK(self):
-        return utils.bytes_to_uint(str(self.status[18]))
+        return utils.bytes_to_uint(self.status[18])
 
     @speed_of_rotation_OK.setter
     def speed_of_rotation_OK(self, value):
@@ -121,7 +121,7 @@ class MotorStatus(object):
 
     @property
     def position(self):
-        return utils.bytes_to_uint(str(self.status[19]))
+        return utils.bytes_to_uint(self.status[19])
 
     @position.setter
     def position(self, value):
@@ -132,7 +132,7 @@ class MotorStatus(object):
 
     @property
     def bus(self):
-        return utils.bytes_to_uint(str(self.status[20]))
+        return utils.bytes_to_uint(self.status[20])
 
     @bus.setter
     def bus(self, value):
@@ -143,7 +143,7 @@ class MotorStatus(object):
 
     @property
     def servo(self):
-        return utils.bytes_to_uint(str(self.status[21]))
+        return utils.bytes_to_uint(self.status[21])
 
     @servo.setter
     def servo(self, value):
@@ -154,7 +154,7 @@ class MotorStatus(object):
 
     @property
     def sensor(self):
-        return utils.bytes_to_uint(str(self.status[22]))
+        return utils.bytes_to_uint(self.status[22])
 
     @sensor.setter
     def sensor(self, value):
@@ -165,7 +165,7 @@ class MotorStatus(object):
 
     @property
     def motWarnCode(self):
-        return utils.bytes_to_binary(str(self.status[23:27]))[::-1]
+        return utils.bytes_to_binary(self.status[23:27])[::-1]
 
     @property
     def wa_iQuad_t(self):
@@ -175,9 +175,9 @@ class MotorStatus(object):
     def wa_iQuad_t(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        motWarnCode = bytearray(self.motWarnCode)
+        motWarnCode = list(self.motWarnCode)
         motWarnCode[0] = str(int(value))
-        self.status[23:27] = utils.binary_to_bytes(str(motWarnCode)[::-1])
+        self.status[23:27] = utils.binary_to_bytes(''.join(motWarnCode)[::-1])
 
     @property
     def wa_Temp_Amplifier(self):
@@ -187,9 +187,9 @@ class MotorStatus(object):
     def wa_Temp_Amplifier(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        motWarnCode = bytearray(self.motWarnCode)
+        motWarnCode = list(self.motWarnCode)
         motWarnCode[1] = str(int(value))
-        self.status[23:27] = utils.binary_to_bytes(str(motWarnCode)[::-1])
+        self.status[23:27] = utils.binary_to_bytes(''.join(motWarnCode)[::-1])
 
     @property
     def wa_Temp_Mot(self):
@@ -199,9 +199,9 @@ class MotorStatus(object):
     def wa_Temp_Mot(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        motWarnCode = bytearray(self.motWarnCode)
+        motWarnCode = list(self.motWarnCode)
         motWarnCode[2] = str(int(value))
-        self.status[23:27] = utils.binary_to_bytes(str(motWarnCode)[::-1])
+        self.status[23:27] = utils.binary_to_bytes(''.join(motWarnCode)[::-1])
 
     @property
     def wa_v_Max_Exceeded(self):
@@ -211,9 +211,9 @@ class MotorStatus(object):
     def wa_v_Max_Exceeded(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        motWarnCode = bytearray(self.motWarnCode)
+        motWarnCode = list(self.motWarnCode)
         motWarnCode[3] = str(int(value))
-        self.status[23:27] = utils.binary_to_bytes(str(motWarnCode)[::-1])
+        self.status[23:27] = utils.binary_to_bytes(''.join(motWarnCode)[::-1])
 
     @property
     def wa_M_Max_Exceeded(self):
@@ -223,9 +223,9 @@ class MotorStatus(object):
     def wa_M_Max_Exceeded(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        motWarnCode = bytearray(self.motWarnCode)
+        motWarnCode = list(self.motWarnCode)
         motWarnCode[4] = str(int(value))
-        self.status[23:27] = utils.binary_to_bytes(str(motWarnCode)[::-1])
+        self.status[23:27] = utils.binary_to_bytes(''.join(motWarnCode)[::-1])
 
     @property
     def wa_Mot_Overload(self):
@@ -235,9 +235,9 @@ class MotorStatus(object):
     def wa_Mot_Overload(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        motWarnCode = bytearray(self.motWarnCode)
+        motWarnCode = list(self.motWarnCode)
         motWarnCode[5] = str(int(value))
-        self.status[23:27] = utils.binary_to_bytes(str(motWarnCode)[::-1])
+        self.status[23:27] = utils.binary_to_bytes(''.join(motWarnCode)[::-1])
 
     @property
     def wa_Temp_Cooling(self):
@@ -247,9 +247,9 @@ class MotorStatus(object):
     def wa_Temp_Cooling(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        motWarnCode = bytearray(self.motWarnCode)
+        motWarnCode = list(self.motWarnCode)
         motWarnCode[6] = str(int(value))
-        self.status[23:27] = utils.binary_to_bytes(str(motWarnCode)[::-1])
+        self.status[23:27] = utils.binary_to_bytes(''.join(motWarnCode)[::-1])
 
     @property
     def wa_Temp_Extern(self):
@@ -259,9 +259,9 @@ class MotorStatus(object):
     def wa_Temp_Extern(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        motWarnCode = bytearray(self.motWarnCode)
+        motWarnCode = list(self.motWarnCode)
         motWarnCode[7] = str(int(value))
-        self.status[23:27] = utils.binary_to_bytes(str(motWarnCode)[::-1])
+        self.status[23:27] = utils.binary_to_bytes(''.join(motWarnCode)[::-1])
 
     @property
     def wa_Temp_Pow_Supply(self):
@@ -271,9 +271,9 @@ class MotorStatus(object):
     def wa_Temp_Pow_Supply(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        motWarnCode = bytearray(self.motWarnCode)
+        motWarnCode = list(self.motWarnCode)
         motWarnCode[8] = str(int(value))
-        self.status[23:27] = utils.binary_to_bytes(str(motWarnCode)[::-1])
+        self.status[23:27] = utils.binary_to_bytes(''.join(motWarnCode)[::-1])
 
     @property
     def wa_Temp_ERM_Module(self):
@@ -283,9 +283,9 @@ class MotorStatus(object):
     def wa_Temp_ERM_Module(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        motWarnCode = bytearray(self.motWarnCode)
+        motWarnCode = list(self.motWarnCode)
         motWarnCode[9] = str(int(value))
-        self.status[23:27] = utils.binary_to_bytes(str(motWarnCode)[::-1])
+        self.status[23:27] = utils.binary_to_bytes(''.join(motWarnCode)[::-1])
 
     @property
     def wa_U_Max(self):
@@ -295,9 +295,9 @@ class MotorStatus(object):
     def wa_U_Max(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        motWarnCode = bytearray(self.motWarnCode)
+        motWarnCode = list(self.motWarnCode)
         motWarnCode[10] = str(int(value))
-        self.status[23:27] = utils.binary_to_bytes(str(motWarnCode)[::-1])
+        self.status[23:27] = utils.binary_to_bytes(''.join(motWarnCode)[::-1])
 
     @property
     def wa_U_Min(self):
@@ -307,9 +307,9 @@ class MotorStatus(object):
     def wa_U_Min(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        motWarnCode = bytearray(self.motWarnCode)
+        motWarnCode = list(self.motWarnCode)
         motWarnCode[11] = str(int(value))
-        self.status[23:27] = utils.binary_to_bytes(str(motWarnCode)[::-1])
+        self.status[23:27] = utils.binary_to_bytes(''.join(motWarnCode)[::-1])
 
     @property
     def wa_Intermed_Circ_Voltage(self):
@@ -319,9 +319,9 @@ class MotorStatus(object):
     def wa_Intermed_Circ_Voltage(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        motWarnCode = bytearray(self.motWarnCode)
+        motWarnCode = list(self.motWarnCode)
         motWarnCode[12] = str(int(value))
-        self.status[23:27] = utils.binary_to_bytes(str(motWarnCode)[::-1])
+        self.status[23:27] = utils.binary_to_bytes(''.join(motWarnCode)[::-1])
 
     @property
     def wa_Wrong_Mode(self):
@@ -331,9 +331,9 @@ class MotorStatus(object):
     def wa_Wrong_Mode(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        motWarnCode = bytearray(self.motWarnCode)
+        motWarnCode = list(self.motWarnCode)
         motWarnCode[13] = str(int(value))
-        self.status[23:27] = utils.binary_to_bytes(str(motWarnCode)[::-1])
+        self.status[23:27] = utils.binary_to_bytes(''.join(motWarnCode)[::-1])
 
     @property
     def wa_err_cmd_M(self):
@@ -343,9 +343,9 @@ class MotorStatus(object):
     def wa_err_cmd_M(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        motWarnCode = bytearray(self.motWarnCode)
+        motWarnCode = list(self.motWarnCode)
         motWarnCode[14] = str(int(value))
-        self.status[23:27] = utils.binary_to_bytes(str(motWarnCode)[::-1])
+        self.status[23:27] = utils.binary_to_bytes(''.join(motWarnCode)[::-1])
 
     @property
     def wa_err_sts_SBM(self):
@@ -355,9 +355,9 @@ class MotorStatus(object):
     def wa_err_sts_SBM(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        motWarnCode = bytearray(self.motWarnCode)
+        motWarnCode = list(self.motWarnCode)
         motWarnCode[15] = str(int(value))
-        self.status[23:27] = utils.binary_to_bytes(str(motWarnCode)[::-1])
+        self.status[23:27] = utils.binary_to_bytes(''.join(motWarnCode)[::-1])
 
     @property
     def wa_err_sts_EF(self):
@@ -367,9 +367,9 @@ class MotorStatus(object):
     def wa_err_sts_EF(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        motWarnCode = bytearray(self.motWarnCode)
+        motWarnCode = list(self.motWarnCode)
         motWarnCode[16] = str(int(value))
-        self.status[23:27] = utils.binary_to_bytes(str(motWarnCode)[::-1])
+        self.status[23:27] = utils.binary_to_bytes(''.join(motWarnCode)[::-1])
 
     @property
     def wa_err_sts_RF(self):
@@ -379,6 +379,6 @@ class MotorStatus(object):
     def wa_err_sts_RF(self, value):
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        motWarnCode = bytearray(self.motWarnCode)
+        motWarnCode = list(self.motWarnCode)
         motWarnCode[17] = str(int(value))
-        self.status[23:27] = utils.binary_to_bytes(str(motWarnCode)[::-1])
+        self.status[23:27] = utils.binary_to_bytes(''.join(motWarnCode)[::-1])

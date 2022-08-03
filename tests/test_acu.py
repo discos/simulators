@@ -66,7 +66,7 @@ class TestACU(unittest.TestCase):
         time.sleep(0.01)
 
     def test_status_message_length(self):
-        status = str(self.system.status.raw)
+        status = self.system.status.raw
         msg_length = utils.bytes_to_uint(status[4:8])
         self.assertEqual(msg_length, 813)
         self.assertEqual(len(status), 813)
@@ -1800,7 +1800,7 @@ class TestACU(unittest.TestCase):
         command_string = command.get()
         command_string = (
             command_string[:32]
-            + utils.uint_to_bytes(5, 2)
+            + utils.uint_to_string(5, 2)
             + command_string[34:]
         )
 
@@ -1830,7 +1830,7 @@ class TestACU(unittest.TestCase):
         command_string = command.get()
         command_string = (
             command_string[:32]
-            + utils.uint_to_bytes(10, 2)
+            + utils.uint_to_string(10, 2)
             + command_string[34:]
         )
 
@@ -1863,7 +1863,7 @@ class TestACU(unittest.TestCase):
         command_string = command.get()
         command_string = (
             command_string[:32]
-            + utils.uint_to_bytes(8, 2)
+            + utils.uint_to_string(8, 2)
             + command_string[34:]
         )
 
@@ -2145,7 +2145,7 @@ class TestACU(unittest.TestCase):
 
         command_string = (
             command_string[:12]
-            + utils.uint_to_bytes(3)
+            + utils.uint_to_string(3)
             + command_string[16:]
         )
 
@@ -2158,7 +2158,7 @@ class TestACU(unittest.TestCase):
         # Change the command id with an unknown one
         command_string = (
             command_string[:16]
-            + utils.uint_to_bytes(3, 2)
+            + utils.uint_to_string(3, 2)
             + command_string[18:]
         )
 
@@ -2215,8 +2215,8 @@ class TestACUSimulator(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.start_flag = b'\x1A\xCF\xFC\x1D'
-        cls.end_flag = b'\xD1\xCF\xFC\xA1'
+        cls.start_flag = '\x1A\xCF\xFC\x1D'
+        cls.end_flag = '\xD1\xCF\xFC\xA1'
         cls.simulator = Simulator('acu')
         cls.simulator.start(daemon=True)
 
@@ -2230,6 +2230,7 @@ class TestACUSimulator(unittest.TestCase):
         prev = ''
         for _ in range(5):
             status = s.recv(1024)
+            status = status.decode('raw_unicode_escape')
             self.assertEqual(len(status), 813)
             self.assertEqual(status[0:4], self.start_flag)
             self.assertEqual(status[-4:], self.end_flag)
@@ -2513,16 +2514,16 @@ class TestACUValues(unittest.TestCase):
         self.assertIsInstance(self.AS.stow_pin_selection, list)
         self.assertIsInstance(self.AS.stow_pin_in, list)
         self.assertIsInstance(self.AS.stow_pin_out, list)
-        self.assertIsInstance(self.AS.mode_command_status, str)
-        self.assertIsInstance(self.AS.received_mode_command_status, str)
+        self.assertIsInstance(self.AS.mode_command_status, bytes)
+        self.assertIsInstance(self.AS.received_mode_command_status, bytes)
         self.assertIsInstance(self.AS.received_mode_command_counter, int)
         self.assertIsInstance(self.AS.received_mode_command, int)
         self.assertIsInstance(self.AS.received_mode_command_answer, int)
-        self.assertIsInstance(self.AS.executed_mode_command_status, str)
+        self.assertIsInstance(self.AS.executed_mode_command_status, bytes)
         self.assertIsInstance(self.AS.executed_mode_command_counter, int)
         self.assertIsInstance(self.AS.executed_mode_command, int)
         self.assertIsInstance(self.AS.executed_mode_command_answer, int)
-        self.assertIsInstance(self.AS.parameter_command_status, str)
+        self.assertIsInstance(self.AS.parameter_command_status, bytes)
         self.assertIsInstance(self.AS.parameter_command_counter, int)
         self.assertIsInstance(self.AS.parameter_command, int)
         self.assertIsInstance(self.AS.parameter_command_answer, int)

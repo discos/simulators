@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 from multiprocessing import Value, Array
 from ctypes import c_bool, c_char
 from threading import Thread
-from Queue import Queue, Empty
-from SocketServer import ThreadingTCPServer
+from queue import Queue, Empty
+from socketserver import ThreadingTCPServer
 from simulators import utils
 from simulators.common import ListeningSystem, SendingSystem
 from simulators.acu.general_status import GeneralStatus
@@ -18,8 +18,8 @@ servers.append(
     (('0.0.0.0', 13000), ('0.0.0.0', 13001), ThreadingTCPServer, {})
 )
 
-start_flag = b'\x1A\xCF\xFC\x1D'
-end_flag = b'\xD1\xCF\xFC\xA1'
+start_flag = '\x1A\xCF\xFC\x1D'
+end_flag = '\xD1\xCF\xFC\xA1'
 
 
 class System(ListeningSystem, SendingSystem):
@@ -76,9 +76,9 @@ class System(ListeningSystem, SendingSystem):
         self.command_threads = Queue()
 
         self.status = Array(c_char, 813)
-        self.status[0:4] = start_flag
+        self.status[0:4] = bytes(start_flag, 'raw_unicode_escape')
         self.status[4:8] = utils.uint_to_bytes(813)
-        self.status[-4:] = end_flag
+        self.status[-4:] = bytes(end_flag, 'raw_unicode_escape')
 
         subsystems = []
         subsystems.append(self.PS.update_status)
@@ -143,43 +143,39 @@ class System(ListeningSystem, SendingSystem):
         """This method resets the received command string to its default value.
         It is called when a tail character is received or when a command is
         received malformed."""
-        self.msg = b''
+        self.msg = ''
         self.msg_length = 0
         self.cmds_number = 0
 
     def parse(self, byte):
         self.msg += byte
 
-        while self.msg and len(self.msg) <= 4:
+        if len(self.msg) <= 4:
             if self.msg != start_flag[:len(self.msg)]:
-                self.msg = self.msg[1:]
-            else:
-                break
+                self.msg = ''
 
         if not self.msg:
             return False
 
         if len(self.msg) == 8:
-            self.msg_length = utils.bytes_to_uint(self.msg[-4:])
+            self.msg_length = utils.string_to_uint(self.msg[-4:])
 
         if len(self.msg) == 12:
-            cmd_counter = utils.bytes_to_uint(self.msg[-4:])
+            cmd_counter = utils.string_to_uint(self.msg[-4:])
             if cmd_counter == self.cmd_counter:
                 self._set_default()
                 raise ValueError('Duplicated command counter.')
-            else:
-                self.cmd_counter = cmd_counter
+            self.cmd_counter = cmd_counter
 
         if len(self.msg) == 16:
-            self.cmds_number = utils.bytes_to_int(self.msg[-4:])
+            self.cmds_number = utils.string_to_int(self.msg[-4:])
 
         if len(self.msg) > 16 and len(self.msg) == self.msg_length:
             msg = self.msg
             self._set_default()
             if msg[-4:] != end_flag:
                 raise ValueError(
-                    'Wrong end flag: got %s, expected %s.'
-                    % (msg[-4:], end_flag)
+                    f'Wrong end flag: got {msg[-4:]}, expected {end_flag}.'
                 )
             self._parse_commands(msg)
 
@@ -192,7 +188,7 @@ class System(ListeningSystem, SendingSystem):
 
     @staticmethod
     def _update_status(status, statuses):
-        payload = ''
+        payload = b''
         for subsystem_status in statuses:
             payload += subsystem_status.raw
         status[8:12] = utils.uint_to_bytes(utils.day_milliseconds())
@@ -223,7 +219,9 @@ class System(ListeningSystem, SendingSystem):
                 pass
             for command_thread in command_threads:
                 if not command_thread.is_alive():
-                    command_threads.remove(command_thread)
+                    command_threads.remove(  # pylint: disable=W4701
+                        command_thread
+                    )
 
             update_subsystems(subsystems)
 
@@ -235,7 +233,7 @@ class System(ListeningSystem, SendingSystem):
                             q.get_nowait()
                         except Empty:
                             break
-                    q.put(str(status.raw))
+                    q.put(status.raw)
                 now = utils.bytes_to_real(status[721:729], precision=2)
                 now = utils.mjd_to_date(now)
                 counter = 0
@@ -246,9 +244,7 @@ class System(ListeningSystem, SendingSystem):
 
             correction = 0
             if nxt:
-                correction = (now - nxt).total_seconds()
-                if correction < 0:
-                    correction = 0
+                correction = max(0, (now - nxt).total_seconds())
                 now = nxt
             nxt = now + timedelta(seconds=sampling_time / 20.)
 
@@ -266,21 +262,21 @@ class System(ListeningSystem, SendingSystem):
         self.unsubscribe_q.put(q)
 
     def _parse_commands(self, msg):
-        cmds_number = utils.bytes_to_int(msg[12:16])
+        cmds_number = utils.string_to_int(msg[12:16])
         commands_string = msg[16:-4]  # Trimming end flag
 
         commands = []
         subsystems = []
 
         while commands_string:
-            current_id = utils.bytes_to_uint(commands_string[:2])
+            current_id = utils.string_to_uint(commands_string[:2])
 
-            if current_id == 1 or current_id == 2:
+            if current_id in [1, 2]:
                 command = commands_string[:26]
                 commands_string = commands_string[26:]
             elif current_id == 4:
                 header = commands_string[:42]
-                sequence_len = utils.bytes_to_uint(header[16:18])
+                sequence_len = utils.string_to_uint(header[16:18])
                 expected_length = 42 + (sequence_len * 20)
                 if len(commands_string) < expected_length:
                     raise ValueError('Malformed program track sequence.')
@@ -289,14 +285,13 @@ class System(ListeningSystem, SendingSystem):
             else:
                 raise ValueError('Unknown command.')
 
-            subsystem = utils.bytes_to_uint(command[2:4])
+            subsystem = utils.string_to_uint(command[2:4])
             if subsystem not in subsystems:
                 subsystems.append(subsystem)
                 commands.append(command)
             else:
                 raise ValueError(
-                    'More than one command for subsystem %d.'
-                    % subsystem
+                    f'More than one command for subsystem {subsystem}.'
                 )
 
         if len(commands) != cmds_number:
@@ -313,8 +308,8 @@ class System(ListeningSystem, SendingSystem):
             self.command_threads.put(t)
 
     def _get_method(self, command):
-        command_id = utils.bytes_to_uint(command[:2])
-        subsystem_id = utils.bytes_to_uint(command[2:4])
+        command_id = utils.string_to_uint(command[:2])
+        subsystem_id = utils.string_to_uint(command[2:4])
 
         command_name = self.commands.get(command_id)
         subsystem_name = self.subsystems.get(subsystem_id)

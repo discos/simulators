@@ -231,20 +231,21 @@ class TestTotalPower(unittest.TestCase):
         # A sample period of 501 allows to receive only
         # one packet in a second, therefore speeding up the test
         sample_period = 501
-        msg = 'X %d 1 0 %s %d\n' % (
+        args = (
             sample_period,
             LISTENING_ADDRESS,
             LISTENING_PORT
         )
+        msg = f'X {args[0]} 1 0 {args[1]} {args[2]}\n'
 
-        s = socket.socket()
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind((LISTENING_ADDRESS, LISTENING_PORT))
-        s.listen(1)
+        sock = socket.socket()
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind((LISTENING_ADDRESS, LISTENING_PORT))
+        sock.listen(1)
 
         t = Thread(target=self._send_x_command, args=(msg,))
         t.start()
-        s, _ = s.accept()
+        s, _ = sock.accept()
         t.join()
 
         # We also check if the sample counter reverts to 0
@@ -262,7 +263,7 @@ class TestTotalPower(unittest.TestCase):
         self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
 
         data = s.recv(1024)
-        self.assertEqual(len(data), 64 * (1000 / sample_period))
+        self.assertEqual(len(data), 64 * int(1000 / sample_period))
 
         msg = 'resume\n'
         for byte in msg[:-1]:
@@ -276,9 +277,10 @@ class TestTotalPower(unittest.TestCase):
         self.assertEqual(self.system.parse(msg[-1]), 'ack\n')
 
         data = s.recv(1024)
-        self.assertEqual(len(data), 64 * (1000 / sample_period))
+        self.assertEqual(len(data), 64 * int(1000 / sample_period))
 
         s.close()
+        sock.close()
 
     def test_X_wrong_port(self):
         msg = 'X 40 0 0 127.0.0.1 5001\n'
@@ -297,20 +299,22 @@ class TestTotalPower(unittest.TestCase):
         # A sample period of 501 allows to receive only
         # one packet in a second, therefore speeding up the test
         sample_period = 501
-        msg = 'X %d 1 0 %s %d\n' % (
+        args = (
             sample_period,
             LISTENING_ADDRESS,
             LISTENING_PORT
         )
+        msg = f'X {args[0]} 1 0 {args[1]} {args[2]}\n'
 
-        s = socket.socket()
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind((LISTENING_ADDRESS, LISTENING_PORT))
-        s.listen(1)
+        sock = socket.socket()
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind((LISTENING_ADDRESS, LISTENING_PORT))
+        sock.listen(1)
 
         t = Thread(target=self._send_x_command, args=(msg,))
         t.start()
-        s, _ = s.accept()
+        s, _ = sock.accept()
+        sock.close()
         t.join()
 
         msg = 'resume\n'
@@ -320,14 +324,16 @@ class TestTotalPower(unittest.TestCase):
         time.sleep(float(sample_period + 10) / 1000)
 
         data = s.recv(1024)
-        self.assertEqual(len(data), 64 * (1000 / sample_period))
 
         # Disconnect socket
         s.close()
 
+        self.assertEqual(len(data), 64 * int(1000 / sample_period))
+
         t0 = time.time()
-        # Wait up to 1 second for the timer to join and be set to None
-        while time.time() - t0 < 1:
+        # Wait up to 5 seconds for the timer to join and be set to None
+        # Usually it takes less than 2 seconds
+        while time.time() - t0 < 5:
             if self.system.data_timer is None:
                 break
             time.sleep(0.01)

@@ -1,9 +1,9 @@
 import time
-from Queue import Queue
+from queue import Queue
 from simulators import utils
 
 
-class USD(object):
+class USD:
     """USD actuator driver implementation.
 
     :param usd_index: the index of the USD on its line.
@@ -157,7 +157,7 @@ class USD(object):
             + str(self.io_val[0])
         )
 
-        for key, val in self.resolutions.iteritems():
+        for key, val in iter(self.resolutions.items()):
             if val == self.resolution:
                 res = key
                 break
