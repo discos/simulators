@@ -41,4 +41,4 @@ mccabe:
     - MC0001
 
 python-targets:
-  - 2
+  - 3
