@@ -337,6 +337,13 @@ class Simulator:
         """
         processes = []
         for l_addr, s_addr, server_type, kwargs in self.system_module.servers:
+            # If the user specifies a 'system_type' from command line (CL), the
+            # other 'system_type' listed in 'servers' don't have to be executed
+            system_type = self.kwargs.get('system_type')  # CL option
+            if system_type is not None:
+                # If CL option is different than 'system_type' read from 'servers'
+                if kwargs['system_type'] != system_type:
+                    continue
             kwargs.update(self.kwargs)
             s = Server(
                 self.system_module, server_type, kwargs, l_addr, s_addr
