@@ -342,7 +342,7 @@ class Simulator:
             system_type = self.kwargs.get('system_type')  # CL option
             if system_type is not None:
                 # If CL option is different than 'system_type' read from 'servers'
-                if kwargs['system_type'] != system_type:
+                if system_type != kwargs['system_type']:
                     continue
             kwargs.update(self.kwargs)
             s = Server(
