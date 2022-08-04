@@ -5,7 +5,18 @@ from simulators.common import MultiTypeSystem
 
 systems = get_multitype_systems(__file__)
 servers = [
-    (('0.0.0.0', 12000), (), ThreadingTCPServer, {'system_type': 'IFD'})
+    (
+        ('0.0.0.0', 12000),
+        (),
+        ThreadingTCPServer,
+        {'system_type': 'IFD'}
+    ),
+    (
+        ('0.0.0.0', 12001),
+        (),
+        ThreadingTCPServer,
+        {'system_type': 'IFD_14_channels'},
+    ),
 ]
 
 

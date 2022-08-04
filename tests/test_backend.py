@@ -3,6 +3,7 @@ import time
 from simulators.utils import ACS_TO_UNIX_TIME
 from simulators.backend import System
 from simulators.backend.sardara import System as Sardara
+from simulators.backend.mistral import System as Mistral
 from simulators.backend.genericbackend import (
     grammar,
     PROTOCOL_VERSION,
@@ -578,6 +579,18 @@ class TestSardara(unittest.TestCase):
 
     def test_sardara_instance(self):
         self.assertIsInstance(self.system, Sardara)
+
+
+class TestMistral(unittest.TestCase):
+
+    def setUp(self):
+        self.system = System(system_type='mistral')
+
+    def tearDown(self):
+        self.system.system_stop()
+
+    def test_mistral_instance(self):
+        self.assertIsInstance(self.system, Mistral)
 
 
 class TestMessage(unittest.TestCase):
