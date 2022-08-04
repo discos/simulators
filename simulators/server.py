@@ -322,7 +322,9 @@ class Simulator:
         else:
             self.system_module = system_module
         self.kwargs = kwargs
-        self.simulator_name = self.system_module.__name__.split('.')[-1]
+        self.system_type = kwargs.get('system_type')  # From command line
+        module_name = self.system_module.__name__.split('.')[-1]
+        self.simulator_name = self.system_type or module_name
 
     def start(self, daemon=False):
         """Starts a simulator by instancing the servers listed in the given
@@ -339,10 +341,8 @@ class Simulator:
         for l_addr, s_addr, server_type, kwargs in self.system_module.servers:
             # If the user specifies a 'system_type' from command line (CL), the
             # other 'system_type' listed in 'servers' don't have to be executed
-            system_type = self.kwargs.get('system_type')  # CL option
-            if system_type is not None:
-                # If CL option is different than 'system_type' read from 'servers'
-                if system_type != kwargs['system_type']:
+            if self.system_type is not None:
+                if self.system_type != kwargs.get('system_type'):
                     continue
             kwargs.update(self.kwargs)
             s = Server(

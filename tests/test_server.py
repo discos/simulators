@@ -12,6 +12,7 @@ from threading import Thread
 from multiprocessing import Value, Array
 from ctypes import c_bool, c_char
 from queue import Empty
+from io import StringIO
 from socketserver import ThreadingTCPServer, ThreadingUDPServer
 
 from simulators.server import Server, Simulator
@@ -398,6 +399,34 @@ class TestSimulator(unittest.TestCase):
         simulator.start(daemon=True)
         time.sleep(5)
         simulator.stop()
+
+    def test_system_type(self):
+        self.mymodule.servers = [
+            (
+                ('127.0.0.1', 10004),
+                (),
+                ThreadingTCPServer,
+                {'system_type': 'foo'}
+            ),
+            (
+                ('127.0.0.1', 10005),
+                (),
+                ThreadingTCPServer,
+                {'system_type': 'moo'}
+            ),
+        ]
+        self.mymodule.System = ListeningTestSystem
+        stdout = StringIO()
+        try:
+            sys.stdout = stdout
+            simulator = Simulator(self.mymodule, system_type='moo')
+            simulator.start(daemon=True)
+            time.sleep(5)
+            simulator.stop()
+        finally:
+            sys.stdout = sys.__stdout__
+
+        self.assertIn("'moo' up and running", stdout.getvalue())
 
     def test_create_simulator_from_name(self):
         address = ('127.0.0.1', 10005)
