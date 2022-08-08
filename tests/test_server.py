@@ -2,7 +2,6 @@ import sys
 import os
 import time
 import socket
-import datetime
 import unittest
 import warnings
 
@@ -65,34 +64,31 @@ class TestListeningServer(unittest.TestCase):
 
     def test_value_error(self):
         """The message of ValueError in the logfile"""
-        now = datetime.datetime.utcnow()
         get_response(
             self.address,
             greet_msg='This is a greeting message!',
             msg='#valueerror:%%%%%',
             response=False
         )
-        self.assertTrue('unexpected value' in get_logs(now))
+        self.assertIn('unexpected value', get_logs())
 
     def test_unexpected_error(self):
-        now = datetime.datetime.utcnow()
         get_response(
             self.address,
             greet_msg='This is a greeting message!',
             msg='#unexpected:%%%%%',
             response=False
         )
-        self.assertTrue('unexpected exception' in get_logs(now))
+        self.assertIn('unexpected exception', get_logs())
 
     def test_unexpected_response(self):
-        now = datetime.datetime.utcnow()
         get_response(
             self.address,
             greet_msg='This is a greeting message!',
             msg='#unexpected_response:%%%%%',
             response=False
         )
-        self.assertTrue('unexpected response: 0.0' in get_logs(now))
+        self.assertIn('unexpected response: 0.0', get_logs())
 
     def test_custom_command_with_parameters(self):
         response = get_response(
@@ -148,18 +144,16 @@ class TestListeningUDPServer(unittest.TestCase):
 
     def test_value_error(self):
         """The message of ValueError in the logfile"""
-        now = datetime.datetime.utcnow()
         get_response(
             self.address, msg='#valueerror:%%%%%', response=False, udp=True
         )
-        self.assertTrue('unexpected value' in get_logs(now))
+        self.assertIn('unexpected value', get_logs())
 
     def test_unexpected_error(self):
-        now = datetime.datetime.utcnow()
         get_response(
             self.address, msg='#unexpected:%%%%%', response=False, udp=True
         )
-        self.assertTrue('unexpected exception' in get_logs(now))
+        self.assertIn('unexpected exception', get_logs())
 
     def test_custom_command_with_parameters(self):
         response = get_response(
@@ -201,15 +195,13 @@ class TestSendingServer(unittest.TestCase):
         self.assertEqual(response, 'message')
 
     def test_unknown_command(self):
-        now = datetime.datetime.utcnow()
         get_response(self.address, msg='$unknown%%%%%', response=False)
-        self.assertTrue('command unknown not supported' in get_logs(now))
+        self.assertIn('command unknown not supported', get_logs())
 
     def test_raise_exception(self):
-        now = datetime.datetime.utcnow()
         get_response(self.address, msg='$raise_exception%%%%%', response=False)
-        self.assertTrue(
-            'unexpected exception raised by sendingtestsystem' in get_logs(now)
+        self.assertIn(
+            'unexpected exception raised by sendingtestsystem', get_logs()
         )
 
 
@@ -238,22 +230,20 @@ class TestSendingUDPServer(unittest.TestCase):
         self.assertEqual(response, 'message')
 
     def test_unknown_command(self):
-        now = datetime.datetime.utcnow()
         get_response(
             self.address,
             msg='$unknown%%%%%',
             response=False,
             udp=True
         )
-        self.assertTrue('command unknown not supported' in get_logs(now))
+        self.assertIn('command unknown not supported', get_logs())
 
     def test_raise_exception(self):
-        now = datetime.datetime.utcnow()
         get_response(
             self.address, msg='$raise_exception%%%%%', response=False, udp=True
         )
-        self.assertTrue(
-            'unexpected exception raised by sendingtestsystem' in get_logs(now)
+        self.assertIn(
+            'unexpected exception raised by sendingtestsystem', get_logs()
         )
 
 
@@ -598,21 +588,21 @@ def get_response(
     return retval
 
 
-def get_logs(start_time=None):
-    logs = []
+def get_logs():
+    time.sleep(0.01)
     filename = os.path.join(os.getenv('ACSDATA', ''), 'sim-server.log')
-    with open(filename, mode='r', encoding='utf-8') as f:
+    logs = []
+    with open(filename, mode='rb') as f:
+        f.seek(-1, os.SEEK_END)
+        counter = 0
+        # read last 3 lines
+        while counter < 3:
+            f.seek(-2, os.SEEK_CUR)
+            if f.read(1) == b'\n':
+                counter += 1
         for line in f.readlines():
-            try:
-                line = line.strip()
-                log_date = datetime.datetime.strptime(
-                    ' '.join(line.split(' ')[0:2]) + '000',
-                    '%Y-%m-%d %H:%M:%S,%f'
-                )
-                if log_date >= start_time:
-                    logs.append(' '.join(line.split(' ')[2:]))
-            except ValueError:  # pragma: no cover
-                continue
+            line = line.decode('utf-8').strip()
+            logs.append(' '.join(line.split(' ')[2:]))
     return logs
 
 
