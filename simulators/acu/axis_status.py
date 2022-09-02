@@ -1013,7 +1013,7 @@ class SimpleAxisStatus:
         motor_selection = ''
         for motor in value:
             motor_selection += str(int(motor))
-        self.status[54:56] = utils.binary_to_bytes(motor_selection, False)
+        self.status[54:56] = utils.binary_to_bytes(motor_selection[::-1])
 
     @property
     def brakes_open(self):
