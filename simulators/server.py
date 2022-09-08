@@ -352,7 +352,7 @@ class Simulator:
             p.daemon = daemon
             processes.append(p)
             p.start()
-        print(f"Simulator '{self.simulator_name}' up and running.")
+        print(f"Simulator '{self.simulator_name}' up and running at {*l_addr,}.")
 
         if not daemon:
             try:
