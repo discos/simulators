@@ -338,11 +338,14 @@ class Simulator:
         :type daemon: bool
         """
         processes = []
+        running_servers = []
+        l_addr = ('', '')
         for l_addr, s_addr, server_type, kwargs in self.system_module.servers:
             # If the user specifies a 'system_type' from command line (CL), the
             # other 'system_type' listed in 'servers' don't have to be executed
+            module_system_type = kwargs.get('system_type')  # Listed in servers
             if self.system_type is not None:
-                if self.system_type != kwargs.get('system_type'):
+                if self.system_type != module_system_type:
                     continue
             kwargs.update(self.kwargs)
             s = Server(
@@ -352,7 +355,16 @@ class Simulator:
             p.daemon = daemon
             processes.append(p)
             p.start()
-        print(f"Simulator '{self.simulator_name}' up and running at {*l_addr,}.")
+            if module_system_type:
+                running_servers.append((module_system_type, l_addr))
+
+        if any(running_servers):
+            for server_name, addr in running_servers:
+                print(f"Simulator '{self.simulator_name}, {server_name}' up "
+                      f"and running at {*addr,}.")
+        else:
+            print(f"Simulator '{self.simulator_name}' up and running at "
+                  f"{*l_addr,}.")
 
         if not daemon:
             try:
