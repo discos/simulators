@@ -360,7 +360,7 @@ class Simulator:
 
         if any(running_servers):
             for server_name, addr in running_servers:
-                print(f"Simulator '{self.simulator_name}, {server_name}' up "
+                print(f"Simulator '{self.simulator_name}.{server_name}' up "
                       f"and running at {*addr,}.")
         else:
             print(f"Simulator '{self.simulator_name}' up and running at "
