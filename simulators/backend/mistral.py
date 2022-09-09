@@ -12,7 +12,6 @@ class System(GenericBackendSystem):
     }
     commands.update(GenericBackendSystem.commands)
 
-
     def __init__(self, setup_time=60):
         GenericBackendSystem.__init__(self)
         self._waiting_for_setup_time = False
@@ -20,8 +19,8 @@ class System(GenericBackendSystem):
         self._setupID = None
         self.ready = False  # Is the system ready to operate?
         self.tasks = {
-                'acquisition': self.acquiring,  # From generic backend
-                'setup': False,
+            'acquisition': self.acquiring,  # From generic backend
+            'setup': False,
         }
 
     def system_stop(self):
@@ -31,17 +30,16 @@ class System(GenericBackendSystem):
         return super().system_stop()
 
     def _running_task(self):
+        running_task = ''
         for task, is_running in self.tasks.items():
             if is_running:
-                return task
+                running_task = task
+        return running_task
 
     def do_setup(self, _):
         if any(self.tasks.values()):
             raise BackendError(f'{self._running_task()} is still running')
-        if self._waiting_for_setup_time:
-            self._setupID.cancel()
         self.tasks['setup'] = True
-        self._waiting_for_setup_time = True
         self._setupID = Timer(self.setup_time, self._setup)
         self._setupID.start()
 

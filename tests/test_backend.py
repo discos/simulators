@@ -598,7 +598,7 @@ class TestMistral(unittest.TestCase):
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
-        cmd, code, timestamp, message, acquiring = response.split(',')
+        cmd, code, _, message, acquiring = response.split(',')
         self.assertEqual(cmd, f'!{command}')
         self.assertEqual(code, 'ok')
         self.assertEqual(message, 'system not initialized (setup required)')
@@ -610,9 +610,9 @@ class TestMistral(unittest.TestCase):
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
-        cmd, answer = response.split(',')
+        cmd, code = response.split(',')
         self.assertEqual(cmd, f'!{command}')
-        self.assertEqual(answer, 'ok')
+        self.assertEqual(code, 'ok')
 
     def test_setup_in_progress(self):
         self.test_setup()  # The setup lasts 60 seconds (setup_time)
@@ -621,7 +621,7 @@ class TestMistral(unittest.TestCase):
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
-        cmd, code, timestamp, message, acquiring = response.split(',')
+        cmd, code, _, message, acquiring = response.split(',')
         self.assertEqual(cmd, f'!{command}')
         self.assertEqual(code, 'ok')
         self.assertEqual(message, 'setup in progress')
@@ -635,7 +635,7 @@ class TestMistral(unittest.TestCase):
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
-        cmd, code, timestamp, message, acquiring = response.split(',')
+        cmd, code, _, message, acquiring = response.split(',')
         self.assertEqual(cmd, f'!{command}')
         self.assertEqual(code, 'ok')
         self.assertEqual(message, 'no task is running')
@@ -648,10 +648,10 @@ class TestMistral(unittest.TestCase):
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
-        cmd, answer, reason = response.split(',')
+        cmd, code, message = response.split(',')
         self.assertEqual(cmd, f'!{command}')
-        self.assertEqual(answer, 'fail')
-        self.assertEqual(reason, 'setup is still running')
+        self.assertEqual(code, 'fail')
+        self.assertEqual(message, 'setup is still running')
 
 
 class TestMessage(unittest.TestCase):
