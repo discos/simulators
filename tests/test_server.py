@@ -416,17 +416,19 @@ class TestSimulator(unittest.TestCase):
             ),
         ]
         self.mymodule.System = ListeningTestSystem
-        stdout = StringIO()
         try:
+            stdout = StringIO()
             sys.stdout = stdout
             simulator = Simulator(self.mymodule, system_type='moo')
             simulator.start(daemon=True)
             time.sleep(5)
             simulator.stop()
+            output = stdout.getvalue()
         finally:
             sys.stdout = sys.__stdout__
+            stdout.close()
 
-        self.assertIn("'moo' up and running", stdout.getvalue())
+        self.assertIn("moo' up and running at (", output)
 
     def test_create_simulator_from_name(self):
         address = ('127.0.0.1', 10005)
