@@ -592,7 +592,29 @@ class TestMistral(unittest.TestCase):
     def test_mistral_instance(self):
         self.assertIsInstance(self.system, Mistral)
 
-    def test_system_not_initialized(self):
+    def test_setup(self):
+        command = 'setup'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'ok')
+
+    def test_setup_when_setup_in_progress(self):
+        self.test_setup()
+        command = 'setup'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, message = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'fail')
+        self.assertEqual(message, 'setup is still running')
+
+    def test_status_when_system_not_initialized(self):
         command = 'status'
         msg = f'?{command}\r\n'
         for byte in msg[:-1]:
@@ -604,30 +626,7 @@ class TestMistral(unittest.TestCase):
         self.assertEqual(message, 'system not initialized (setup required)')
         self.assertEqual(acquiring, '0')
 
-    def test_setup(self):
-        command = 'setup'
-        msg = f'?{command}\r\n'
-        for byte in msg[:-1]:
-            self.assertTrue(self.system.parse(byte))
-        response = self.system.parse(msg[-1]).strip()
-        cmd, code = response.split(',')
-        self.assertEqual(cmd, f'!{command}')
-        self.assertEqual(code, 'ok')
-
-    def test_setup_in_progress(self):
-        self.test_setup()  # The setup lasts 60 seconds (setup_time)
-        command = 'status'
-        msg = f'?{command}\r\n'
-        for byte in msg[:-1]:
-            self.assertTrue(self.system.parse(byte))
-        response = self.system.parse(msg[-1]).strip()
-        cmd, code, _, message, acquiring = response.split(',')
-        self.assertEqual(cmd, f'!{command}')
-        self.assertEqual(code, 'ok')
-        self.assertEqual(message, 'setup in progress')
-        self.assertEqual(acquiring, '0')
-
-    def test_setup_and_ready(self):
+    def test_status_when_system_ready(self):
         self.system.setup_time = 0  # Defalut value is 60 seconds
         self.test_setup()
         command = 'status'
@@ -641,17 +640,73 @@ class TestMistral(unittest.TestCase):
         self.assertEqual(message, 'no task is running')
         self.assertEqual(acquiring, '0')
 
-    def test_setup_and_setup(self):
-        self.test_setup()
-        command = 'setup'
+    def test_status_when_setup_in_progress(self):
+        self.test_setup()  # The setup lasts 60 seconds (setup_time)
+        command = 'status'
         msg = f'?{command}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
         response = self.system.parse(msg[-1]).strip()
-        cmd, code, message = response.split(',')
+        cmd, code, _, message, acquiring = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'ok')
+        self.assertEqual(message, 'setup in progress')
+        self.assertEqual(acquiring, '0')
+
+    def test_start(self):
+        self.system.setup_time = 0  # Defalut value is 60 seconds
+        self.test_setup()  # Setup is required
+        command = 'start'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, *answer = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'ok')
+        self.assertEqual(answer, [])
+
+    def test_start_when_system_not_ready(self):
+        command = 'start'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, reason = response.split(',')
         self.assertEqual(cmd, f'!{command}')
         self.assertEqual(code, 'fail')
-        self.assertEqual(message, 'setup is still running')
+        self.assertEqual(reason, 'system not initialized (setup required)')
+
+    def test_start_when_acquisition_in_progress(self):
+        self.system.setup_time = 0  # Defalut value is 60 seconds
+        self.test_setup()
+        self.test_start()
+        command = 'start'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, reason = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'fail')
+        self.assertEqual(reason, 'acquisition in progress')
+
+    def test_status_when_acquisition_in_progress(self):
+        self.system.setup_time = 0
+        self.test_setup()
+        self.test_start()
+        command = 'status'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, _, message, acquiring = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'ok')
+        self.assertEqual(message, 'acquisition in progress')
+        self.assertEqual(acquiring, '1')
+
+    # For task n.X: same test of setup
 
 
 class TestMessage(unittest.TestCase):

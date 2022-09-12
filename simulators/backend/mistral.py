@@ -17,10 +17,14 @@ class System(GenericBackendSystem):
         self._waiting_for_setup_time = False
         self.setup_time = setup_time
         self._setupID = None
+        self._running_setup = False
         self.ready = False  # Is the system ready to operate?
-        self.tasks = {
+
+    @property
+    def tasks(self):
+        return {
             'acquisition': self.acquiring,  # From generic backend
-            'setup': False,
+            'setup': self._running_setup,
         }
 
     def system_stop(self):
@@ -39,13 +43,18 @@ class System(GenericBackendSystem):
     def do_setup(self, _):
         if any(self.tasks.values()):
             raise BackendError(f'{self._running_task()} is still running')
-        self.tasks['setup'] = True
+        self._running_setup = True
         self._setupID = Timer(self.setup_time, self._setup)
         self._setupID.start()
 
     def _setup(self):
         self.ready = True
-        self.tasks['setup'] = False
+        self._running_setup = False
+
+    def do_start(self, args):
+        if not self.ready or any(self.tasks.values()):
+            raise BackendError(self.status_msg)
+        super().do_start(args)
 
     @property
     def status_msg(self):
