@@ -4,13 +4,15 @@ import types
 import socket
 import logging
 import importlib
-import threading
 import time
+import threading
 from queue import Queue, Empty
-from multiprocessing import Process
+from multiprocessing import Process, Value
+from ctypes import c_bool
 from socketserver import (
-    ThreadingMixIn, ThreadingTCPServer, ThreadingUDPServer, BaseRequestHandler
+    ThreadingTCPServer, ThreadingUDPServer, BaseRequestHandler
 )
+from .common import BaseSystem
 
 
 logging.basicConfig(
@@ -63,9 +65,8 @@ class BaseHandler(BaseRequestHandler):
                     self.client_address
                 )
                 if response == '$server_shutdown%%%%%':
-                    # Wait 10ms
                     time.sleep(0.01)
-                    self.server.stop()
+                    self.stop()
         except AttributeError:
             logging.debug('command %s not supported', name)
         except Exception as ex:
@@ -209,16 +210,16 @@ class SendHandler(BaseHandler):
         self.system.unsubscribe(message_queue)
 
 
-class Server(ThreadingMixIn):
-    """This class inherits from the ThreadingMixIn class.
-    It can instance a server for the given address(es). The server can either
-    be a TCP or a UDP server, depending on which `server_type` argument is
-    provided. Also, the server could be a listening server, if param
-    `l_address` is provided, or a sending server, if param `s_address` is
-    provided. If both addresses are provided, the server acts as both as a
-    listening server and a sending server. Be aware that if the server both
-    listens and sends to its clients, `l_address` and `s_address` must not
-    share the same endpoint (IP address and/or port should be different).
+class Server:
+    """This class can instance a server for the given address(es).
+    The server can either be a TCP or a UDP server, depending on which
+    `server_type` argument is provided. Also, the server could be a listening
+    server, if param `l_address` is provided, or a sending server, if param
+    `s_address` is provided. If both addresses are provided, the server acts as
+    both as a listening server and a sending server. Be aware that if the
+    server both listens and sends to its clients, `l_address` and `s_address`
+    must not share the same endpoint (IP address and/or port should be
+    different).
 
     :param system: the desired simulator system module
     :param server_type: the type of threading server to be used
@@ -242,69 +243,59 @@ class Server(ThreadingMixIn):
                 'Provide either the `ThreadingTCPServer` class '
                 + 'or the `ThreadingUDPServer` class!'
             )
-        self.__class__.__bases__ = (server_type, ThreadingMixIn)
-        self.server_type = server_type
-        self.server_type.allow_reuse_address = True
+        if not l_address and not s_address:
+            raise ValueError('You must specify at least one server.')
         self.system = system
         self.system_kwargs = kwargs
+        self.servers = []
+        self.threads = []
+        self.stop_me = Value(c_bool, False)
+        self.server_type = server_type
+        self.server_type.allow_reuse_address = True
 
-        self.child_server = None
         if l_address:
-            self.address = l_address
-            self.server_type.__init__(self, l_address, ListenHandler)
-            if s_address:
-                self.child_server = Server(
-                    system, self.server_type, kwargs, None, s_address
-                )
-        elif s_address:
-            self.address = s_address
-            self.server_type.__init__(self, s_address, SendHandler)
-        else:
-            raise ValueError('You must specify at least one server.')
-        self.RequestHandlerClass.system = None
-        self.RequestHandlerClass.server = self
+            self.servers.append(server_type(l_address, ListenHandler))
+        if s_address:
+            self.servers.append(server_type(s_address, SendHandler))
 
-    def serve_forever(self, poll_interval=0.05):
-        """Overrides the base class `serve_forever` method. Before calling the
-        base method, which would stay in a loop until the process is stopped,
-        it starts the eventual child server as a daemon thread.
-
-        :param poll_interval: the interval used by the class to check for
-            incoming shutdown requests
-        :type poll_interval: float
+    def serve_forever(self):
+        """This method starts the System and then cycle for incoming requests.
+        It stops the cycle only when the `stop_me` variable gets set to True.
         """
         if isinstance(self.system, types.ModuleType):
             self.system = self.system.System(**self.system_kwargs)
-        else:
-            try:
-                bases = self.system.__bases__
-                bases = [str(x).split("'")[1].split('.')[-1] for x in bases]
-                if 'TestingSystem' in bases:
-                    self.system = self.system(**self.system_kwargs)
-            except AttributeError:
-                pass
-        if not self.RequestHandlerClass.system:
-            self.RequestHandlerClass.system = self.system
-        if self.child_server:
-            self.child_server.system = self.system
-            self.child_server.start()
+        elif issubclass(self.system, BaseSystem):
+            self.system = self.system(**self.system_kwargs)
+
+        for server in self.servers:
+            server.RequestHandlerClass.system = self.system
+            server.RequestHandlerClass.stop = self.stop
+
+        threads = []
+        for server in self.servers:
+            t = threading.Thread(target=server.serve_forever)
+            t.daemon = True
+            threads.append(t)
+            t.start()
+
         try:
-            self.server_type.serve_forever(self, poll_interval)
+            for t in threads:
+                t.join()
         except KeyboardInterrupt:
-            self.stop()
+            pass
 
     def start(self):
         """Starts a daemon thread which calls the `serve_forever` method. The
         server is therefore started as a daemon."""
-        server_thread = threading.Thread(target=self.serve_forever)
-        server_thread.daemon = True
-        server_thread.start()
+        t = threading.Thread(target=self.serve_forever)
+        t.daemon = True
+        t.start()
 
     def stop(self):
-        """Stops the server and its eventual child."""
-        if self.child_server:
-            self.child_server.shutdown()
-        self.shutdown()
+        """Sets the `stop_me` value to True, stopping the server."""
+        self.stop_me.value = True
+        for server in self.servers:
+            server.shutdown()
 
 
 class Simulator:

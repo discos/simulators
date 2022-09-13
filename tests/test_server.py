@@ -2,13 +2,12 @@ import sys
 import os
 import time
 import socket
-import datetime
 import unittest
 import warnings
 
 from types import ModuleType
 from contextlib import contextmanager
-from threading import Thread
+from threading import Thread, Timer
 from multiprocessing import Value, Array
 from ctypes import c_bool, c_char
 from queue import Empty
@@ -71,7 +70,7 @@ class TestListeningServer(unittest.TestCase):
             msg='#valueerror:%%%%%',
             response=False
         )
-        self.assertTrue('unexpected value' in get_logs())
+        self.assertIn('unexpected value', get_logs())
 
     def test_unexpected_error(self):
         get_response(
@@ -80,7 +79,7 @@ class TestListeningServer(unittest.TestCase):
             msg='#unexpected:%%%%%',
             response=False
         )
-        self.assertTrue('unexpected exception' in get_logs())
+        self.assertIn('unexpected exception', get_logs())
 
     def test_unexpected_response(self):
         get_response(
@@ -89,7 +88,7 @@ class TestListeningServer(unittest.TestCase):
             msg='#unexpected_response:%%%%%',
             response=False
         )
-        self.assertTrue('unexpected response: 0.0' in get_logs())
+        self.assertIn('unexpected response: 0.0', get_logs())
 
     def test_custom_command_with_parameters(self):
         response = get_response(
@@ -148,13 +147,13 @@ class TestListeningUDPServer(unittest.TestCase):
         get_response(
             self.address, msg='#valueerror:%%%%%', response=False, udp=True
         )
-        self.assertTrue('unexpected value' in get_logs())
+        self.assertIn('unexpected value', get_logs())
 
     def test_unexpected_error(self):
         get_response(
             self.address, msg='#unexpected:%%%%%', response=False, udp=True
         )
-        self.assertTrue('unexpected exception' in get_logs())
+        self.assertIn('unexpected exception', get_logs())
 
     def test_custom_command_with_parameters(self):
         response = get_response(
@@ -197,12 +196,12 @@ class TestSendingServer(unittest.TestCase):
 
     def test_unknown_command(self):
         get_response(self.address, msg='$unknown%%%%%', response=False)
-        self.assertTrue('command unknown not supported' in get_logs())
+        self.assertIn('command unknown not supported', get_logs())
 
     def test_raise_exception(self):
         get_response(self.address, msg='$raise_exception%%%%%', response=False)
-        self.assertTrue(
-            'unexpected exception raised by sendingtestsystem' in get_logs()
+        self.assertIn(
+            'unexpected exception raised by sendingtestsystem', get_logs()
         )
 
 
@@ -237,14 +236,14 @@ class TestSendingUDPServer(unittest.TestCase):
             response=False,
             udp=True
         )
-        self.assertTrue('command unknown not supported' in get_logs())
+        self.assertIn('command unknown not supported', get_logs())
 
     def test_raise_exception(self):
         get_response(
             self.address, msg='$raise_exception%%%%%', response=False, udp=True
         )
-        self.assertTrue(
-            'unexpected exception raised by sendingtestsystem' in get_logs()
+        self.assertIn(
+            'unexpected exception raised by sendingtestsystem', get_logs()
         )
 
 
@@ -380,6 +379,49 @@ class TestDuplexUDPServer(unittest.TestCase):
         self.assertEqual(s_response, message[1:].strip('%'))
 
 
+class TestServerVarious(unittest.TestCase):
+
+    def test_server_shutdown(self):
+        address = ('127.0.0.1', 10012)
+        server = Server(
+            ListeningTestSystem,
+            ThreadingTCPServer,
+            kwargs={},
+            l_address=address,
+        )
+        server.start()
+
+        def shutdown(self):
+            response = get_response(
+                address,
+                greet_msg='This is a greeting message!',
+                msg='$system_stop%%%%%'
+            )
+            self.assertEqual(response, '$server_shutdown%%%%%')
+
+        t = Timer(0.01, shutdown, args=(self,))
+        t.start()
+        t.join()
+
+    def test_server_no_addresses(self):
+        with self.assertRaises(ValueError):
+            Server(
+                ListeningTestSystem,
+                ThreadingTCPServer,
+                kwargs={}
+            )
+
+    def test_server_wrong_socket_type(self):
+        address = ('127.0.0.1', 10012)
+        with self.assertRaises(ValueError):
+            Server(
+                ListeningTestSystem,
+                object,
+                kwargs={},
+                l_address=address
+            )
+
+
 class TestSimulator(unittest.TestCase):
 
     @classmethod
@@ -388,7 +430,6 @@ class TestSimulator(unittest.TestCase):
         cls.mymodulename = 'simulators.mymodule'
         cls.mymodule = ModuleType(cls.mymodulename)
         sys.modules[cls.mymodulename] = cls.mymodule
-        cls.simulator = Simulator(cls.mymodule)
 
     def test_create_simulator_from_module(self):
         address = ('127.0.0.1', 10004)
@@ -397,7 +438,6 @@ class TestSimulator(unittest.TestCase):
 
         simulator = Simulator(self.mymodule)
         simulator.start(daemon=True)
-        time.sleep(5)
         simulator.stop()
 
     def test_system_type(self):
@@ -421,7 +461,6 @@ class TestSimulator(unittest.TestCase):
             sys.stdout = stdout
             simulator = Simulator(self.mymodule, system_type='moo')
             simulator.start(daemon=True)
-            time.sleep(5)
             simulator.stop()
             output = stdout.getvalue()
         finally:
@@ -444,7 +483,8 @@ class TestSimulator(unittest.TestCase):
         self.mymodule.servers = [(address, (), ThreadingTCPServer, {})]
         self.mymodule.System = ListeningTestSystem
 
-        self.simulator.start(daemon=True)
+        simulator = Simulator(self.mymodule)
+        simulator.start(daemon=True)
 
         response = get_response(
             address,
@@ -453,19 +493,20 @@ class TestSimulator(unittest.TestCase):
         )
         self.assertEqual(response, 'aabbcc')
 
-        self.simulator.stop()
+        simulator.stop()
 
     def test_start_and_stop_sending(self):
         address = ('127.0.0.1', 10007)
         self.mymodule.servers = [((), address, ThreadingTCPServer, {})]
         self.mymodule.System = SendingTestSystem
 
-        self.simulator.start(daemon=True)
+        simulator = Simulator(self.mymodule)
+        simulator.start(daemon=True)
 
         response = get_response(address)
         self.assertEqual(response, 'message')
 
-        self.simulator.stop()
+        simulator.stop()
 
     def test_start_and_stop_duplex(self):
         l_addr = ('127.0.0.1', 10008)
@@ -473,7 +514,8 @@ class TestSimulator(unittest.TestCase):
         self.mymodule.servers = [(l_addr, s_addr, ThreadingTCPServer, {})]
         self.mymodule.System = DuplexTestSystem
 
-        self.simulator.start(daemon=True)
+        simulator = Simulator(self.mymodule)
+        simulator.start(daemon=True)
 
         l_response = get_response(
             l_addr,
@@ -484,13 +526,14 @@ class TestSimulator(unittest.TestCase):
         s_response = get_response(s_addr)
         self.assertEqual(s_response, 'command:a,b,c')
 
-        self.simulator.stop()
+        simulator.stop()
 
     def test_stop_without_start(self):
         address = ('127.0.0.1', 10007)
-        self.mymodule.servers = [((), address, {})]
+        self.mymodule.servers = [((), address, ThreadingUDPServer, {})]
         self.mymodule.System = SendingTestSystem
-        self.simulator.stop()
+        simulator = Simulator(self.mymodule)
+        simulator.stop()
 
     def test_non_daemon_simulator(self):
         l_addr = ('127.0.0.1', 10010)
@@ -500,62 +543,20 @@ class TestSimulator(unittest.TestCase):
 
         simulator = Simulator(self.mymodule)
 
-        t = Thread(target=simulator.start)
-        t.start()
-        time.sleep(0.1)
-        response = get_response(
-            l_addr,
-            greet_msg='This is a greeting message!',
-            msg='$system_stop%%%%%'
-        )
-        self.assertEqual(response, '$server_shutdown%%%%%')
-        response = get_response(s_addr, msg='$system_stop%%%%%')
-        self.assertEqual(response, '$server_shutdown%%%%%')
-        t.join()
-
-
-class TestServerVarious(unittest.TestCase):
-
-    def test_server_shutdown(self):
-        address = ('127.0.0.1', 10012)
-        server = Server(
-            ListeningTestSystem,
-            ThreadingTCPServer,
-            kwargs={},
-            l_address=address,
-        )
-        server.start()
-
         def shutdown(self):
-            time.sleep(0.01)
             response = get_response(
-                address,
+                l_addr,
                 greet_msg='This is a greeting message!',
                 msg='$system_stop%%%%%'
             )
             self.assertEqual(response, '$server_shutdown%%%%%')
+            response = get_response(s_addr, msg='$system_stop%%%%%')
+            self.assertEqual(response, '$server_shutdown%%%%%')
 
-        t = Thread(target=shutdown, args=(self,))
+        t = Timer(0.01, shutdown, args=(self,))
         t.start()
+        simulator.start()
         t.join()
-
-    def test_server_no_addresses(self):
-        with self.assertRaises(ValueError):
-            Server(
-                ListeningTestSystem,
-                ThreadingTCPServer,
-                kwargs={}
-            )
-
-    def test_server_wrong_socket_type(self):
-        address = ('127.0.0.1', 10012)
-        with self.assertRaises(ValueError):
-            Server(
-                ListeningTestSystem,
-                object,
-                kwargs={},
-                l_address=address
-            )
 
 
 def get_response(
@@ -589,36 +590,29 @@ def get_response(
 
 
 def get_logs():
-    time.sleep(0.03)
-    now = datetime.datetime.now()
-    logs = []
+    time.sleep(0.01)
     filename = os.path.join(os.getenv('ACSDATA', ''), 'sim-server.log')
-    with open(filename, mode='r', encoding='utf-8') as f:
+    logs = []
+    with open(filename, mode='rb') as f:
+        f.seek(-1, os.SEEK_END)
+        counter = 0
+        # read last 3 lines
+        while counter < 3:
+            f.seek(-2, os.SEEK_CUR)
+            if f.read(1) == b'\n':
+                counter += 1
         for line in f.readlines():
-            try:
-                line = line.strip()
-                log_date = datetime.datetime.strptime(
-                    ' '.join(line.split(' ')[0:2]) + '000',
-                    '%Y-%m-%d %H:%M:%S,%f'
-                )
-                log_date += datetime.timedelta(microseconds=25000)
-                if (now - log_date).total_seconds() < 0.01:
-                    logs.append(' '.join(line.split(' ')[2:]))
-            except ValueError:  # pragma: no cover
-                continue
+            line = line.decode('utf-8').strip()
+            logs.append(' '.join(line.split(' ')[2:]))
     return logs
 
 
-class TestingSystem:
-    pass
-
-
-class ListeningTestSystem(ListeningSystem, TestingSystem):
+class ListeningTestSystem(ListeningSystem):
 
     header = '#'
     tail = '%%%%%'
 
-    def __init__(self):
+    def __init__(self, **kwargs):  # pylint: disable=unused-argument
         self.msg = ''
         try:
             getattr(self, 'last_cmd')
@@ -666,9 +660,9 @@ class ListeningTestSystem(ListeningSystem, TestingSystem):
         return 'This is a greeting message!'
 
 
-class SendingTestSystem(SendingSystem, TestingSystem):
+class SendingTestSystem(SendingSystem):
 
-    def __init__(self):
+    def __init__(self, **kwargs):  # pylint: disable=unused-argument
         try:
             getattr(self, 'last_cmd')
         except AttributeError:
@@ -706,11 +700,11 @@ class SendingTestSystem(SendingSystem, TestingSystem):
         raise Exception('raised by sendingtestsystem')
 
 
-class DuplexTestSystem(ListeningTestSystem, SendingTestSystem, TestingSystem):
+class DuplexTestSystem(ListeningTestSystem, SendingTestSystem):
 
-    def __init__(self):
-        ListeningTestSystem.__init__(self)
-        SendingTestSystem.__init__(self)
+    def __init__(self, **kwargs):
+        ListeningTestSystem.__init__(self, **kwargs)
+        SendingTestSystem.__init__(self, **kwargs)
 
 
 @contextmanager
@@ -724,4 +718,3 @@ def socket_context(*args, **kw):
 
 if __name__ == '__main__':
     unittest.main()
-    warnings.resetwarnings()
