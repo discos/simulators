@@ -355,7 +355,6 @@ class Simulator:
             p.daemon = daemon
             processes.append(p)
             p.start()
-
             if module_system_type:
                 running_servers.append((module_system_type, l_addr))
 
