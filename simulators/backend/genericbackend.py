@@ -54,6 +54,7 @@ class GenericBackendSystem(ListeningSystem):
         self.interleave = 0
         self.current_sections = range(0, self.max_sections)
         self._valid_conf_re = re.compile("^[a-z0-9]")
+        self.failure = False
 
     def system_stop(self):
         if self._startID:
@@ -99,7 +100,10 @@ class GenericBackendSystem(ListeningSystem):
                 reply_arguments = method(message.arguments)
                 if reply_arguments:
                     reply_message.arguments = map(str, reply_arguments)
-                reply_message.code = grammar.OK
+                if self.failure:
+                    reply_message.code = grammar.FAIL
+                else:
+                    reply_message.code = grammar.OK
                 return str(reply_message)
             except BackendError as he:
                 return self._send_fail_reply(message, str(he))

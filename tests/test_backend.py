@@ -612,7 +612,20 @@ class TestMistral(unittest.TestCase):
         cmd, code, message = response.split(',')
         self.assertEqual(cmd, f'!{command}')
         self.assertEqual(code, 'fail')
-        self.assertEqual(message, 'setup is still running')
+        self.assertEqual(message, 'setup in progress')
+
+    def test_setup_when_system_failure(self):
+        self.test_setup()
+        self.system.failure = True
+        command = 'setup'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, message = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'fail')
+        self.assertEqual(message, 'failure description')
 
     def test_status_when_system_not_initialized(self):
         command = 'status'
@@ -637,7 +650,7 @@ class TestMistral(unittest.TestCase):
         cmd, code, _, message, acquiring = response.split(',')
         self.assertEqual(cmd, f'!{command}')
         self.assertEqual(code, 'ok')
-        self.assertEqual(message, 'no task is running')
+        self.assertEqual(message, 'ready to run a task')
         self.assertEqual(acquiring, '0')
 
     def test_status_when_setup_in_progress(self):
@@ -651,6 +664,19 @@ class TestMistral(unittest.TestCase):
         self.assertEqual(cmd, f'!{command}')
         self.assertEqual(code, 'ok')
         self.assertEqual(message, 'setup in progress')
+        self.assertEqual(acquiring, '0')
+
+    def test_status_when_system_failure(self):
+        self.system.failure = True
+        command = 'status'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, _, message, acquiring = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'fail')
+        self.assertEqual(message, 'failure description')
         self.assertEqual(acquiring, '0')
 
     def test_start(self):
@@ -691,6 +717,18 @@ class TestMistral(unittest.TestCase):
         self.assertEqual(code, 'fail')
         self.assertEqual(reason, 'acquisition in progress')
 
+    def test_start_when_system_failure(self):
+        self.system.failure = True
+        command = 'start'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, message = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'fail')
+        self.assertEqual(message, 'failure description')
+
     def test_status_when_acquisition_in_progress(self):
         self.system.setup_time = 0
         self.test_setup()
@@ -706,7 +744,209 @@ class TestMistral(unittest.TestCase):
         self.assertEqual(message, 'acquisition in progress')
         self.assertEqual(acquiring, '1')
 
-    # For task n.X: same test of setup
+    def test_target_sweep(self):
+        self.system.setup_time = 0
+        self.test_setup()
+        command = 'target-sweep'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, *answer = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'ok')
+        self.assertEqual(answer, [])
+
+    def test_target_sweep_when_system_not_ready(self):
+        command = 'target-sweep'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, reason = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'fail')
+        self.assertEqual(reason, 'system not initialized (setup required)')
+
+    def test_target_sweep_when_target_sweep_in_progress(self):
+        self.system.setup_time = 0
+        self.test_setup()
+        self.test_target_sweep()
+        command = 'target-sweep'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, reason = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'fail')
+        self.assertEqual(reason, 'target-sweep in progress')
+
+    def test_target_sweep_when_acquisition_in_progress(self):
+        self.system.setup_time = 0
+        self.test_setup()
+        self.test_start()
+        command = 'target-sweep'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, reason = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'fail')
+        self.assertEqual(reason, 'acquisition in progress')
+
+    def test_target_sweep_when_system_failure(self):
+        self.system.failure = True
+        command = 'target-sweep'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, message = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'fail')
+        self.assertEqual(message, 'failure description')
+
+    def test_status_when_target_sweep_in_progress(self):
+        self.system.setup_time = 0
+        self.test_setup()
+        self.test_target_sweep()
+        command = 'status'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, _, message, acquiring = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'ok')
+        self.assertEqual(message, 'target-sweep in progress')
+        self.assertEqual(acquiring, '0')
+
+    def test_status_when_target_sweep_done(self):
+        self.system.setup_time = 0
+        self.test_setup()
+        self.system.sweep_time = 0
+        self.test_target_sweep()
+        command = 'status'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, _, message, acquiring = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'ok')
+        self.assertEqual(message, 'ready to run a task')
+        self.assertEqual(acquiring, '0')
+
+    def test_vna_sweep(self):
+        self.system.setup_time = 0
+        self.test_setup()
+        command = 'vna-sweep'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, *answer = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'ok')
+        self.assertEqual(answer, [])
+
+    def test_vna_sweep_when_system_not_ready(self):
+        command = 'vna-sweep'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, reason = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'fail')
+        self.assertEqual(reason, 'system not initialized (setup required)')
+
+    def test_vna_sweep_when_vna_sweep_in_progress(self):
+        self.system.setup_time = 0
+        self.test_setup()
+        self.test_vna_sweep()
+        command = 'vna-sweep'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, reason = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'fail')
+        self.assertEqual(reason, 'vna-sweep in progress')
+
+    def test_vna_sweep_when_target_sweep_in_progress(self):
+        self.system.setup_time = 0
+        self.test_setup()
+        self.test_target_sweep()
+        command = 'vna-sweep'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, reason = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'fail')
+        self.assertEqual(reason, 'target-sweep in progress')
+
+    def test_vna_sweep_when_acquisition_in_progress(self):
+        self.system.setup_time = 0
+        self.test_setup()
+        self.test_start()
+        command = 'vna-sweep'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, reason = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'fail')
+        self.assertEqual(reason, 'acquisition in progress')
+
+    def test_vna_sweep_when_system_failure(self):
+        self.system.failure = True
+        command = 'vna-sweep'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, message = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'fail')
+        self.assertEqual(message, 'failure description')
+
+    def test_status_when_vna_sweep_in_progress(self):
+        self.system.setup_time = 0
+        self.test_setup()
+        self.test_vna_sweep()
+        command = 'status'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, _, message, acquiring = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'ok')
+        self.assertEqual(message, 'vna-sweep in progress')
+        self.assertEqual(acquiring, '0')
+
+    def test_status_when_vna_sweep_done(self):
+        self.system.setup_time = 0
+        self.test_setup()
+        self.system.sweep_time = 0
+        self.test_vna_sweep()
+        command = 'status'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, _, message, acquiring = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'ok')
+        self.assertEqual(message, 'ready to run a task')
+        self.assertEqual(acquiring, '0')
 
 
 class TestMessage(unittest.TestCase):
