@@ -62,7 +62,7 @@ class GenericBackendSystem(ListeningSystem):
         if self._stopID:
             self._stopID.cancel()
             self._stopID.join()
-        super().system_stop()
+        return super().system_stop()
 
     def _set_default(self):
         self.msg = ''

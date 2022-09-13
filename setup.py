@@ -5,7 +5,7 @@ except ImportError:
 
 setup(
     name='discos-simulators',
-    version='0.8',
+    version='1.0',
     description='Simulators for the DISCOS project',
     packages=find_packages(),
     scripts=['scripts/discos-simulator'],
@@ -13,6 +13,6 @@ setup(
     platforms='all',
     classifiers=[
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.9.6',
     ],
 )
