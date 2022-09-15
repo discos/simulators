@@ -1,4 +1,4 @@
-name: Scheduled CI Python 3.9.6 Tests
+name: Scheduled CI Python 3.6.9 and 3.9.6 Tests
 
 on:
   schedule:
