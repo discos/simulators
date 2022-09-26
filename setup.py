@@ -1,11 +1,9 @@
-try:
-    from setuptools import setup, find_packages
-except ImportError:
-    from distutils.core import setup, find_packages
+#!/usr/bin/env python
+from setuptools import setup, find_packages
 
 setup(
     name='discos-simulators',
-    version='1.0',
+    version='1.1',
     description='Simulators for the DISCOS project',
     packages=find_packages(),
     scripts=['scripts/discos-simulator'],
@@ -13,6 +11,6 @@ setup(
     platforms='all',
     classifiers=[
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 3.9.6',
+        'Programming Language :: Python :: 3.10.7',
     ],
 )
