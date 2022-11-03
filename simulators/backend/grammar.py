@@ -2,6 +2,7 @@ import re
 
 REQUEST = '?'
 REPLY = '!'
+TAIL = '\r\n'
 SEPARATOR = ','
 OK = "ok"
 FAIL = "fail"
