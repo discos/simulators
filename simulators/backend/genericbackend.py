@@ -8,8 +8,6 @@ from simulators.utils import ACS_TO_UNIX_TIME
 
 
 PROTOCOL_VERSION = '1.2'
-headers = ('!', '?')
-closers = ('\r\n')
 
 
 class BackendError(Exception):
@@ -70,8 +68,8 @@ class GenericBackendSystem(ListeningSystem):
 
     def parse(self, byte):
         self.msg += byte
-        if self.msg.endswith(closers):
-            msg = self.msg.strip('\n\r')
+        if self.msg.endswith(grammar.TAIL):
+            msg = self.msg.strip(grammar.TAIL)
             self._set_default()
             return self._parse(msg)
         return True
