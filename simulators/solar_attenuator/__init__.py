@@ -7,14 +7,15 @@ servers = [
     (('0.0.0.0', 13100), (), ThreadingTCPServer, {}),
 ]
 
+
 class System(ListeningSystem):
 
     commands = {
-        'set W_solar_attn':'set_w_solar_attn',
-        'set W_cal':'set_w_cal',
-        'set W_passthrough':'set_w_passthrough',
-        'get W_cal_temp':'get_w_cal_temp',
-        'get W_mode':'get_w_mod',
+        'set W_solar_attn': 'set_w_solar_attn',
+        'set W_cal': 'set_w_cal',
+        'set W_passthrough': 'set_w_passthrough',
+        'get W_cal_temp': 'get_w_cal_temp',
+        'get W_mode': 'get_w_mod',
     }
 
     tail = '\r\n'
