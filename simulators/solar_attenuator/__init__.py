@@ -45,8 +45,6 @@ class System(ListeningSystem):
             if len(args) < 2:
                 continue
             cmd_name = self.commands.get(args[0] + " " + args[1])
-            if not cmd_name:
-                continue
             method = getattr(self, cmd_name)
             ans = method()
             if isinstance(ans, str):
