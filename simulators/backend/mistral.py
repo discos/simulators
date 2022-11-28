@@ -4,6 +4,12 @@ from simulators.backend.genericbackend import (
     BackendError,
 )
 
+import sys
+
+#sys.path.append("/home/mistral/src/mistral_readout")
+#import mistral_client_current
+
+import subprocess
 
 class System(GenericBackendSystem):
 
@@ -73,13 +79,42 @@ class System(GenericBackendSystem):
         return result
 
     def do_setup(self, _):
+
         if error := self.error:
             if error['reason'] != 'setup':
                 raise BackendError(error['message'])
+        
         self._running_setup = True
         self._setupID = Timer(self.setup_time, self._setup)
         self._setupID.start()
+        print("Starting subprocess")
 
+        '''
+        Starting the client in non-blocking mode.
+        '''
+        
+        p = subprocess.Popen(["python2", "/home/mistral/src/mistral_readout/mistral_client_current.py","do-initialize"])
+        
+        '''
+        The subprocess returns 0 at the end of execution. The while checks for the end of the execution, and returns
+        the status of the receiver to ready. If the setup fails and returns 1, it raises a backend error.
+        '''
+
+        print("Entering while")
+        while p.poll() is None:
+            print("Setup in progress")
+            time.wait(1)
+        
+        print("Exiting from while")
+        
+        if p.poll() == 0:
+            print("Setup completed")
+            self._setup()
+        
+        elif p.poll() == 1:
+            print("Setup failed")
+                
+        
     def _setup(self):
         self.ready = True
         self._running_setup = False
