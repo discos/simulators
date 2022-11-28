@@ -7,7 +7,6 @@ servers = [
     (('0.0.0.0', 13100), (), ThreadingTCPServer, {}),
 ]
 
-
 class System(ListeningSystem):
 
     commands = {
@@ -48,7 +47,7 @@ class System(ListeningSystem):
             if not cmd_name:
                 continue
             method = getattr(self, cmd_name)
-            ans = method(args[1:])
+            ans = method()
             if isinstance(ans, str):
                 answer += ans + ';'
         if answer:
