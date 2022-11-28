@@ -52,5 +52,6 @@ class TestSolarAttenuator(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.mode, '')
 
+
 if __name__ == '__main__':
     unittest.main()
