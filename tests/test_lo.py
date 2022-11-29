@@ -2,13 +2,10 @@ import unittest
 from simulators.lo import System
 
 
-class TestLocalOscillator(unittest.TestCase):
+class TestGenericLocalOscillator(unittest.TestCase):
 
     def setUp(self):
-        self.system = System()
-
-    def tearDown(self):
-        del self.system
+        self.system = System(system_type='generic_LO')
 
     def test_set_power(self, power=10):
         msg = f'POWER {power} dBm\n'
@@ -104,6 +101,12 @@ class TestLocalOscillator(unittest.TestCase):
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
 
+
+class TestLocalOscillatorUnknownType(unittest.TestCase):
+
+    def test_unknown_type(self):
+        with self.assertRaises(ValueError):
+            self.system = System(system_type='unknown')
 
 if __name__ == '__main__':
     unittest.main()
