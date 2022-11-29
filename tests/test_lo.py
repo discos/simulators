@@ -108,5 +108,6 @@ class TestLocalOscillatorUnknownType(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.system = System(system_type='unknown')
 
+
 if __name__ == '__main__':
     unittest.main()

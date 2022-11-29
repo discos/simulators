@@ -10,21 +10,21 @@ from simulators.common import MultiTypeSystem
 systems = get_multitype_systems(__file__)
 servers = [
     (
-        ('0.0.0.0', 12700), 
-        (), 
-        ThreadingTCPServer, 
+        ('0.0.0.0', 12700),
+        (),
+        ThreadingTCPServer,
         {'system_type': 'generic_LO'}
     ),
     (
-        ('0.0.0.0', 12701), 
-        (), 
-        ThreadingTCPServer, 
+        ('0.0.0.0', 12701),
+        (),
+        ThreadingTCPServer,
         {'system_type': 'generic_LO'}
     ),
     (
-        ('0.0.0.0', 12702), 
-        (), 
-        ThreadingTCPServer, 
+        ('0.0.0.0', 12702),
+        (),
+        ThreadingTCPServer,
         {'system_type': 'generic_LO'}
     ),
 ]
