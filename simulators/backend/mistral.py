@@ -14,10 +14,11 @@ class System(GenericBackendSystem):
     }
     commands.update(GenericBackendSystem.commands)
 
-    def __init__(self, setup_time=60, sweep_time=300):
+    setup_time = 60
+    sweep_time = 300
+
+    def __init__(self):
         GenericBackendSystem.__init__(self)
-        self.setup_time = setup_time
-        self.sweep_time = sweep_time
         self._setupID = None
         self._target_sweepID = None
         self._vna_sweepID = None
