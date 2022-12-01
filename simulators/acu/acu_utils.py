@@ -27,7 +27,7 @@ class ModeCommand:
 
     def get(self, command_counter):
         self.command_counter = command_counter
-        return(
+        return (
             utils.uint_to_string(1, 2)  # 1: mode command
             + utils.uint_to_string(self.subsystem_id, 2)
             + utils.uint_to_string(self.command_counter)
@@ -52,7 +52,7 @@ class ParameterCommand:
 
     def get(self, command_counter):
         self.command_counter = command_counter
-        return(
+        return (
             utils.uint_to_string(2, 2)  # 2: parameter command
             + utils.uint_to_string(self.subsystem_id, 2)
             + utils.uint_to_string(self.command_counter)
@@ -70,7 +70,7 @@ class ProgramTrackEntry:
         self.elevation_position = elevation_position
 
     def get(self):
-        return(
+        return (
             utils.int_to_string(self.relative_time)
             + utils.real_to_string(self.azimuth_position, 2)
             + utils.real_to_string(self.elevation_position, 2)
@@ -123,7 +123,7 @@ class ProgramTrackCommand:
         for entry in self.sequence:
             sequence_bytes += entry.get()
 
-        return(
+        return (
             utils.uint_to_string(4, 2)  # 4: program track parameter command
             # The only subsystem supported is 5, tracking, but it is possible
             # to be overridden to generate some specific errors
@@ -177,7 +177,7 @@ class Command:
 
         time.sleep(0.001 * len(self.command_list))
 
-        return(
+        return (
             start_flag
             + utils.uint_to_string(20 + len(commands))
             + utils.uint_to_string(self.command_counter)
