@@ -55,9 +55,8 @@ class System(ListeningSystem):
                 ans = method()
             if isinstance(ans, str):
                 answer += ans + ';'
-        if answer:
-            answer = answer[:-1]
-            return answer
+        answer = answer[:-1]
+        return answer
 
     def set_w_LO_freq_PolH(self, params):
         self.w_lo_freq_polH = params
