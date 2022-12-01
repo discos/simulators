@@ -27,6 +27,12 @@ servers = [
         ThreadingTCPServer,
         {'system_type': 'generic_LO'}
     ),
+    (
+        ('0.0.0.0', 12703),
+        (),
+        ThreadingTCPServer,
+        {'system_type': 'w_LO'}
+    ),
 ]
 
 
