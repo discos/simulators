@@ -19,7 +19,6 @@ class System(GenericBackendSystem):
     sweep_time = 300
 
     def __init__(self):
-        GenericBackendSystem.__init__(self)
         self.set_default()
 
     def system_stop(self):
@@ -112,6 +111,9 @@ class System(GenericBackendSystem):
         if self._setupID:
             self._setupID.cancel()
             self._setupID.join()
+        if self._stopID:
+            self._stopID.cancel()
+            self._stopID.join()
         if self._target_sweepID:
             self._target_sweepID.cancel()
             self._target_sweepID.join()
@@ -128,3 +130,4 @@ class System(GenericBackendSystem):
         self._running_vna_sweep = False
         self.ready = False  # Is the system ready to operate?
         self.failure = False
+        GenericBackendSystem.__init__(self)

@@ -949,7 +949,6 @@ class TestMistral(unittest.TestCase):
         self.assertEqual(acquiring, '0')
 
     def test_reset(self):
-        self.test_status_when_system_ready()
         command = 'reset'
         msg = f'?{command}\r\n'
         for byte in msg[:-1]:
@@ -959,7 +958,22 @@ class TestMistral(unittest.TestCase):
         self.assertEqual(cmd, f'!{command}')
         self.assertEqual(code, 'ok')
 
-    def test_status_after_reset(self):
+    def test_status_after_setup_and_reset(self):
+        self.test_status_when_system_ready()
+        self.test_reset()
+        command = 'status'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, _, message, acquiring = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'ok')
+        self.assertEqual(message, 'system not initialized (setup required)')
+        self.assertEqual(acquiring, '0')
+
+    def test_acquisition_stopped_after_reset(self):
+        self.test_start()
         self.test_reset()
         command = 'status'
         msg = f'?{command}\r\n'
