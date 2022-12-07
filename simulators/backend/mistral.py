@@ -11,6 +11,7 @@ class System(GenericBackendSystem):
         'setup': 'do_setup',
         'target-sweep': 'do_target_sweep',
         'vna-sweep': 'do_vna_sweep',
+        'reset': 'do_reset',
     }
     commands.update(GenericBackendSystem.commands)
 
@@ -26,17 +27,10 @@ class System(GenericBackendSystem):
         self._running_target_sweep = False
         self._running_vna_sweep = False
         self.ready = False  # Is the system ready to operate?
+        self.failure = False
 
     def system_stop(self):
-        if self._setupID:
-            self._setupID.cancel()
-            self._setupID.join()
-        if self._target_sweepID:
-            self._target_sweepID.cancel()
-            self._target_sweepID.join()
-        if self._vna_sweepID:
-            self._vna_sweepID.cancel()
-            self._vna_sweepID.join()
+        self.stop_tasks()
         return super().system_stop()
 
     @property
@@ -116,3 +110,18 @@ class System(GenericBackendSystem):
             self.error.get('message') or 'ready to run a task',
             1 if self.acquiring else 0
         )
+
+    def do_reset(self, _):
+        self.stop_tasks()
+        self.__init__()
+
+    def stop_tasks(self):
+        if self._setupID:
+            self._setupID.cancel()
+            self._setupID.join()
+        if self._target_sweepID:
+            self._target_sweepID.cancel()
+            self._target_sweepID.join()
+        if self._vna_sweepID:
+            self._vna_sweepID.cancel()
+            self._vna_sweepID.join()
