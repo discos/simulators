@@ -252,8 +252,7 @@ class GenericBackendSystem(ListeningSystem):
         def _get_param(p, _type_converter=str):
             if p == "*":
                 return p
-            else:
-                return _type_converter(p)
+            return _type_converter(p)
 
         if len(args) < 7:
             raise BackendError("set-section needs 7 arguments")
