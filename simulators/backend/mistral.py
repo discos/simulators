@@ -20,14 +20,7 @@ class System(GenericBackendSystem):
 
     def __init__(self):
         GenericBackendSystem.__init__(self)
-        self._setupID = None
-        self._target_sweepID = None
-        self._vna_sweepID = None
-        self._running_setup = False
-        self._running_target_sweep = False
-        self._running_vna_sweep = False
-        self.ready = False  # Is the system ready to operate?
-        self.failure = False
+        self.set_default()
 
     def system_stop(self):
         self.stop_tasks()
@@ -113,7 +106,7 @@ class System(GenericBackendSystem):
 
     def do_reset(self, _):
         self.stop_tasks()
-        self.__init__()
+        self.set_default()
 
     def stop_tasks(self):
         if self._setupID:
@@ -125,3 +118,13 @@ class System(GenericBackendSystem):
         if self._vna_sweepID:
             self._vna_sweepID.cancel()
             self._vna_sweepID.join()
+
+    def set_default(self):
+        self._setupID = None
+        self._target_sweepID = None
+        self._vna_sweepID = None
+        self._running_setup = False
+        self._running_target_sweep = False
+        self._running_vna_sweep = False
+        self.ready = False  # Is the system ready to operate?
+        self.failure = False
