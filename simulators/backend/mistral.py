@@ -19,6 +19,7 @@ class System(GenericBackendSystem):
     sweep_time = 300
 
     def __init__(self):
+        GenericBackendSystem.__init__(self)
         self.set_default()
 
     def system_stop(self):
