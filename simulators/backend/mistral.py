@@ -112,9 +112,6 @@ class System(GenericBackendSystem):
         if self._setupID:
             self._setupID.cancel()
             self._setupID.join()
-        if self._stopID:
-            self._stopID.cancel()
-            self._stopID.join()
         if self._target_sweepID:
             self._target_sweepID.cancel()
             self._target_sweepID.join()
