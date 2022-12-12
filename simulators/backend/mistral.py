@@ -128,3 +128,4 @@ class System(GenericBackendSystem):
         self._running_vna_sweep = False
         self.ready = False  # Is the system ready to operate?
         self.failure = False
+        GenericBackendSystem.__init__(self)
