@@ -592,6 +592,17 @@ class TestSardara(unittest.TestCase):
     def test_sardara_instance(self):
         self.assertIsInstance(self.system, Sardara)
 
+    def test_sardara_set_configuration(self):
+        command = 'set-configuration'
+        configuration = 'SK77'
+        msg = f'?{command},{configuration}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        args = response.split(',')
+        self.assertEqual(args[0], f'!{command}')
+        self.assertEqual(args[1], 'ok')
+
 
 class TestMistral(unittest.TestCase):
 
