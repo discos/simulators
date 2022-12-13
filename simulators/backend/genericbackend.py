@@ -32,6 +32,7 @@ class GenericBackendSystem(ListeningSystem):
         'start': 'do_start',
         'stop': 'do_stop',
         'set-filename': 'do_set_filename',
+        'get-filename': 'do_get_filename',
         'convert-data': 'do_convert_data',  # New in version 1.2
     }
 
@@ -181,6 +182,9 @@ class GenericBackendSystem(ListeningSystem):
         if len(args) < 1:
             raise BackendError("command needs <filename> as argument")
         self._filename = args[0]
+
+    def do_get_filename(self, _):
+        return [self._filename]
 
     def do_time(self, _):
         return [self._get_time()]

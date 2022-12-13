@@ -476,9 +476,8 @@ class TestGenericBackend(unittest.TestCase):
         self.assertEqual(answer, 'fail')
         self.assertEqual(reason, 'interleave samples must be a positive int')
 
-    def test_set_filename(self):
+    def test_set_filename(self, filename='testfile'):
         command = 'set-filename'
-        filename = 'testfile'
         msg = f'?{command},{filename}\r\n'
         for byte in msg[:-1]:
             self.assertTrue(self.system.parse(byte))
@@ -497,6 +496,19 @@ class TestGenericBackend(unittest.TestCase):
         self.assertEqual(cmd, f'!{command}')
         self.assertEqual(answer, 'fail')
         self.assertEqual(reason, 'command needs <filename> as argument')
+
+    def test_get_filename(self):
+        filename = 'foo.fits'
+        self.test_set_filename(filename)
+        command = 'get-filename'
+        msg = f'?{command}\r\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1]).strip()
+        cmd, code, answer = response.split(',')
+        self.assertEqual(cmd, f'!{command}')
+        self.assertEqual(code, 'ok')
+        self.assertEqual(answer, filename)
 
     def test_convert_data(self):
         command = 'convert-data'
