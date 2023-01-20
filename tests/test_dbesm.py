@@ -1,12 +1,11 @@
 import unittest
-from simulators.dbesm import System
+from simulators import dbesm
 
 
 class TestDBESM(unittest.TestCase):
-    
-    def setUp(self):
-        self.system = System(system_type='DBESM')
 
+    def setUp(self):
+        self.system = dbesm.System()
 
 if __name__ == '__main__':
     unittest.main()

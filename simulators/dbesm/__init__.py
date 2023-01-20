@@ -1,22 +1,10 @@
+import time
 from socketserver import ThreadingTCPServer
-from simulators.utils import get_multitype_systems
-from simulators.common import MultiTypeSystem
+from simulators.common import ListeningSystem
 
 
-systems = get_multitype_systems(__file__)
-servers = [
-    (
-        ('0.0.0.0', 12000),
-        (),
-        ThreadingTCPServer,
-        {'system_type': 'DBESM'}
-    )
-]
+servers = [(('0.0.0.0', 12500), (), ThreadingTCPServer, {})]
 
 
-class System(MultiTypeSystem):
-
-    def __new__(cls, **kwargs):
-        cls.systems = systems
-        cls.system_type = kwargs.pop('system_type')
-        return MultiTypeSystem.__new__(cls, **kwargs)
+class System(ListeningSystem):
+   pass
