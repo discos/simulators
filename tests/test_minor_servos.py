@@ -319,7 +319,7 @@ class TestMinorServos(unittest.TestCase):
         self.assertRegex(self.system.parse(cmd[-1]), bad)
 
     def test_program_track_too_many_arguments(self):
-        for servo_id, servo in self.system.servos.items():
+        for servo_id in self.system.servos:
             DOF = 10  # Too many coordinates
             coords = [random.uniform(0, 100) for _ in range(DOF)]
             cmd = f'PROGRAMTRACK={servo_id},0,0,{time.time()+3:.6f},'

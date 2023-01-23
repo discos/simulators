@@ -130,8 +130,8 @@ class System(ListeningSystem):
         if configuration not in self.configurations:
             return self.bad
         self.configuration = self.configurations.get(configuration)['ID']
-        for servo in self.servos:
-            self.servos[servo].operative_mode = 10  # SETUP
+        for _, servo in self.servos.items():
+            servo.operative_mode = 10  # SETUP
         self.last_executed_command = self.plc_time()
         return self.good
 
@@ -142,7 +142,7 @@ class System(ListeningSystem):
         if servo_id not in self.servos:
             return self.bad
         try:
-            stow_pos = int(args[1])
+            _ = int(args[1])  # STOW POSITION
         except ValueError:
             return self.bad
         self.servos[servo_id].operative_mode = 20  # STOW
@@ -188,8 +188,8 @@ class System(ListeningSystem):
         if len(args) != 4 + self.servos.get(servo_id).DOF:
             return self.bad
         try:
-            trajectory_id = int(args[1])
-            point_id = int(args[2])
+            _ = int(args[1])  # TRAJECTORY ID
+            _ = int(args[2])  # POINT ID
             start_time = args[3]
             if start_time == '*':
                 # Should append the point to the last known trajectory
