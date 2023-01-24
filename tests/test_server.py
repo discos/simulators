@@ -617,7 +617,7 @@ def get_logs():
         f.seek(0, os.SEEK_END)
         # read last 3 lines with current process ID
         buffer_string = ''
-        while len(logs) < 3:
+        while len(logs) <= 3:
             try:
                 f.seek(-2, os.SEEK_CUR)
                 buffer_string += f.read(1).decode('utf-8')
