@@ -17,7 +17,7 @@ from .common import BaseSystem
 
 logging.basicConfig(
     filename=os.path.join(os.getenv('ACSDATA', ''), 'sim-server.log'),
-    format='%(asctime)s %(message)s',
+    format='%(asctime)s %(process)d %(message)s',
     level=logging.DEBUG)
 
 
