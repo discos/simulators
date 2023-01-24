@@ -18,11 +18,31 @@ from simulators.server import Server, Simulator
 from simulators.common import ListeningSystem, SendingSystem
 
 
+STARTING_PORT = 10000
+
+
+def address_generator_function():
+    port = STARTING_PORT
+    while True:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        address = ('127.0.0.1', port)
+        try:
+            s.bind(address)
+            s.close()
+            yield address
+        except OSError:
+            pass
+        port += 1
+
+
+address_generator = address_generator_function()
+
+
 class TestListeningServer(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.address = ('127.0.0.1', 10000)
+        cls.address = next(address_generator)
         cls.server = Server(
             ListeningTestSystem,
             ThreadingTCPServer,
@@ -111,7 +131,7 @@ class TestListeningUDPServer(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.address = ('127.0.0.1', 10000)
+        cls.address = next(address_generator)
         cls.server = Server(
             ListeningTestSystem,
             ThreadingUDPServer,
@@ -174,7 +194,7 @@ class TestSendingServer(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.address = ('127.0.0.1', 10001)
+        cls.address = next(address_generator)
         cls.server = Server(
             SendingTestSystem,
             ThreadingTCPServer,
@@ -209,7 +229,7 @@ class TestSendingUDPServer(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.address = ('127.0.0.1', 10001)
+        cls.address = next(address_generator)
         cls.server = Server(
             SendingTestSystem,
             ThreadingUDPServer,
@@ -251,8 +271,8 @@ class TestDuplexServer(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.l_address = ('127.0.0.1', 10002)
-        cls.s_address = ('127.0.0.1', 10003)
+        cls.l_address = next(address_generator)
+        cls.s_address = next(address_generator)
         cls.server = Server(
             DuplexTestSystem,
             ThreadingTCPServer,
@@ -322,8 +342,8 @@ class TestDuplexUDPServer(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.l_address = ('127.0.0.1', 10002)
-        cls.s_address = ('127.0.0.1', 10003)
+        cls.l_address = next(address_generator)
+        cls.s_address = next(address_generator)
         cls.server = Server(
             DuplexTestSystem,
             ThreadingUDPServer,
@@ -382,7 +402,7 @@ class TestDuplexUDPServer(unittest.TestCase):
 class TestServerVarious(unittest.TestCase):
 
     def test_server_shutdown(self):
-        address = ('127.0.0.1', 10012)
+        address = next(address_generator)
         server = Server(
             ListeningTestSystem,
             ThreadingTCPServer,
@@ -412,7 +432,7 @@ class TestServerVarious(unittest.TestCase):
             )
 
     def test_server_wrong_socket_type(self):
-        address = ('127.0.0.1', 10012)
+        address = next(address_generator)
         with self.assertRaises(ValueError):
             Server(
                 ListeningTestSystem,
@@ -432,7 +452,7 @@ class TestSimulator(unittest.TestCase):
         sys.modules[cls.mymodulename] = cls.mymodule
 
     def test_create_simulator_from_module(self):
-        address = ('127.0.0.1', 10004)
+        address = next(address_generator)
         self.mymodule.servers = [(address, (), ThreadingTCPServer, {})]
         self.mymodule.System = ListeningTestSystem
 
@@ -443,13 +463,13 @@ class TestSimulator(unittest.TestCase):
     def test_system_type(self):
         self.mymodule.servers = [
             (
-                ('127.0.0.1', 10004),
+                next(address_generator),
                 (),
                 ThreadingTCPServer,
                 {'system_type': 'foo'}
             ),
             (
-                ('127.0.0.1', 10005),
+                next(address_generator),
                 (),
                 ThreadingTCPServer,
                 {'system_type': 'moo'}
@@ -470,7 +490,7 @@ class TestSimulator(unittest.TestCase):
         self.assertIn("moo' up and running at (", output)
 
     def test_create_simulator_from_name(self):
-        address = ('127.0.0.1', 10005)
+        address = next(address_generator)
         self.mymodule.servers = [(address, (), ThreadingTCPServer, {})]
         self.mymodule.System = ListeningTestSystem
 
@@ -479,7 +499,7 @@ class TestSimulator(unittest.TestCase):
         simulator.stop()
 
     def test_start_and_stop_listening(self):
-        address = ('127.0.0.1', 10006)
+        address = next(address_generator)
         self.mymodule.servers = [(address, (), ThreadingTCPServer, {})]
         self.mymodule.System = ListeningTestSystem
 
@@ -496,7 +516,7 @@ class TestSimulator(unittest.TestCase):
         simulator.stop()
 
     def test_start_and_stop_sending(self):
-        address = ('127.0.0.1', 10007)
+        address = next(address_generator)
         self.mymodule.servers = [((), address, ThreadingTCPServer, {})]
         self.mymodule.System = SendingTestSystem
 
@@ -509,8 +529,8 @@ class TestSimulator(unittest.TestCase):
         simulator.stop()
 
     def test_start_and_stop_duplex(self):
-        l_addr = ('127.0.0.1', 10008)
-        s_addr = ('127.0.0.1', 10009)
+        l_addr = next(address_generator)
+        s_addr = next(address_generator)
         self.mymodule.servers = [(l_addr, s_addr, ThreadingTCPServer, {})]
         self.mymodule.System = DuplexTestSystem
 
@@ -529,15 +549,15 @@ class TestSimulator(unittest.TestCase):
         simulator.stop()
 
     def test_stop_without_start(self):
-        address = ('127.0.0.1', 10007)
+        address = next(address_generator)
         self.mymodule.servers = [((), address, ThreadingUDPServer, {})]
         self.mymodule.System = SendingTestSystem
         simulator = Simulator(self.mymodule)
         simulator.stop()
 
     def test_non_daemon_simulator(self):
-        l_addr = ('127.0.0.1', 10010)
-        s_addr = ('127.0.0.1', 10011)
+        l_addr = next(address_generator)
+        s_addr = next(address_generator)
         self.mymodule.servers = [(l_addr, s_addr, ThreadingTCPServer, {})]
         self.mymodule.System = DuplexTestSystem
 
@@ -594,16 +614,23 @@ def get_logs():
     filename = os.path.join(os.getenv('ACSDATA', ''), 'sim-server.log')
     logs = []
     with open(filename, mode='rb') as f:
-        f.seek(-1, os.SEEK_END)
-        counter = 0
-        # read last 3 lines
-        while counter < 3:
-            f.seek(-2, os.SEEK_CUR)
-            if f.read(1) == b'\n':
-                counter += 1
-        for line in f.readlines():
-            line = line.decode('utf-8').strip()
-            logs.append(' '.join(line.split(' ')[2:]))
+        f.seek(0, os.SEEK_END)
+        # read last 3 lines with current process ID
+        buffer_string = ''
+        while len(logs) < 3:
+            try:
+                f.seek(-2, os.SEEK_CUR)
+                buffer_string += f.read(1).decode('utf-8')
+            except OSError:
+                if buffer_string:
+                    buffer_string += '\n'
+                else:
+                    break
+            if buffer_string.endswith('\n'):
+                buffer_string = buffer_string.strip()[::-1].split()
+                if str(os.getpid()) in buffer_string[2]:
+                    logs.append(' '.join(buffer_string[3:]))
+                    buffer_string = ''
     return logs
 
 
