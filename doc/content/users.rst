@@ -11,7 +11,7 @@ User guide
       The following section describes setup process and the command line interface
       of the package. Installing the required Python dependencies and the package
       itself will require no longer than 5 minutes.
-      In order to run this package, Python 2.7 is required.
+      In order to run this package, Python>=3.9 is required.
 
 
 Package setup

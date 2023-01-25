@@ -136,7 +136,7 @@ Testing environment
 In the `continuous integration` workflow, the tests are executed more than
 once.  During the development process, tests will be executed locally, and
 after pushing the code to Github, they will be executed on
-`Travis-CI <https://travis-ci.org/github/discos/simulators>`__.
+`GitHub Actions <https://github.com/features/actions>`__.
 
 
 Dependencies
@@ -146,42 +146,20 @@ That is possible thanks to the `unittest` framework, included in the
 Python standard library. But we do not want to only run the unit tests:
 we want to set up an environment that allows us to check for suspicious
 code, test the code and the documentation, evaluate the testing coverage,
-and replicate the Travis-CI build locally.  To accomplish this goal we
-need to install some additional dependencies:
+and replicate the GitHub Actions build locally. To accomplish this goal we
+need to install some additional dependencies by executing the following command:
 
 .. code-block:: shell
 
-   $ pip install coverage           # testing coverage tool
-   $ pip install codecov            # testing coverage tool
-   $ pip install coveralls          # testing coverage tool
+   $ pip install -r testng_requirements.txt
+
+which is equivalent of manually installing the testing dependencies by executing
+the following commands:
+
+.. code-block:: shell
+
+   $ pip install coverage           # Coverage testing tool
    $ pip install prospector         # Python linter
-   $ pip install sphinx             # documentation generator
-   $ pip install sphinx_rtd_theme   # HTML doc theme
-   $ pip install tox                # testing tool
-   $ sudo apt install ruby          # apt, yum, ...
-   $ sudo gem install wwtd          # run travis-ci locally
-
-
-Run all tests at once
----------------------
-All tests can be run at once by executing this single command:
-
-.. code-block:: shell
-
-   $ wwtd
-
-The `wwtd` program (`What Would Travis Do`) reads the *.travis.yml*
-file and executes the tests accordingly. The tests can also be run
-manually, one by one, as described in the following sections.
-
-Run the linter
---------------
-To run the `linter <https://en.wikipedia.org/wiki/Lint_(software)>`__ move to
-the project's root directory and execute the following command:
-
-.. code-block:: shell
-
-   $ prospector
 
 
 .. _unit-tests:
@@ -193,6 +171,16 @@ Move to the project's root directory and execute the following command:
 .. code-block:: shell
 
    $ python -m unittest discover -b tests
+
+
+Run the linter
+--------------
+To run the `linter <https://en.wikipedia.org/wiki/Lint_(software)>`__ move to
+the project's root directory and execute the following command:
+
+.. code-block:: shell
+
+   $ prospector
 
 
 Check the testing coverage
@@ -216,16 +204,32 @@ file with your browser.
 
 Test the documentation
 ----------------------
-Several things have to be tested:
+To make sure the documentation is written correctly, several things
+have to be tested:
 
 * the docstring examples
 * the documentation (*doc* directory) examples
 * the links inside the documentation must point correctly to the target
 * the HTML must be generated properly
 
-To test the docstring examples, we use the Python standard library `doctest`
-module. Simply move to the root directory of the project and execute the
+In order to do so, some other dependencies must be installed by using the
 following command:
+
+.. code-block:: shell
+
+   $ pip install -r doc/doc_requirements.txt
+
+which is equivalent of manually installing the following Python packages:
+
+.. code-block:: shell
+
+   $ pip install sphinx             # Documentation generator
+   $ pip install sphinx_rtd_theme   # HTML doc theme
+   
+
+In order to test the docstring examples, we use the Python standard
+library `doctest` module. Simply move to the root directory of the project
+and execute the following command:
 
 .. code-block:: shell
 
@@ -249,3 +253,24 @@ To generate the HTML:
 .. code-block:: shell
 
    $ make html  # From the doc directory
+
+
+Run all tests at once
+---------------------
+
+All tests can be run at once using the `act <https://github.com/nektos/act>__`
+tool. This tool can be installed in several operating systems and relies on 
+`Docker <https://www.docker.com/>`__ to be executed. `act` and `Docker`
+installation procedures will not be documented here since they are already
+described on their respective web pages.
+Once everything is set up correctly, all tests can be executed by launching the
+following command in the repository main directory:
+
+.. code-block:: shell
+
+   $ act
+
+The `act` program reads the *.actrc* file in the main directory, this file
+contains the configuration in order for `act` to run the same GitHub Action
+workflow that will be run online when a commit is pushed to the remote
+repository.

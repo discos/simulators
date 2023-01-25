@@ -12,7 +12,7 @@ from ctypes import c_bool
 from socketserver import (
     ThreadingTCPServer, ThreadingUDPServer, BaseRequestHandler
 )
-from .common import BaseSystem
+from simulators.common import BaseSystem
 
 
 logging.basicConfig(
