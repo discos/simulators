@@ -290,7 +290,10 @@ class PFP(Servo):
         answer += f'PFP_ELONG_THETA_SLAVE={random.uniform(0, 100):.6f}|'
         answer += f'PFP_TX={self.coords[0]:.6f}|'
         answer += f'PFP_TZ={self.coords[1]:.6f}|'
-        answer += f'PFP_RTHETA={self.coords[2]:.6f}'
+        answer += f'PFP_RTHETA={self.coords[2]:.6f}|'
+        answer += f'PFP_OFFSET_TX={self.offsets[0]:.6f}|'
+        answer += f'PFP_OFFSET_TZ={self.offsets[1]:.6f}|'
+        answer += f'PFP_OFFSET_RTHETA={self.offsets[2]:.6f}'
         return answer
 
 
@@ -330,7 +333,13 @@ class SRP(Servo):
         answer += f'SRP_TZ={self.coords[2]:.6f}|'
         answer += f'SRP_RX={self.coords[3]:.6f}|'
         answer += f'SRP_RY={self.coords[4]:.6f}|'
-        answer += f'SRP_RZ={self.coords[5]:.6f}'
+        answer += f'SRP_RZ={self.coords[5]:.6f}|'
+        answer += f'SRP_OFFSET_TX={self.offsets[0]:.6f}|'
+        answer += f'SRP_OFFSET_TY={self.offsets[1]:.6f}|'
+        answer += f'SRP_OFFSET_TZ={self.offsets[2]:.6f}|'
+        answer += f'SRP_OFFSET_RX={self.offsets[3]:.6f}|'
+        answer += f'SRP_OFFSET_RY={self.offsets[4]:.6f}|'
+        answer += f'SRP_OFFSET_RZ={self.offsets[5]:.6f}'
         return answer
 
 
@@ -348,7 +357,8 @@ class M3R(Servo):
         answer += f'M3R_COUNTERCLOCKWISE_ENABLED={self.ccw_enabled}|'
         answer += f'M3R_CLOCKWISE={random.uniform(0, 100):.6f}|'
         answer += f'M3R_COUNTERCLOCKWISE={random.uniform(0, 100):.6f}|'
-        answer += f'M3R_ROTATION={self.coords[0]:.6f}'
+        answer += f'M3R_ROTATION={self.coords[0]:.6f}|'
+        answer += f'M3R_OFFSET={self.offsets[0]:.6f}'
         return answer
 
 
@@ -366,7 +376,8 @@ class GFR(Servo):
         answer += f'GFR_COUNTERCLOCKWISE_ENABLED={self.ccw_enabled}|'
         answer += f'GFR_CLOCKWISE={random.uniform(0, 100):.6f}|'
         answer += f'GFR_COUNTERCLOCKWISE={random.uniform(0, 100):.6f}|'
-        answer += f'GFR_ROTATION={self.coords[0]:.6f}'
+        answer += f'GFR_ROTATION={self.coords[0]:.6f}|'
+        answer += f'GFR_OFFSET={self.offsets[0]:.6f}'
         return answer
 
 
@@ -381,5 +392,6 @@ class Derotator(Servo):
         answer = super().get_status()
         answer += f'{self.name}_ROTARY_AXIS_ENABLED='
         answer += f'{self.rotary_axis_enabled}|'
-        answer += f'{self.name}_ROTATION={self.coords[0]:.6f}'
+        answer += f'{self.name}_ROTATION={self.coords[0]:.6f}|'
+        answer += f'{self.name}_OFFSET={self.offsets[0]:.6f}'
         return answer
