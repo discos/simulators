@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from simulators import utils
 from simulators.receiver import System
 from simulators.receiver import DEFINITIONS as DEF
-from simulators.receiver.slaves import Slave, Dewar, LNA
+from simulators.receiver.slaves import Slave, Dewar, LNA, Switch
 
 
 def checksum(msg):
@@ -854,6 +854,613 @@ class TestProtocol(unittest.TestCase):
         answer = self.system.parse(command[-1])
         expected_answer = DEF.CMD_STX + '\x01\x01\x6F\x00\x00'
         self.assertEqual(answer, expected_answer)
+
+
+class TestSwitch(unittest.TestCase):
+
+    def setUp(self):
+        self.system = System(
+            slave_type=Switch,
+            max_index=1
+        )
+
+    def test_ext_get_data_bit16_initialState(self):
+        command = DEF.CMD_SOH + '\x01\x01\x4E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x10'    # bit 16
+        command += data_type + port_type + port_number
+        command += checksum(command) + DEF.CMD_ETX
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'   # result
+        expected_answer += checksum(expected_answer)
+        expected_answer += DEF.CMD_EOT
+        self.assertEqual(answer, expected_answer)
+
+    def test_abbr_get_data_bit16_initialState(self):
+        command = DEF.CMD_SOH + '\x01\x01\x6E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x10'    # bit 16
+        command += data_type + port_type + port_number
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x6E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'   # result
+        self.assertEqual(answer, expected_answer)
+
+    def test_ext_get_data_bit16_LNAByPass(self):
+        self.system.slaves[chr(0x01)].LO_selector = 1
+        self.system.slaves[chr(0x01)].Out1 = 1
+        self.system.slaves[chr(0x01)].Out2 = 1
+        self.system.slaves[chr(0x01)].swa = 0
+        self.system.slaves[chr(0x01)].swb = 1
+        self.system.slaves[chr(0x01)].swc = 1
+        self.system.slaves[chr(0x01)].swd = 0
+
+        command = DEF.CMD_SOH + '\x01\x01\x4E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x10'    # bit 16
+        command += data_type + port_type + port_number
+        command += checksum(command) + DEF.CMD_ETX
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x01'   # result
+        expected_answer += checksum(expected_answer)
+        expected_answer += DEF.CMD_EOT
+        self.assertEqual(answer, expected_answer)
+
+    def test_abbr_get_data_bit16_LNAByPass(self):
+        self.system.slaves[chr(0x01)].LO_selector = 1
+        self.system.slaves[chr(0x01)].Out1 = 1
+        self.system.slaves[chr(0x01)].Out2 = 1
+        self.system.slaves[chr(0x01)].swa = 0
+        self.system.slaves[chr(0x01)].swb = 1
+        self.system.slaves[chr(0x01)].swc = 1
+        self.system.slaves[chr(0x01)].swd = 0
+
+        command = DEF.CMD_SOH + '\x01\x01\x6E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x10'    # bit 16
+        command += data_type + port_type + port_number
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x6E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x01'   # result
+        self.assertEqual(answer, expected_answer)
+
+    def test_ext_get_data_bit16_LNAPass(self):
+        self.system.slaves[chr(0x01)].LO_selector = 0
+        self.system.slaves[chr(0x01)].Out1 = 1
+        self.system.slaves[chr(0x01)].Out2 = 1
+        self.system.slaves[chr(0x01)].swa = 1
+        self.system.slaves[chr(0x01)].swb = 0
+        self.system.slaves[chr(0x01)].swc = 0
+        self.system.slaves[chr(0x01)].swd = 1
+
+        command = DEF.CMD_SOH + '\x01\x01\x4E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x10'    # bit 16
+        command += data_type + port_type + port_number
+        command += checksum(command) + DEF.CMD_ETX
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'   # result
+        expected_answer += checksum(expected_answer)
+        expected_answer += DEF.CMD_EOT
+        self.assertEqual(answer, expected_answer)
+
+    def test_abbr_get_data_bit16_LNAPass(self):
+        self.system.slaves[chr(0x01)].LO_selector = 0
+        self.system.slaves[chr(0x01)].Out1 = 1
+        self.system.slaves[chr(0x01)].Out2 = 1
+        self.system.slaves[chr(0x01)].swa = 1
+        self.system.slaves[chr(0x01)].swb = 0
+        self.system.slaves[chr(0x01)].swc = 0
+        self.system.slaves[chr(0x01)].swd = 1
+
+        command = DEF.CMD_SOH + '\x01\x01\x6E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x10'    # bit 16
+        command += data_type + port_type + port_number
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x6E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'   # result
+        self.assertEqual(answer, expected_answer)
+
+    def test_ext_get_data_bit17_initialState(self):
+        command = DEF.CMD_SOH + '\x01\x01\x4E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x11'    # bit 17
+        command += data_type + port_type + port_number
+        command += checksum(command) + DEF.CMD_ETX
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'   # result
+        expected_answer += checksum(expected_answer)
+        expected_answer += DEF.CMD_EOT
+        self.assertEqual(answer, expected_answer)
+
+    def test_abbr_get_data_bit17_initialState(self):
+        command = DEF.CMD_SOH + '\x01\x01\x6E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x11'    # bit 17
+        command += data_type + port_type + port_number
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x6E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'   # result
+        self.assertEqual(answer, expected_answer)
+
+    def test_ext_get_data_bit17_LNAByPass(self):
+        self.system.slaves[chr(0x01)].LO_selector = 1
+        self.system.slaves[chr(0x01)].Out1 = 1
+        self.system.slaves[chr(0x01)].Out2 = 1
+        self.system.slaves[chr(0x01)].swa = 0
+        self.system.slaves[chr(0x01)].swb = 1
+        self.system.slaves[chr(0x01)].swc = 1
+        self.system.slaves[chr(0x01)].swd = 0
+
+        command = DEF.CMD_SOH + '\x01\x01\x4E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x11'    # bit 17
+        command += data_type + port_type + port_number
+        command += checksum(command) + DEF.CMD_ETX
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'   # result
+        expected_answer += checksum(expected_answer)
+        expected_answer += DEF.CMD_EOT
+        self.assertEqual(answer, expected_answer)
+
+    def test_abbr_get_data_bit17_LNAByPass(self):
+        self.system.slaves[chr(0x01)].LO_selector = 1
+        self.system.slaves[chr(0x01)].Out1 = 1
+        self.system.slaves[chr(0x01)].Out2 = 1
+        self.system.slaves[chr(0x01)].swa = 0
+        self.system.slaves[chr(0x01)].swb = 1
+        self.system.slaves[chr(0x01)].swc = 1
+        self.system.slaves[chr(0x01)].swd = 0
+
+        command = DEF.CMD_SOH + '\x01\x01\x6E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x11'    # bit 17
+        command += data_type + port_type + port_number
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x6E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'   # result
+        self.assertEqual(answer, expected_answer)
+
+    def test_ext_get_data_bit17_LNAPass(self):
+        self.system.slaves[chr(0x01)].LO_selector = 0
+        self.system.slaves[chr(0x01)].Out1 = 1
+        self.system.slaves[chr(0x01)].Out2 = 1
+        self.system.slaves[chr(0x01)].swa = 1
+        self.system.slaves[chr(0x01)].swb = 0
+        self.system.slaves[chr(0x01)].swc = 0
+        self.system.slaves[chr(0x01)].swd = 1
+
+        command = DEF.CMD_SOH + '\x01\x01\x4E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x11'    # bit 17
+        command += data_type + port_type + port_number
+        command += checksum(command) + DEF.CMD_ETX
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x01'   # result
+        expected_answer += checksum(expected_answer)
+        expected_answer += DEF.CMD_EOT
+        self.assertEqual(answer, expected_answer)
+
+    def test_abbr_get_data_bit17_LNAPass(self):
+        self.system.slaves[chr(0x01)].LO_selector = 0
+        self.system.slaves[chr(0x01)].Out1 = 1
+        self.system.slaves[chr(0x01)].Out2 = 1
+        self.system.slaves[chr(0x01)].swa = 1
+        self.system.slaves[chr(0x01)].swb = 0
+        self.system.slaves[chr(0x01)].swc = 0
+        self.system.slaves[chr(0x01)].swd = 1
+
+        command = DEF.CMD_SOH + '\x01\x01\x6E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x11'    # bit 17
+        command += data_type + port_type + port_number
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x6E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x01'   # result
+        self.assertEqual(answer, expected_answer)
+
+    def test_ext_get_data_bit18_initialState(self):
+        command = DEF.CMD_SOH + '\x01\x01\x4E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x12'    # bit 18
+        command += data_type + port_type + port_number
+        command += checksum(command) + DEF.CMD_ETX
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'   # result
+        expected_answer += checksum(expected_answer)
+        expected_answer += DEF.CMD_EOT
+        self.assertEqual(answer, expected_answer)
+
+    def test_abbr_get_data_bit18_initialState(self):
+        command = DEF.CMD_SOH + '\x01\x01\x6E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x12'    # bit 18
+        command += data_type + port_type + port_number
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x6E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'   # result
+        self.assertEqual(answer, expected_answer)
+
+    def test_ext_get_data_bit18_LNAByPass(self):
+        self.system.slaves[chr(0x01)].LO_selector = 1
+        self.system.slaves[chr(0x01)].Out1 = 1
+        self.system.slaves[chr(0x01)].Out2 = 1
+        self.system.slaves[chr(0x01)].swa = 0
+        self.system.slaves[chr(0x01)].swb = 1
+        self.system.slaves[chr(0x01)].swc = 1
+        self.system.slaves[chr(0x01)].swd = 0
+
+        command = DEF.CMD_SOH + '\x01\x01\x4E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x12'    # bit 18
+        command += data_type + port_type + port_number
+        command += checksum(command) + DEF.CMD_ETX
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'   # result
+        expected_answer += checksum(expected_answer)
+        expected_answer += DEF.CMD_EOT
+        self.assertEqual(answer, expected_answer)
+
+    def test_abbr_get_data_bit18_LNAByPass(self):
+        self.system.slaves[chr(0x01)].LO_selector = 1
+        self.system.slaves[chr(0x01)].Out1 = 1
+        self.system.slaves[chr(0x01)].Out2 = 1
+        self.system.slaves[chr(0x01)].swa = 0
+        self.system.slaves[chr(0x01)].swb = 1
+        self.system.slaves[chr(0x01)].swc = 1
+        self.system.slaves[chr(0x01)].swd = 0
+
+        command = DEF.CMD_SOH + '\x01\x01\x6E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x12'    # bit 18
+        command += data_type + port_type + port_number
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x6E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'   # result
+        self.assertEqual(answer, expected_answer)
+
+    def test_ext_get_data_bit18_LNAPass(self):
+        self.system.slaves[chr(0x01)].LO_selector = 0
+        self.system.slaves[chr(0x01)].Out1 = 1
+        self.system.slaves[chr(0x01)].Out2 = 1
+        self.system.slaves[chr(0x01)].swa = 1
+        self.system.slaves[chr(0x01)].swb = 0
+        self.system.slaves[chr(0x01)].swc = 0
+        self.system.slaves[chr(0x01)].swd = 1
+
+        command = DEF.CMD_SOH + '\x01\x01\x4E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x12'    # bit 18
+        command += data_type + port_type + port_number
+        command += checksum(command) + DEF.CMD_ETX
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x01'   # result
+        expected_answer += checksum(expected_answer)
+        expected_answer += DEF.CMD_EOT
+        self.assertEqual(answer, expected_answer)
+
+    def test_abbr_get_data_bit18_LNAPass(self):
+        self.system.slaves[chr(0x01)].LO_selector = 0
+        self.system.slaves[chr(0x01)].Out1 = 1
+        self.system.slaves[chr(0x01)].Out2 = 1
+        self.system.slaves[chr(0x01)].swa = 1
+        self.system.slaves[chr(0x01)].swb = 0
+        self.system.slaves[chr(0x01)].swc = 0
+        self.system.slaves[chr(0x01)].swd = 1
+
+        command = DEF.CMD_SOH + '\x01\x01\x6E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x12'    # bit 18
+        command += data_type + port_type + port_number
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x6E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x01'   # result
+        self.assertEqual(answer, expected_answer)
+
+    def test_ext_get_data_bit19_initialState(self):
+        command = DEF.CMD_SOH + '\x01\x01\x4E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x13'    # bit 19
+        command += data_type + port_type + port_number
+        command += checksum(command) + DEF.CMD_ETX
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'   # result
+        expected_answer += checksum(expected_answer)
+        expected_answer += DEF.CMD_EOT
+        self.assertEqual(answer, expected_answer)
+
+    def test_abbr_get_data_bit19_initialState(self):
+        command = DEF.CMD_SOH + '\x01\x01\x6E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x13'    # bit 19
+        command += data_type + port_type + port_number
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x6E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'   # result
+        self.assertEqual(answer, expected_answer)
+
+    def test_ext_get_data_bit19_LNAByPass(self):
+        self.system.slaves[chr(0x01)].LO_selector = 1
+        self.system.slaves[chr(0x01)].Out1 = 1
+        self.system.slaves[chr(0x01)].Out2 = 1
+        self.system.slaves[chr(0x01)].swa = 0
+        self.system.slaves[chr(0x01)].swb = 1
+        self.system.slaves[chr(0x01)].swc = 1
+        self.system.slaves[chr(0x01)].swd = 0
+
+        command = DEF.CMD_SOH + '\x01\x01\x4E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x13'    # bit 19
+        command += data_type + port_type + port_number
+        command += checksum(command) + DEF.CMD_ETX
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x01'   # result
+        expected_answer += checksum(expected_answer)
+        expected_answer += DEF.CMD_EOT
+        self.assertEqual(answer, expected_answer)
+
+    def test_abbr_get_data_bit19_LNAByPass(self):
+        self.system.slaves[chr(0x01)].LO_selector = 1
+        self.system.slaves[chr(0x01)].Out1 = 1
+        self.system.slaves[chr(0x01)].Out2 = 1
+        self.system.slaves[chr(0x01)].swa = 0
+        self.system.slaves[chr(0x01)].swb = 1
+        self.system.slaves[chr(0x01)].swc = 1
+        self.system.slaves[chr(0x01)].swd = 0
+
+        command = DEF.CMD_SOH + '\x01\x01\x6E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x13'    # bit 19
+        command += data_type + port_type + port_number
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x6E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x01'   # result
+        self.assertEqual(answer, expected_answer)
+
+    def test_ext_get_data_bit19_LNAPass(self):
+        self.system.slaves[chr(0x01)].LO_selector = 0
+        self.system.slaves[chr(0x01)].Out1 = 1
+        self.system.slaves[chr(0x01)].Out2 = 1
+        self.system.slaves[chr(0x01)].swa = 1
+        self.system.slaves[chr(0x01)].swb = 0
+        self.system.slaves[chr(0x01)].swc = 0
+        self.system.slaves[chr(0x01)].swd = 1
+
+        command = DEF.CMD_SOH + '\x01\x01\x4E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x13'    # bit 19
+        command += data_type + port_type + port_number
+        command += checksum(command) + DEF.CMD_ETX
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x4E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'   # result
+        expected_answer += checksum(expected_answer)
+        expected_answer += DEF.CMD_EOT
+        self.assertEqual(answer, expected_answer)
+
+    def test_abbr_get_data_bit19_LNAPass(self):
+        self.system.slaves[chr(0x01)].LO_selector = 0
+        self.system.slaves[chr(0x01)].Out1 = 1
+        self.system.slaves[chr(0x01)].Out2 = 1
+        self.system.slaves[chr(0x01)].swa = 1
+        self.system.slaves[chr(0x01)].swb = 0
+        self.system.slaves[chr(0x01)].swc = 0
+        self.system.slaves[chr(0x01)].swd = 1
+
+        command = DEF.CMD_SOH + '\x01\x01\x6E\x00\x03'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x13'    # bit 19
+        command += data_type + port_type + port_number
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x6E\x00\x00'
+        expected_answer += '\x04'
+        expected_answer += data_type + port_type + port_number
+        expected_answer += '\x00'   # result
+        self.assertEqual(answer, expected_answer)
+
+    def test_ext_set_data_right_message(self):
+        command = DEF.CMD_SOH + '\x01\x01\x4F\x00\x04'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x01'    # bit1 - out1
+        port_setting = '\x01'
+        command += data_type + port_type + port_number + port_setting
+        command += checksum(command) + DEF.CMD_ETX
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x4F\x00\x00'
+        expected_answer += checksum(expected_answer)
+        expected_answer += DEF.CMD_EOT
+        self.assertEqual(answer, expected_answer)
+
+    def test_ext_set_data_right_setting(self):
+        self.system.slaves[chr(0x01)].LO_selector = 1
+        command = DEF.CMD_SOH + '\x01\x01\x4F\x00\x04'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x01'    # bit1 - out1
+        port_setting = '\x01'
+        command += data_type + port_type + port_number + port_setting
+        command += checksum(command) + DEF.CMD_ETX
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.system.parse(command[-1])
+        self.assertEqual(self.system.slaves[chr(0x01)].swa, 0)
+        self.assertEqual(self.system.slaves[chr(0x01)].swb, 1)
+        self.assertEqual(self.system.slaves[chr(0x01)].swc, 1)
+        self.assertEqual(self.system.slaves[chr(0x01)].swd, 0)
+
+    def test_abbr_set_data_right_message(self):
+        command = DEF.CMD_SOH + '\x01\x01\x6F\x00\x04'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x01'    # bit1 - out1
+        port_setting = '\x01'
+        command += data_type + port_type + port_number + port_setting
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        answer = self.system.parse(command[-1])
+        expected_answer = DEF.CMD_STX + '\x01\x01\x6F\x00\x00'
+        self.assertEqual(answer, expected_answer)
+
+    def test_abbr_set_data_right_setting(self):
+        self.system.slaves[chr(0x01)].LO_selector = 1
+        command = DEF.CMD_SOH + '\x01\x01\x6F\x00\x04'
+        data_type = '\x03'      # DATA_TYPE_B01 data type
+        port_type = '\x04'      # DIO port type
+        port_number = '\x01'    # bit1 - out1
+        port_setting = '\x01'
+        command += data_type + port_type + port_number + port_setting
+        for byte in command[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.system.parse(command[-1])
+        self.assertEqual(self.system.slaves[chr(0x01)].swa, 0)
+        self.assertEqual(self.system.slaves[chr(0x01)].swb, 1)
+        self.assertEqual(self.system.slaves[chr(0x01)].swc, 1)
+        self.assertEqual(self.system.slaves[chr(0x01)].swd, 0)
 
 
 class TestDewar(unittest.TestCase):
