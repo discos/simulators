@@ -12,6 +12,7 @@ pylint:
     - invalid-name
     - too-many-branches
     - broad-except
+    - broad-exception-raised
     - too-many-instance-attributes
     - too-many-public-methods
     - attribute-defined-outside-init
