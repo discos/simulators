@@ -65,7 +65,10 @@ class TestMinorServos(unittest.TestCase):
         regex += r'PFP_ELONG_THETA_SLAVE=[0-9]+\.[0-9]+\|'
         regex += r'PFP_TX=[0-9]+\.[0-9]+\|'
         regex += r'PFP_TZ=[0-9]+\.[0-9]+\|'
-        regex += r'PFP_RTHETA=[0-9]+\.[0-9]+'
+        regex += r'PFP_RTHETA=[0-9]+\.[0-9]+\|'
+        regex += r'PFP_OFFSET_TX=[0-9]+\.[0-9]+\|'
+        regex += r'PFP_OFFSET_TZ=[0-9]+\.[0-9]+\|'
+        regex += r'PFP_OFFSET_RTHETA=[0-9]+\.[0-9]+'
         regex += fr'{tail}$'
         for byte in cmd[:-1]:
             self.assertTrue(self.system.parse(byte))
@@ -95,7 +98,13 @@ class TestMinorServos(unittest.TestCase):
         regex += r'SRP_TZ=[0-9]+\.[0-9]+\|'
         regex += r'SRP_RX=[0-9]+\.[0-9]+\|'
         regex += r'SRP_RY=[0-9]+\.[0-9]+\|'
-        regex += r'SRP_RZ=[0-9]+\.[0-9]+'
+        regex += r'SRP_RZ=[0-9]+\.[0-9]+\|'
+        regex += r'SRP_OFFSET_TX=[0-9]+\.[0-9]+\|'
+        regex += r'SRP_OFFSET_TY=[0-9]+\.[0-9]+\|'
+        regex += r'SRP_OFFSET_TZ=[0-9]+\.[0-9]+\|'
+        regex += r'SRP_OFFSET_RX=[0-9]+\.[0-9]+\|'
+        regex += r'SRP_OFFSET_RY=[0-9]+\.[0-9]+\|'
+        regex += r'SRP_OFFSET_RZ=[0-9]+\.[0-9]+'
         regex += fr'{tail}$'
         for byte in cmd[:-1]:
             self.assertTrue(self.system.parse(byte))
@@ -112,7 +121,8 @@ class TestMinorServos(unittest.TestCase):
         regex += r'M3R_COUNTERCLOCKWISE_ENABLED=1\|'
         regex += r'M3R_CLOCKWISE=[0-9]+\.[0-9]+\|'
         regex += r'M3R_COUNTERCLOCKWISE=[0-9]+\.[0-9]+\|'
-        regex += r'M3R_ROTATION=[0-9]+\.[0-9]+'
+        regex += r'M3R_ROTATION=[0-9]+\.[0-9]+\|'
+        regex += r'M3R_OFFSET=[0-9]+\.[0-9]+'
         regex += fr'{tail}$'
         for byte in cmd[:-1]:
             self.assertTrue(self.system.parse(byte))
@@ -129,7 +139,8 @@ class TestMinorServos(unittest.TestCase):
         regex += r'GFR_COUNTERCLOCKWISE_ENABLED=1\|'
         regex += r'GFR_CLOCKWISE=[0-9]+\.[0-9]+\|'
         regex += r'GFR_COUNTERCLOCKWISE=[0-9]+\.[0-9]+\|'
-        regex += r'GFR_ROTATION=[0-9]+\.[0-9]+'
+        regex += r'GFR_ROTATION=[0-9]+\.[0-9]+\|'
+        regex += r'GFR_OFFSET=[0-9]+\.[0-9]+'
         regex += fr'{tail}$'
         for byte in cmd[:-1]:
             self.assertTrue(self.system.parse(byte))
@@ -145,7 +156,8 @@ class TestMinorServos(unittest.TestCase):
             regex += fr'{derotator}_BLOCK=2\|'
             regex += fr'{derotator}_OPERATIVE_MODE=0\|'
             regex += fr'{derotator}_ROTARY_AXIS_ENABLED=1\|'
-            regex += fr'{derotator}_ROTATION=[0-9]+\.[0-9]+'
+            regex += fr'{derotator}_ROTATION=[0-9]+\.[0-9]+\|'
+            regex += fr'{derotator}_OFFSET=[0-9]+\.[0-9]+'
             regex += fr'{tail}$'
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
