@@ -261,8 +261,6 @@ class Dewar(Slave):
     def __init__(self, address):
         # The following variables are stored in the DIO port
         self.LO_selector = 0        # bit 0, 0: LO1, 1: LO2
-        self.LO_selector = 0        # bit 0, 0: LO1, 1: LO2
-        self.LO_selector = 0        # bit 0, 0: LO1, 1: LO2
         self.vacuum_sensor = 1      # bit 4, 0: off, 1: on
         self.vacuum_pump = 1        # bit 5, 0: off, 1: on
         self.vacuum_pump_fault = 0  # bit 6, 0: ok, 1: fault
@@ -434,6 +432,7 @@ class Switch(Slave):
         self.LO_selector = 0        # bit 0, 0: open, 1: open (out)
         self.Out1 = 0               # bit 1, 0: open, 1: close (out)
         self.Out2 = 0               # bit 2, 0: open, 1: close (out)
+        self.vacuum_sensor = 1      # bit 4, 0: off, 1: on
         self.vacuum_pump = 1        # bit 5, 0: off, 1: on
         self.vacuum_pump_fault = 0  # bit 6, 0: ok, 1: fault
         self.vacuum_valve = 1       # bit 7, 0: off, 1: on
