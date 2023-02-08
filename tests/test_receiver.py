@@ -1399,7 +1399,7 @@ class TestSwitch(unittest.TestCase):
         expected_answer += data_type + port_type + port_number
         expected_answer += '\x00'   # result
         self.assertEqual(answer, expected_answer)
-    
+
     def test_ext_set_data_initial_state(self):
         command = DEF.CMD_SOH + '\x01\x01\x4F\x00\x04'
         data_type = '\x03'      # DATA_TYPE_B01 data type
@@ -1415,7 +1415,7 @@ class TestSwitch(unittest.TestCase):
         self.assertEqual(self.system.slaves[chr(0x01)].swb, 2)
         self.assertEqual(self.system.slaves[chr(0x01)].swc, 2)
         self.assertEqual(self.system.slaves[chr(0x01)].swd, 2)
-    
+
     def test_abbr_set_data_initial_state(self):
         self.system.slaves[chr(0x01)].LO_selector = 1
         command = DEF.CMD_SOH + '\x01\x01\x6F\x00\x04'
@@ -1781,7 +1781,7 @@ class TestSwitch(unittest.TestCase):
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
-    
+
     def test_ext_get_out2_data(self):
         command = DEF.CMD_SOH + '\x01\x01\x4E\x00\x03'
         data_type = DEF.DATA_TYPE_B01
@@ -1799,7 +1799,7 @@ class TestSwitch(unittest.TestCase):
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
-    
+
     def test_ext_set_out2_data(self):
         command = DEF.CMD_SOH + '\x01\x01\x4F\x00\x04'
         data_type = DEF.DATA_TYPE_B01
@@ -1815,7 +1815,7 @@ class TestSwitch(unittest.TestCase):
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
         self.assertEqual(answer, expected_answer)
-    
+
     def test_ext_get_vacuum_sensor_data(self):
         command = DEF.CMD_SOH + '\x01\x01\x4E\x00\x03'
         data_type = DEF.DATA_TYPE_B01
