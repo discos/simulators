@@ -47,7 +47,6 @@ servers.append((
     ThreadingTCPServer,
     {'slave_type': Slave}
 ))
-
 servers.append((
     ('0.0.0.0', 12907),
     (),
@@ -66,7 +65,18 @@ servers.append((
     ThreadingTCPServer,
     {'slave_type': Switch}
 ))
-
+servers.append((
+    ('0.0.0.0', 12910),
+    (),
+    ThreadingTCPServer,
+    {'slave_type': LNA, 'feeds': 19}
+))
+servers.append((
+    ('0.0.0.0', 12911),
+    (),
+    ThreadingTCPServer,
+    {'slave_type': Dewar}
+))
 
 class System(ListeningSystem):
 
