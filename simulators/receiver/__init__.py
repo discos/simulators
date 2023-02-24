@@ -78,6 +78,7 @@ servers.append((
     {'slave_type': Dewar}
 ))
 
+
 class System(ListeningSystem):
 
     def __init__(self, slave_type=Slave, min_index=1, max_index=1, **kwargs):
