@@ -112,9 +112,10 @@ class System(ListeningSystem):
                 return answer
         else:
             answer = self.good
+            plc_time = answer.split(',')[-1]
             answer += f',CURRENT_CONFIG={self.configuration}|'
             answer += f'SIMULATION_ENABLED={self.simulation}|'
-            answer += f'PLC_TIME={self.plc_time()}|'
+            answer += f'PLC_TIME={plc_time}|'
             answer += f'PLC_VERSION={self.plc_version}|'
             answer += f'CONTROL={self.control}|'
             answer += f'POWER={self.power}|'
