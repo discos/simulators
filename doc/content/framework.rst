@@ -13,7 +13,7 @@ The Framework
       another, in order to simulate a subsystem of a radio telescope.
 
 The framework is written in
-`Python 2.7 <https://www.python.org/download/releases/2.7/>`__. This `Python`
+`Python 3.9.4 <https://www.python.org/downloads/release/python-394/>`__. This `Python`
 version was chosen to maintain compatibility with the `ACS` default `Python`
 version. By matching the two versions, all the simulators can be executed on
 the same machine where the `DISCOS` control software is running, no matter if
@@ -180,11 +180,10 @@ The `ListeningSystem` class and the `parse` method
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 In order for any `System` class to be able to parse any command received by the
 server, a `parse` method has to be defined.
-This method takes one byte (string of one character, in Python 2.7) as argument
-and returns:
+This method takes a string composed by a single character as argument and returns:
 
-* `False` when the byte is not recognized as a message header and the system is
-  still waiting for the correct header character
+* `False` when the character is not recognized as a message header and the system
+  is still waiting for the correct header
 * `True` when the system has already received the header and it is waiting to
   receive the rest of the message
 * a response to the client, a non empty string, built according to the protocol

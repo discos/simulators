@@ -12,12 +12,12 @@ from ctypes import c_bool
 from socketserver import (
     ThreadingTCPServer, ThreadingUDPServer, BaseRequestHandler
 )
-from .common import BaseSystem
+from simulators.common import BaseSystem
 
 
 logging.basicConfig(
     filename=os.path.join(os.getenv('ACSDATA', ''), 'sim-server.log'),
-    format='%(asctime)s %(message)s',
+    format='%(asctime)s %(process)d %(message)s',
     level=logging.DEBUG)
 
 

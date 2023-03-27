@@ -21,21 +21,20 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install -r requirements.txt
+        python -m pip install -r testing_requirements.txt
+        python -m pip install -r doc/doc_requirements.txt
     - name: Run the unit tests
       run: |
-        python -m pip install coverage
         coverage run -p -m unittest discover -b tests
         coverage combine
         coverage xml
     - name: Upload test coverage to codecov
       uses: codecov/codecov-action@v3
-    - name: Run prospector
+    - name: Run the Python linter
       run: |
-        python -m pip install prospector pylint!=2.15.7
         prospector
     - name: Build documentation
       run: |
-        python -m pip install sphinx sphinx_rtd_theme sphinxcontrib-bibtex
         sphinx-build -W -b html doc doc/_build/html
         sphinx-build -W -b doctest doc doc/_build/doctest
         sphinx-build -W -b linkcheck doc doc/_build/linkcheck

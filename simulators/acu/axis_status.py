@@ -1460,6 +1460,7 @@ class MasterAxisStatus(SimpleAxisStatus):
                 self.v_Ist = 0
                 return False
             time.sleep(0.01)
+        return True
 
     def update_status(self):
         """This method is called to update some of the values before comparison

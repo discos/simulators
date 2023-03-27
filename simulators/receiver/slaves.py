@@ -425,6 +425,221 @@ class Dewar(Slave):
         return retval
 
 
+class Switch(Slave):
+    def __init__(self, address):
+        # The following variables are stored in the DIO port
+        # LO_selector and Out1 open during power up or at power failure
+        self.LO_selector = 0        # bit 0, 0: open, 1: open (out)
+        self.Out1 = 0               # bit 1, 0: open, 1: close (out)
+        self.Out2 = 0               # bit 2, 0: open, 1: close (out)
+        self.vacuum_sensor = 1      # bit 4, 0: off, 1: on
+        self.vacuum_pump = 1        # bit 5, 0: off, 1: on
+        self.vacuum_pump_fault = 0  # bit 6, 0: ok, 1: fault
+        self.vacuum_valve = 1       # bit 7, 0: off, 1: on
+        self.cool_head = 1          # bit 8, 0: off, 1: on
+        self.calibration = 0        # bit 11, 0: off, 1: on
+        self.ext_calibration = 0    # bit 12, 0: off, 1: on
+        self.single_dish = 0        # bit 13, 0: on, 1: off
+        self.vlbi = 0               # bit 14, 0: on, 1: off
+        self.LO_1_status = 0        # bit 16, r/o (in)
+        self.LO_2_status = 0        # bit 17, r/o (in)
+        self.LO_2_locked = 0        # bit 18, r/o (in)
+        self.LO_control_lr = 0      # bit 19, r/o (in)
+        self.is_remote = 1          # bit 25, r/o
+        self.is_single_dish = 0     # bit 29, r/o
+        self.is_vlbi = 0            # bit 30, r/o
+
+        # reference: User manual of the INAF software for monitoring and
+        # controlling the tri-band receiver(page 11)
+        self.swa, self.swd = 2, 2    # 0 = pos1, 1 = pos2, 2 = floating
+        self.swb, self.swc = 2, 2    # 0 = pos1, 1 = pos2, 2 = floating
+
+        Slave.__init__(self, address)
+
+    def get_data(self, cmd_id, extended, params):
+        retval = DEF.CMD_ACK
+        data = ''
+        if len(params) != 3:
+            retval = DEF.CMD_ERR_FORM
+        else:
+            data_type, port_type, port_number = params
+            if data_type not in DEF.DATA_TYPES:
+                retval = DEF.CMD_ERR_DATA_TYPE
+            elif port_type not in DEF.PORT_TYPES:
+                retval = DEF.CMD_ERR_PORT_TYPE
+            elif port_number not in DEF.PORT_NUMBERS:
+                retval = DEF.CMD_ERR_PORT_NUMBER
+            elif (port_type == DEF.PORT_TYPE_AD24 and
+                    data_type == DEF.DATA_TYPE_F32):
+                data += '\x00' * 4 * 8
+                retval = DEF.CMD_ACK
+            elif (port_type == DEF.PORT_TYPE_DIO and
+                    data_type == DEF.DATA_TYPE_B01):
+                if port_number == DEF.PORT_NUMBER_00:
+                    # LO selector
+                    value = self.LO_selector
+                elif port_number == DEF.PORT_NUMBER_01:
+                    # Out1
+                    value = self.Out1
+                elif port_number == DEF.PORT_NUMBER_02:
+                    # Out2
+                    value = self.Out2
+                elif port_number == DEF.PORT_NUMBER_04:
+                    # Vacuum sensor
+                    value = self.vacuum_sensor
+                elif port_number == DEF.PORT_NUMBER_05:
+                    # Vacuum pump
+                    value = self.vacuum_pump
+                elif port_number == DEF.PORT_NUMBER_06:
+                    # Vacuum pump fault
+                    value = self.vacuum_pump_fault
+                elif port_number == DEF.PORT_NUMBER_07:
+                    # Vacuum valve
+                    value = self.vacuum_valve
+                elif port_number == DEF.PORT_NUMBER_08:
+                    # Cool head
+                    value = self.cool_head
+                elif port_number == DEF.PORT_NUMBER_11:
+                    # Calibration
+                    value = self.calibration
+                elif port_number == DEF.PORT_NUMBER_12:
+                    # External calibration
+                    value = self.calibration
+                elif port_number == DEF.PORT_NUMBER_13:
+                    # Single dish mode
+                    value = self.single_dish
+                elif port_number == DEF.PORT_NUMBER_14:
+                    # VLBI mode
+                    value = self.vlbi
+                elif port_number == DEF.PORT_NUMBER_16:
+                    # LO1 status
+                    if self.Out2 == 1:    # read all pos1
+                        value = 1 if self.swa == 0 else 0
+                    if self.Out2 == 0:    # read all pos2
+                        value = 1 if self.swa == 1 else 0
+                elif port_number == DEF.PORT_NUMBER_17:
+                    # LO2 status
+                    if self.Out2 == 1:    # read all pos1
+                        value = 1 if self.swb == 0 else 0
+                    if self.Out2 == 0:    # read all pos2
+                        value = 1 if self.swb == 1 else 0
+                elif port_number == DEF.PORT_NUMBER_18:
+                    # LO2 Lock Status
+                    if self.Out2 == 1:    # read all pos1
+                        value = 1 if self.swc == 0 else 0
+                    if self.Out2 == 0:    # read all pos2
+                        value = 1 if self.swc == 1 else 0
+                elif port_number == DEF.PORT_NUMBER_19:
+                    # LO Control L/R
+                    if self.Out2 == 1:    # read all pos1
+                        value = 1 if self.swd == 0 else 0
+                    if self.Out2 == 0:    # read all pos2
+                        value = 1 if self.swd == 1 else 0
+                elif port_number == DEF.PORT_NUMBER_24:
+                    # Cool head on
+                    value = self.cool_head
+                elif port_number == DEF.PORT_NUMBER_26:
+                    # Is remote on
+                    value = self.is_remote
+                elif port_number == DEF.PORT_NUMBER_29:
+                    # Is single dish mode
+                    value = self.is_single_dish
+                elif port_number == DEF.PORT_NUMBER_30:
+                    # Is VLBI mode
+                    value = self.is_vlbi
+                data += chr(value)
+            else:
+                key = (data_type, port_type, port_number)
+                data += self.port_settings.get(key, '\x00')
+                retval = DEF.CMD_ACK
+        self._set_last_cmd(
+            DEF.CMD_EXT_GET_DATA if extended else DEF.CMD_ABBR_GET_DATA,
+            cmd_id,
+            retval
+        )
+        return [retval, data]
+
+    def set_data(self, cmd_id, extended, params):
+        retval = DEF.CMD_ACK
+        if len(params) < 4:
+            retval = DEF.CMD_ERR_FORM
+        else:
+            data_type, port_type, port_number = params[:3]
+            port_setting = params[3:]
+            if data_type not in DEF.DATA_TYPES:
+                retval = DEF.CMD_ERR_DATA_TYPE
+            elif port_type not in DEF.PORT_TYPES:
+                retval = DEF.CMD_ERR_PORT_TYPE
+            elif port_number not in DEF.PORT_NUMBERS:
+                retval = DEF.CMD_ERR_PORT_NUMBER
+            else:
+                while (data_type == DEF.DATA_TYPE_B01 and
+                        port_type == DEF.PORT_TYPE_DIO):
+                    if len(port_setting) != 1:
+                        retval = DEF.CMD_ERR_DATA
+                        break
+                    value = ord(port_setting)
+                    if value not in [0, 1]:
+                        retval = DEF.CMD_ERR_DATA
+                        break
+                    if port_number == DEF.PORT_NUMBER_00:
+                        # LO selector
+                        self.LO_selector = value
+                    elif port_number == DEF.PORT_NUMBER_01:
+                        # Out1
+                        self.Out1 = value
+                        if self.Out1 == 1:  # observation modes
+                            if self.LO_selector == 1:
+                                self.swa, self.swd = 0, 0
+                                self.swb, self.swc = 1, 1
+                            else:
+                                self.swa, self.swd = 1, 1
+                                self.swb, self.swc = 0, 0
+                        else:               # initial state
+                            self.swa, self.swd = 2, 2
+                            self.swb, self.swc = 2, 2
+                    elif port_number == DEF.PORT_NUMBER_02:
+                        # Out2
+                        self.Out2 = value
+                    elif port_number == DEF.PORT_NUMBER_04:
+                        # Vacuum sensor
+                        self.vacuum_sensor = value
+                    elif port_number == DEF.PORT_NUMBER_05:
+                        # Vacuum pump
+                        self.vacuum_pump = value
+                    elif port_number == DEF.PORT_NUMBER_07:
+                        # Vacuum valve
+                        self.vacuum_valve = value
+                    elif port_number == DEF.PORT_NUMBER_08:
+                        # Cool head
+                        self.cool_head = value
+                    elif port_number == DEF.PORT_NUMBER_11:
+                        # Calibration
+                        self.calibration = value
+                    elif port_number == DEF.PORT_NUMBER_12:
+                        # External calibration
+                        self.calibration = value
+                    elif port_number == DEF.PORT_NUMBER_13:
+                        # Single dish mode
+                        self.single_dish = value
+                        if value == 0:
+                            self.is_single_dish = 1
+                            self.is_vlbi = 0
+                    elif port_number == DEF.PORT_NUMBER_14:
+                        # VLBI mode
+                        self.vlbi = value
+                        if value == 0:
+                            self.is_single_dish = 0
+                            self.is_vlbi = 1
+                    break
+        self._set_last_cmd(
+            DEF.CMD_EXT_SET_DATA if extended else DEF.CMD_ABBR_SET_DATA,
+            cmd_id,
+            retval
+        )
+        return retval
+
+
 class Feed:
 
     def __init__(self):

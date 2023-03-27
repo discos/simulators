@@ -1,7 +1,7 @@
 from socketserver import ThreadingTCPServer
 from simulators.common import ListeningSystem
 from simulators.receiver import DEFINITIONS as DEF
-from simulators.receiver.slaves import Slave, Dewar, LNA
+from simulators.receiver.slaves import Slave, Dewar, LNA, Switch
 
 
 servers = []
@@ -46,6 +46,36 @@ servers.append((
     (),
     ThreadingTCPServer,
     {'slave_type': Slave}
+))
+servers.append((
+    ('0.0.0.0', 12907),
+    (),
+    ThreadingTCPServer,
+    {'slave_type': LNA, 'feeds': 3}
+))
+servers.append((
+    ('0.0.0.0', 12908),
+    (),
+    ThreadingTCPServer,
+    {'slave_type': Dewar}
+))
+servers.append((
+    ('0.0.0.0', 12909),
+    (),
+    ThreadingTCPServer,
+    {'slave_type': Switch}
+))
+servers.append((
+    ('0.0.0.0', 12910),
+    (),
+    ThreadingTCPServer,
+    {'slave_type': LNA, 'feeds': 19}
+))
+servers.append((
+    ('0.0.0.0', 12911),
+    (),
+    ThreadingTCPServer,
+    {'slave_type': Dewar}
 ))
 
 
