@@ -6,35 +6,36 @@ servers = [(('0.0.0.0', 11111), (), ThreadingTCPServer, {})]
 
 
 class System(ListeningSystem):
-    #tail = ['\x0A', '\x0D']  # NEWLINE and CR
+    # tail = ['\x0A', '\x0D']  # NEWLINE and CR
     tail = '\r'
     ack = 'ack\n'
     nak = 'nak\n'
     max_msg_length = 15
 
     commands = {
-          'ALLMODE': '_set_allmode',
+        'ALLMODE': '_set_allmode',
     }
 
     errors = {
-            1000: 'ERROR_ARGS_NOT_VALID',
-            1001: 'ERROR_COMMAND_UNKNOWN',
-        }
+        1000: 'ERROR_ARGS_NOT_VALID',
+        1001: 'ERROR_COMMAND_UNKNOWN',
+    }
 
     def __init__(self):
         self.msg = ''
         self.cmd_id = ''
+    
     def _set_default(self):
-          self.msg = ''
+        self.msg = ''
 
     def parse(self, byte):
-          self.msg += byte
+        self.msg += byte
           
-          if byte == self.tail:
-                msg = self.msg[:-1]
-                self.msg = ''
-                return self._execute(msg)
-          return True
+        if byte == self.tail:
+            msg = self.msg[:-1]
+            self.msg = ''
+            return self._execute(msg)
+        return True
 
     def _execute(self, msg):
         """This method parses and executes a command the moment it is
@@ -57,7 +58,7 @@ class System(ListeningSystem):
         return cmd(params)
 
     def _set_allmode(self, params):
-      print("allmode IN")
+        print("allmode IN")
 
     def _error(self, error_code):
         error_string = self.errors.get(error_code)
