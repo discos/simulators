@@ -9,8 +9,8 @@ servers = [(('0.0.0.0', 11111), (), ThreadingTCPServer, {})]
 class System(ListeningSystem):
     header = '#'
     tail = '\x0D'
-    ack = 'ack\n\x0D'
-    nak = 'nak\n\x0D'
+    ack = 'ACK\x0D\x0A'
+    nak = 'NAK\x0D\x0A'
     max_msg_length = 15
 
     devices = {
@@ -19,7 +19,7 @@ class System(ListeningSystem):
     }
 
     commands = {
-        'DBE GETALLMODE': '_get_allmode',
+        'DBE SETALLMODE': '_set_allmode',
         'DBE MODE': '_not_implemented',
         'DBE STOREALLMODE': '_not_implemented',
         'DBE CLRMODE': '_not_implemented',
@@ -46,19 +46,19 @@ class System(ListeningSystem):
         'DF_8s',
         '3-Band_1s',
         '3-Band',
-        'MFS_7', 
+        'MFS_7',
     ]
 
     def __init__(self):
         self.msg = ''
         self.cmd_id = ''
-    
+
     def _set_default(self):
         self.msg = ''
 
     def parse(self, byte):
         self.msg += byte
-          
+
         if byte == self.tail:
             msg = self.msg[:-1]
             self.msg = ''
@@ -72,51 +72,52 @@ class System(ListeningSystem):
         :param msg: the received command, comprehensive of its header and tail.
         """
         args = [x.strip() for x in msg.split(' ')]
-        device_code=list(self.devices.keys())[list(self.devices.values()).index(args[0])]
+        device_code=list(self.devices.keys())[
+            list(self.devices.values()).index(args[0])]
+        params = [device_code]
 
-        if len(args)==1:
+        if len(args) == 1:
             cmd = self.commands.get(args[0])
             args = args[1:]
         else:
-            cmd = self.commands.get(args[0]+ ' ' +args[1])
+            cmd = self.commands.get(args[0] + ' ' + args[1])
             args = args[2:]
-       
+        
         if not cmd:
-            return self._error(params[0],1001)
+            return self._error(params[0], 1001)
         cmd = getattr(self, cmd)
-        params = [device_code]
-
         try:
             for param in args:
-                params.append(int(param))
+                params.append(param)
         except ValueError:
             return self.nak
         return cmd(params)
 
-    def _get_allmode(self, params):
-        if len(params)!=2:
-            return self._error(params[0],1001)
+    def _set_allmode(self, params):
+        print(params)
+        if len(params) != 2:
+            return self._error(params[0], 1001)
         elif params[1] not in self.obs_mode:
-            return self._error(params[0],1003)
+            return self._error(params[0], 1003)
 
-        err_sim=False
+        err_sim = False
         if err_sim:
-            return self._error(params[0],1005)
+            return self._error(params[0], 1005)
         else:
             return self.ack
 
     def _not_implemented(self, params):
-        return self._error(params[0],9999)
-    
+        return self._error(params[0], 9999)
+
     def _error(self, device_code, error_code):
         error_string = self.errors.get(error_code)
-        if error_code==1001:
-            retval = f'NAK {error_string}\n'
+        if error_code == 1001:
+            retval = f'NAK {error_string}\x0A'
         else:
             device_string = self.devices.get(device_code)
             hex_string = codecs.encode(
                 error_string.encode('raw_unicode_escape'),
                 'hex'
             )
-            retval = f'ERR {device_string} {error_string}{self.tail}\n'
+            retval = f'ERR {device_string} {error_string}{self.tail}\x0A'
         return retval
