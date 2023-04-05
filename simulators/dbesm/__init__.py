@@ -1,4 +1,3 @@
-import codecs
 from socketserver import ThreadingTCPServer
 from simulators.common import ListeningSystem
 
