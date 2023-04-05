@@ -72,7 +72,7 @@ class System(ListeningSystem):
         :param msg: the received command, comprehensive of its header and tail.
         """
         args = [x.strip() for x in msg.split(' ')]
-        device_code=list(self.devices.keys())[
+        device_code = list(self.devices.keys())[
             list(self.devices.values()).index(args[0])]
         params = [device_code]
 
@@ -82,7 +82,7 @@ class System(ListeningSystem):
         else:
             cmd = self.commands.get(args[0] + ' ' + args[1])
             args = args[2:]
-        
+
         if not cmd:
             return self._error(params[0], 1001)
         cmd = getattr(self, cmd)
@@ -115,9 +115,5 @@ class System(ListeningSystem):
             retval = f'NAK {error_string}\x0A'
         else:
             device_string = self.devices.get(device_code)
-            hex_string = codecs.encode(
-                error_string.encode('raw_unicode_escape'),
-                'hex'
-            )
             retval = f'ERR {device_string} {error_string}{self.tail}\x0A'
         return retval
