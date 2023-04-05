@@ -1,3 +1,4 @@
+import codecs
 from socketserver import ThreadingTCPServer
 from simulators.common import ListeningSystem
 
@@ -7,9 +8,10 @@ servers = [(('0.0.0.0', 11111), (), ThreadingTCPServer, {})]
 
 class System(ListeningSystem):
     # tail = ['\x0A', '\x0D']  # NEWLINE and CR
-    tail = '\r'
-    ack = 'ack\n'
-    nak = 'nak\n'
+    header = '#'
+    tail = '\x0D'
+    ack = 'ack\x0D'
+    nak = 'nak\x0D'
     max_msg_length = 15
 
     commands = {
@@ -43,10 +45,18 @@ class System(ListeningSystem):
 
         :param msg: the received command, comprehensive of its header and tail.
         """
+        print ("aaa")
         args = [x.strip() for x in msg.split(' ')]
+        print (args)
+        print ("cmd")
         cmd = self.commands.get(args[0])
-        cmd = getattr(self, cmd)
+        if not cmd:
+            print ("not cmd")
+            return self._error(1001)
 
+        print (cmd)
+
+        cmd = getattr(self, cmd)
         args = args[1:]
 
         params = []
@@ -58,14 +68,19 @@ class System(ListeningSystem):
         return cmd(params)
 
     def _set_allmode(self, params):
-        print("allmode IN")
+        print("allmode")
+        print (params)
+        return self.ack
 
     def _error(self, error_code):
         error_string = self.errors.get(error_code)
+        print (error_string)
         hex_string = codecs.encode(
             error_string.encode('raw_unicode_escape'),
             'hex'
         )
         retval = f'{self.header}ERROR({error_code})[{error_string}]'
         retval += f'({hex_string}) {self.cmd_id}{self.tail}'
+        print (retval)
+
         return retval
