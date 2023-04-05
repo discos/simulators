@@ -15,12 +15,26 @@ class System(ListeningSystem):
     max_msg_length = 15
 
     commands = {
-        'ALLMODE': '_set_allmode',
+        'DBE GETALLMODE': '_get_allmode',
+        'FBCB': '_not_implemented',
     }
 
     errors = {
+        9999: 'NOT_IMPLEMENTED',
         1000: 'ERROR_ARGS_NOT_VALID',
         1001: 'ERROR_COMMAND_UNKNOWN',
+        1002: 'ERROR_DEVICE_UNKNOWN',
+
+    }
+
+    obs_mode = {
+        'MF20_1s',
+        'MF10_2s',
+        'DF_8s',
+        '3-Band_1s',
+        '3-Band',
+        'MFS_7', 
+
     }
 
     def __init__(self):
@@ -45,16 +59,14 @@ class System(ListeningSystem):
 
         :param msg: the received command, comprehensive of its header and tail.
         """
-        print ("aaa")
         args = [x.strip() for x in msg.split(' ')]
-        print (args)
-        print ("cmd")
-        cmd = self.commands.get(args[0])
+        if len(args)==1:
+            cmd = self.commands.get(args[0])
+        else:
+                cmd = self.commands.get(args[0]+ ' ' +args[1])
+    
         if not cmd:
-            print ("not cmd")
             return self._error(1001)
-
-        print (cmd)
 
         cmd = getattr(self, cmd)
         args = args[1:]
@@ -67,20 +79,20 @@ class System(ListeningSystem):
             return self.nak
         return cmd(params)
 
-    def _set_allmode(self, params):
+    def _get_allmode(self, params):
         print("allmode")
         print (params)
         return self.ack
-
+    
+    def _not_implemented(self, params):
+            return self._error(9999)
+    
     def _error(self, error_code):
         error_string = self.errors.get(error_code)
-        print (error_string)
         hex_string = codecs.encode(
             error_string.encode('raw_unicode_escape'),
             'hex'
         )
         retval = f'{self.header}ERROR({error_code})[{error_string}]'
-        retval += f'({hex_string}) {self.cmd_id}{self.tail}'
-        print (retval)
-
+        retval += f'({hex_string}) {self.cmd_id}{self.tail}\n'
         return retval
