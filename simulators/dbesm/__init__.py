@@ -71,8 +71,12 @@ class System(ListeningSystem):
         :param msg: the received command, comprehensive of its header and tail.
         """
         args = [x.strip() for x in msg.split(' ')]
-        device_code = list(self.devices.keys())[
+        try:
+            device_code = list(self.devices.keys())[
             list(self.devices.values()).index(args[0])]
+        except ValueError:
+            return self._error(-1,1001)
+        
         params = [device_code]
 
         if len(args) == 1:
