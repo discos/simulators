@@ -20,9 +20,9 @@ class System(ListeningSystem):
     commands = {
         'DBE SETALLMODE': '_set_allmode',
         'DBE MODE': '_set_mode',
-        'DBE STOREALLMODE': '_not_implemented',
-        'DBE CLRMODE': '_not_implemented',
-        'DBE STATUS': '_not_implemented',
+        'DBE STOREALLMODE': '_store_allmode',
+        'DBE CLRMODE': '_clr_mode',
+        'DBE STATUS': '_status',
         'DBE DIAG': '_not_implemented',
         'DBE': '_not_implemented',
         'FBCB': '_not_implemented',
@@ -38,6 +38,9 @@ class System(ListeningSystem):
         1005: 'BOARD X unreachable',
         1006: 'BOARD 1 2 3 4 unreachable',
         1007: 'BOARD not existing',
+        1008: 'writing cfg file',
+        1009: 'deleting cfg file',
+
     }
 
     obs_mode = [
@@ -52,14 +55,15 @@ class System(ListeningSystem):
     def __init__(self):
         self.msg = ''
         self.cmd_id = ''
-    
-        # -1 -> board not available  
-        self.boards =[
-            {'Address': '12', "Status":-1},
+
+        # -1 -> board not available
+        self.boards = [
+            {'Address': '12', "Status": -1},
             {'Address': '13', "Status": 0},
             {'Address': '14', "Status": 0},
-            {'Address': '15', "Status":-1},
+            {'Address': '15', "Status": -1},
         ]
+
     def _set_default(self):
         self.msg = ''
 
@@ -118,7 +122,6 @@ class System(ListeningSystem):
                 return self._error(params[0], 1005, err[0])
             else:
                 return self._error(params[0], 1005,' '.join(map(str, err)))
-
         else:
             return self.ack
 
@@ -135,6 +138,33 @@ class System(ListeningSystem):
         else:
             return self.ack
 
+    def _store_allmode(self, params):
+        err=[]
+        if len(params) != 2:
+            return self._error(params[0], 1001)
+        elif params[1] in self.obs_mode:
+            return self._error(params[0], 1008)
+        for key in self.boards:
+            if key['Status']!=0:
+                err.append(key['Address'])
+        if len(err)>0:
+            if len(err)==1:
+                return self._error(params[0], 1005, err[0])
+            else:
+                return self._error(params[0], 1005,' '.join(map(str, err)))
+        else:
+            return self.ack
+
+    def _clr_mode(self, params):
+        if len(params) != 2:
+            return self._error(params[0], 1001)
+        elif params[1] not in self.obs_mode:
+            return self._error(params[0], 1003)
+        else:
+            return self.ack
+    
+    def _status(self, params):
+        return    
 
     def _not_implemented(self, params):
         return self._error(params[0], 9999)
