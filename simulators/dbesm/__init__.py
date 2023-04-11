@@ -19,7 +19,7 @@ class System(ListeningSystem):
 
     commands = {
         'DBE SETALLMODE': '_set_allmode',
-        'DBE MODE': '_not_implemented',
+        'DBE MODE': '_set_mode',
         'DBE STOREALLMODE': '_not_implemented',
         'DBE CLRMODE': '_not_implemented',
         'DBE STATUS': '_not_implemented',
@@ -35,8 +35,9 @@ class System(ListeningSystem):
         1002: 'ERROR_DEVICE_UNKNOWN',
         1003: 'CFG file not existing',
         1004: 'reading cfg file',
-        1005: 'BOARD 1 unreachable',
+        1005: 'BOARD X unreachable',
         1006: 'BOARD 1 2 3 4 unreachable',
+        1007: 'BOARD not existing',
     }
 
     obs_mode = [
@@ -51,7 +52,14 @@ class System(ListeningSystem):
     def __init__(self):
         self.msg = ''
         self.cmd_id = ''
-
+    
+        # -1 -> board not available  
+        self.boards =[
+            {'Address': '12', "Status":-1},
+            {'Address': '13', "Status": 0},
+            {'Address': '14', "Status": 0},
+            {'Address': '15', "Status":-1},
+        ]
     def _set_default(self):
         self.msg = ''
 
@@ -97,25 +105,47 @@ class System(ListeningSystem):
         return cmd(params)
 
     def _set_allmode(self, params):
-        print(params)
+        err=[]
         if len(params) != 2:
             return self._error(params[0], 1001)
         elif params[1] not in self.obs_mode:
             return self._error(params[0], 1003)
+        for key in self.boards:
+            if key['Status']!=0:
+                err.append(key['Address'])
+        if len(err)>0:
+            if len(err)==1:
+                return self._error(params[0], 1005, err[0])
+            else:
+                return self._error(params[0], 1005,' '.join(map(str, err)))
 
-        err_sim = False
-        if err_sim:
-            return self._error(params[0], 1005)
         else:
             return self.ack
+
+    def _set_mode(self, params):
+        selected_board = next((sub for sub in self.boards if sub['Address'] == params [2]), None)
+        if len(params) != 4:
+            return self._error(params[0], 1001)
+        elif selected_board == None:
+            return self._error(params[0], 1007)
+        elif params[3] not in self.obs_mode:
+            return self._error(params[0], 1003)
+        elif selected_board["Status"] != 0:
+            return self._error(params[0], 1005,params[2])
+        else:
+            return self.ack
+
 
     def _not_implemented(self, params):
         return self._error(params[0], 9999)
 
-    def _error(self, device_code, error_code):
+    def _error(self, device_code, error_code,board_address=None):
         error_string = self.errors.get(error_code)
         if error_code == 1001:
             retval = f'NAK {error_string}\x0A'
+        elif error_code == 1005:
+            device_string = self.devices.get(device_code)
+            retval = f'ERR {device_string} {error_string.replace("X",board_address)}{self.tail}\x0A'
         else:
             device_string = self.devices.get(device_code)
             retval = f'ERR {device_string} {error_string}{self.tail}\x0A'
