@@ -37,7 +37,7 @@ class System(ListeningSystem):
         1004: 'reading cfg file',
         1005: 'BOARD X unreachable',
         1006: 'BOARD 1 2 3 4 unreachable',
-        1007: 'BOARD not existing',
+        1007: 'BOARD X not existing',
         1008: 'writing cfg file',
         1009: 'deleting cfg file',
 
@@ -85,10 +85,10 @@ class System(ListeningSystem):
         args = [x.strip() for x in msg.split(' ')]
         try:
             device_code = list(self.devices.keys())[
-            list(self.devices.values()).index(args[0])]
+                list(self.devices.values()).index(args[0])]
         except ValueError:
-            return self._error(-1,1001)
-        
+            return self._error(-1, 1001)
+
         params = [device_code]
 
         if len(args) == 1:
@@ -109,49 +109,50 @@ class System(ListeningSystem):
         return cmd(params)
 
     def _set_allmode(self, params):
-        err=[]
+        err = []
         if len(params) != 2:
             return self._error(params[0], 1001)
         elif params[1] not in self.obs_mode:
             return self._error(params[0], 1003)
         for key in self.boards:
-            if key['Status']!=0:
+            if key['Status'] != 0:
                 err.append(key['Address'])
         if len(err)>0:
-            if len(err)==1:
+            if len(err) == 1:
                 return self._error(params[0], 1005, err[0])
             else:
-                return self._error(params[0], 1005,' '.join(map(str, err)))
+                return self._error(params[0], 1005, ' '.join(map(str, err)))
         else:
             return self.ack
 
     def _set_mode(self, params):
-        selected_board = next((sub for sub in self.boards if sub['Address'] == params [2]), None)
+        selected_board = next((sub for sub in self.boards 
+                               if sub['Address'] == params[2]), None)
         if len(params) != 4:
             return self._error(params[0], 1001)
-        elif selected_board == None:
-            return self._error(params[0], 1007)
+        elif selected_board is None:
+            return self._error(params[0], 1007, params[2])
         elif params[3] not in self.obs_mode:
             return self._error(params[0], 1003)
         elif selected_board["Status"] != 0:
-            return self._error(params[0], 1005,params[2])
+            return self._error(params[0], 1005, params[2])
         else:
             return self.ack
 
     def _store_allmode(self, params):
-        err=[]
+        err = []
         if len(params) != 2:
             return self._error(params[0], 1001)
         elif params[1] in self.obs_mode:
             return self._error(params[0], 1008)
         for key in self.boards:
-            if key['Status']!=0:
+            if key['Status'] != 0:
                 err.append(key['Address'])
-        if len(err)>0:
+        if len(err) > 0:
             if len(err)==1:
                 return self._error(params[0], 1005, err[0])
             else:
-                return self._error(params[0], 1005,' '.join(map(str, err)))
+                return self._error(params[0], 1005, ' '.join(map(str, err)))
         else:
             return self.ack
 
@@ -164,7 +165,16 @@ class System(ListeningSystem):
             return self.ack
     
     def _status(self, params):
-        return    
+        selected_board = next((sub for sub in self.boards if sub['Address'] == params [2]), None)
+
+        if len(params) != 3:
+            return self._error(params[0], 1001)
+        elif selected_board == None:
+            return self._error(params[0], 1007, params[2])
+        elif selected_board["Status"] != 0:
+            return self._error(params[0], 1005, params[2])
+
+        return self.ack 
 
     def _not_implemented(self, params):
         return self._error(params[0], 9999)
@@ -173,7 +183,7 @@ class System(ListeningSystem):
         error_string = self.errors.get(error_code)
         if error_code == 1001:
             retval = f'NAK {error_string}\x0A'
-        elif error_code == 1005:
+        elif error_code == 1005 or error_code == 1007:
             device_string = self.devices.get(device_code)
             retval = f'ERR {device_string} {error_string.replace("X",board_address)}{self.tail}\x0A'
         else:
