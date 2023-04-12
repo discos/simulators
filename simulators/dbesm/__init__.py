@@ -1,6 +1,7 @@
 from socketserver import ThreadingTCPServer
 from simulators.common import ListeningSystem
-
+import random
+import numpy
 
 servers = [(('0.0.0.0', 11111), (), ThreadingTCPServer, {})]
 
@@ -51,18 +52,26 @@ class System(ListeningSystem):
         '3-Band',
         'MFS_7',
     ]
-
     def __init__(self):
         self.msg = ''
         self.cmd_id = ''
 
         # -1 -> board not available
         self.boards = [
-            {'Address': '12', "Status": -1},
-            {'Address': '13', "Status": 0},
-            {'Address': '14', "Status": 0},
-            {'Address': '15', "Status": -1},
+            {'Address': '12', "Status": -1, "REG": self._init_reg(), "ATT": self._init_att()},
+            {'Address': '13', "Status": 0, "REG": self._init_reg(), "ATT": self._init_att() },
+            {'Address': '14', "Status": 0, "REG": self._init_reg(), "ATT": self._init_att() },
+            {'Address': '15', "Status": -1, "REG": self._init_reg(), "ATT": self._init_att() },
         ]
+
+    def _init_reg(self):
+        reg = random.sample(range(0, 255), 10)
+        return reg
+    
+    def _init_att(self):
+        att = [ round(elem*2)/2 for elem in numpy.random.uniform(0.0, 31.5,17) ]
+        return att
+    
 
     def _set_default(self):
         self.msg = ''
@@ -173,8 +182,8 @@ class System(ListeningSystem):
             return self._error(params[0], 1007, params[2])
         elif selected_board["Status"] != 0:
             return self._error(params[0], 1005, params[2])
-
-        return self.ack 
+        retval = f'ACK REG={selected_board["REG"]} ATT={selected_board["ATT"]}\x0A'
+        return retval
 
     def _not_implemented(self, params):
         return self._error(params[0], 9999)
