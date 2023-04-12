@@ -203,7 +203,7 @@ class System(ListeningSystem):
             return self._error(params[0], 1007, params[2])
         elif selected_board["Status"] != 0:
             return self._error(params[0], 1005, params[2])
-        retval = f'ACK\nREG=[{" ".join(map(str,selected_board["REG"]))}]\n'\
+        retval = f'ACK\nREG=[{" ".join(map(str,selected_board["REG"]))}]\n\n'\
             f'ATT=[{" ".join(map(str,selected_board["ATT"])) }]\x0A'
         return retval
 
