@@ -1,7 +1,7 @@
-from socketserver import ThreadingTCPServer
-from simulators.common import ListeningSystem
 import random
 import numpy
+from socketserver import ThreadingTCPServer
+from simulators.common import ListeningSystem
 
 servers = [(('0.0.0.0', 11111), (), ThreadingTCPServer, {})]
 
@@ -58,10 +58,30 @@ class System(ListeningSystem):
 
         # -1 -> board not available
         self.boards = [
-            {'Address': '12', "Status": -1, "REG": self._init_reg(), "ATT": self._init_att()},
-            {'Address': '13', "Status": 0, "REG": self._init_reg(), "ATT": self._init_att() },
-            {'Address': '14', "Status": 0, "REG": self._init_reg(), "ATT": self._init_att() },
-            {'Address': '15', "Status": -1, "REG": self._init_reg(), "ATT": self._init_att() },
+            {
+            'Address': '12',
+            "Status": -1,
+            "REG": self._init_reg(),
+            "ATT": self._init_att()
+            },
+            {
+            'Address': '13',
+            "Status": 0,
+            "REG": self._init_reg(),
+            "ATT": self._init_att()
+            },
+            {
+            'Address': '14',
+            "Status": 0,
+            "REG": self._init_reg(),
+            "ATT": self._init_att()
+            },
+            {
+            'Address': '15',
+            "Status": -1,
+            "REG": self._init_reg(),
+            "ATT": self._init_att()
+            },
         ]
 
     def _init_reg(self):
@@ -69,9 +89,9 @@ class System(ListeningSystem):
         return reg
     
     def _init_att(self):
-        att = [ round(elem*2)/2 for elem in numpy.random.uniform(0.0, 31.5,17) ]
+        att = [round(elem*2) / 2 for elem
+               in numpy.random.uniform(0.0, 31.5, 17)]
         return att
-    
 
     def _set_default(self):
         self.msg = ''
@@ -126,7 +146,7 @@ class System(ListeningSystem):
         for key in self.boards:
             if key['Status'] != 0:
                 err.append(key['Address'])
-        if len(err)>0:
+        if len(err) > 0:
             if len(err) == 1:
                 return self._error(params[0], 1005, err[0])
             else:
@@ -135,7 +155,7 @@ class System(ListeningSystem):
             return self.ack
 
     def _set_mode(self, params):
-        selected_board = next((sub for sub in self.boards 
+        selected_board = next((sub for sub in self.boards
                                if sub['Address'] == params[2]), None)
         if len(params) != 4:
             return self._error(params[0], 1001)
@@ -158,7 +178,7 @@ class System(ListeningSystem):
             if key['Status'] != 0:
                 err.append(key['Address'])
         if len(err) > 0:
-            if len(err)==1:
+            if len(err) == 1:
                 return self._error(params[0], 1005, err[0])
             else:
                 return self._error(params[0], 1005, ' '.join(map(str, err)))
@@ -172,29 +192,32 @@ class System(ListeningSystem):
             return self._error(params[0], 1003)
         else:
             return self.ack
-    
+
     def _status(self, params):
-        selected_board = next((sub for sub in self.boards if sub['Address'] == params [2]), None)
+        selected_board = next((sub for sub in self.boards
+                               if sub['Address'] == params [2]), None)
 
         if len(params) != 3:
             return self._error(params[0], 1001)
-        elif selected_board == None:
+        elif selected_board is None:
             return self._error(params[0], 1007, params[2])
         elif selected_board["Status"] != 0:
             return self._error(params[0], 1005, params[2])
-        retval = f'ACK REG={selected_board["REG"]} ATT={selected_board["ATT"]}\x0A'
+        retval = f'ACK REG={selected_board["REG"]}\
+                ATT={selected_board["ATT"]}\x0A'
         return retval
 
     def _not_implemented(self, params):
         return self._error(params[0], 9999)
 
-    def _error(self, device_code, error_code,board_address=None):
+    def _error(self, device_code, error_code, board_address=None):
         error_string = self.errors.get(error_code)
         if error_code == 1001:
             retval = f'NAK {error_string}\x0A'
-        elif error_code == 1005 or error_code == 1007:
+        elif error_code in [ 1005, 1007 ]:
             device_string = self.devices.get(device_code)
-            retval = f'ERR {device_string} {error_string.replace("X",board_address)}{self.tail}\x0A'
+            retval = f'ERR {device_string} \
+                {error_string.replace("X", board_address)}{self.tail}\x0A'
         else:
             device_string = self.devices.get(device_code)
             retval = f'ERR {device_string} {error_string}{self.tail}\x0A'
