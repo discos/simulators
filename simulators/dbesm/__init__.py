@@ -194,9 +194,11 @@ class System(ListeningSystem):
             return self.ack
 
     def _status(self, params):
-        selected_board = next((sub for sub in self.boards
-                               if sub['Address'] == params[2]), None)
-
+        try:
+            selected_board = next((sub for sub in self.boards
+                                   if sub['Address'] == params[2]), None)
+        except:
+            return self._error(params[0], 1001)
         if len(params) != 3:
             return self._error(params[0], 1001)
         elif selected_board is None:
