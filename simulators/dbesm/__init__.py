@@ -25,6 +25,7 @@ class System(ListeningSystem):
         'DBE CLRMODE': '_clr_mode',
         'DBE STATUS': '_status',
         'DBE SETATT': '_set_att',
+        'DBE SETAMP': '_set_amp',
         'DBE DIAG': '_not_implemented',
         'DBE': '_not_implemented',
         'FBCB': '_not_implemented',
@@ -44,6 +45,7 @@ class System(ListeningSystem):
         1009: 'deleting cfg file',
         1010: 'ATT X not existing',
         1011: 'value out of range',
+        1012: 'AMP X not existing',
     }
 
     obs_mode = [
@@ -65,25 +67,37 @@ class System(ListeningSystem):
                 'Address': '12',
                 "Status": -1,
                 "REG": self._init_reg(),
-                "ATT": self._init_att()
+                "ATT": self._init_att(),
+                "AMP": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                "EQ": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                "BPF": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             },
             {
                 'Address': '13',
                 "Status": 0,
                 "REG": self._init_reg(),
-                "ATT": self._init_att()
+                "ATT": self._init_att(),
+                "AMP": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                "EQ": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                "BPF": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             },
             {
                 'Address': '14',
                 "Status": 0,
                 "REG": self._init_reg(),
-                "ATT": self._init_att()
+                "ATT": self._init_att(),
+                "AMP": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                "EQ": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                "BPF": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             },
             {
                 'Address': '15',
                 "Status": -1,
                 "REG": self._init_reg(),
-                "ATT": self._init_att()
+                "ATT": self._init_att(),
+                "AMP": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                "EQ": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                "BPF": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             },
         ]
 
@@ -227,6 +241,23 @@ class System(ListeningSystem):
             selected_board["ATT"][int(params[1])]=float(params[5])
             return self.ack
 
+    def _set_amp(self, params):
+        if len(params) != 6:
+            return self._error(params[0], 1001)
+        selected_board = next((sub for sub in self.boards
+                                   if sub['Address'] == params[3]), None)
+        if selected_board is None:
+            return self._error(params[0], 1007, params[3])
+        elif selected_board["Status"] != 0:
+            return self._error(params[0], 1005, params[3])
+        elif int(params[1]) not in list(range(1, 11)):
+            return self._error(params[0], 1012, params[1])
+        elif float(params[5]) not in [0, 1]:
+            return self._error(params[0], 1011)
+        else:
+            selected_board["AMP"][int(params[1])-1]=params[5]
+            return self.ack
+
     def _not_implemented(self, params):
         return self._error(params[0], 9999)
 
@@ -234,7 +265,7 @@ class System(ListeningSystem):
         error_string = self.errors.get(error_code)
         if error_code == 1001:
             retval = f'NAK {error_string}\x0A'
-        elif error_code in [1005, 1007, 1010]:
+        elif error_code in [1005, 1007, 1010, 1011]:
             device_string = self.devices.get(device_code)
             retval = f'ERR {device_string} '\
                 f'{error_string.replace("X", board_address)}{self.tail}\x0A'
