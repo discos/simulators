@@ -24,6 +24,7 @@ class System(ListeningSystem):
         'DBE STOREALLMODE': '_store_allmode',
         'DBE CLRMODE': '_clr_mode',
         'DBE STATUS': '_status',
+        'DBE SETATT': '_set_att',
         'DBE DIAG': '_not_implemented',
         'DBE': '_not_implemented',
         'FBCB': '_not_implemented',
@@ -41,6 +42,8 @@ class System(ListeningSystem):
         1007: 'BOARD X not existing',
         1008: 'writing cfg file',
         1009: 'deleting cfg file',
+        1010: 'ATT X not existing',
+        1011: 'value out of range',
     }
 
     obs_mode = [
@@ -194,20 +197,35 @@ class System(ListeningSystem):
             return self.ack
 
     def _status(self, params):
-        try:
-            selected_board = next((sub for sub in self.boards
-                                   if sub['Address'] == params[2]), None)
-        except:
-            return self._error(params[0], 1001)
         if len(params) != 3:
             return self._error(params[0], 1001)
-        elif selected_board is None:
+        
+        selected_board = next((sub for sub in self.boards
+                                   if sub['Address'] == params[2]), None)
+        if selected_board is None:
             return self._error(params[0], 1007, params[2])
         elif selected_board["Status"] != 0:
             return self._error(params[0], 1005, params[2])
         retval = f'ACK\nREG=[{" ".join(map(str,selected_board["REG"]))}]\n\n'\
             f'ATT=[{" ".join(map(str,selected_board["ATT"])) }]\x0A'
         return retval
+
+    def _set_att(self, params):
+        if len(params) != 6:
+            return self._error(params[0], 1001)
+        selected_board = next((sub for sub in self.boards
+                                   if sub['Address'] == params[3]), None)
+        if selected_board is None:
+            return self._error(params[0], 1007, params[3])
+        elif selected_board["Status"] != 0:
+            return self._error(params[0], 1005, params[3])
+        elif int(params[1]) not in list(range(0, 17)):
+            return self._error(params[0], 1010, params[1])
+        elif float(params[5]) not in list(numpy.arange(0, 31.5, 0.5)):
+            return self._error(params[0], 1011)
+        else:
+            selected_board["ATT"][int(params[1])]=float(params[5])
+            return self.ack
 
     def _not_implemented(self, params):
         return self._error(params[0], 9999)
@@ -216,10 +234,10 @@ class System(ListeningSystem):
         error_string = self.errors.get(error_code)
         if error_code == 1001:
             retval = f'NAK {error_string}\x0A'
-        elif error_code in [1005, 1007]:
+        elif error_code in [1005, 1007, 1010]:
             device_string = self.devices.get(device_code)
-            retval = f'ERR {device_string} \
-                {error_string.replace("X", board_address)}{self.tail}\x0A'
+            retval = f'ERR {device_string} '\
+                f'{error_string.replace("X", board_address)}{self.tail}\x0A'
         else:
             device_string = self.devices.get(device_code)
             retval = f'ERR {device_string} {error_string}{self.tail}\x0A'
