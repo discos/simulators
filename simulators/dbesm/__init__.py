@@ -1,6 +1,6 @@
 import random
-import numpy
 from socketserver import ThreadingTCPServer
+import numpy
 from simulators.common import ListeningSystem
 
 servers = [(('0.0.0.0', 11111), (), ThreadingTCPServer, {})]
@@ -41,7 +41,6 @@ class System(ListeningSystem):
         1007: 'BOARD X not existing',
         1008: 'writing cfg file',
         1009: 'deleting cfg file',
-
     }
 
     obs_mode = [
@@ -52,44 +51,45 @@ class System(ListeningSystem):
         '3-Band',
         'MFS_7',
     ]
+
     def __init__(self):
         self.msg = ''
         self.cmd_id = ''
 
-        # -1 -> board not available
+        # Status -1 -> board not available
         self.boards = [
             {
-            'Address': '12',
-            "Status": -1,
-            "REG": self._init_reg(),
-            "ATT": self._init_att()
+                'Address': '12',
+                "Status": -1,
+                "REG": self._init_reg(),
+                "ATT": self._init_att()
             },
             {
-            'Address': '13',
-            "Status": 0,
-            "REG": self._init_reg(),
-            "ATT": self._init_att()
+                'Address': '13',
+                "Status": 0,
+                "REG": self._init_reg(),
+                "ATT": self._init_att()
             },
             {
-            'Address': '14',
-            "Status": 0,
-            "REG": self._init_reg(),
-            "ATT": self._init_att()
+                'Address': '14',
+                "Status": 0,
+                "REG": self._init_reg(),
+                "ATT": self._init_att()
             },
             {
-            'Address': '15',
-            "Status": -1,
-            "REG": self._init_reg(),
-            "ATT": self._init_att()
+                'Address': '15',
+                "Status": -1,
+                "REG": self._init_reg(),
+                "ATT": self._init_att()
             },
         ]
 
     def _init_reg(self):
         reg = random.sample(range(0, 255), 10)
         return reg
-    
+
     def _init_att(self):
-        att = [round(elem*2) / 2 for elem
+        att = [round(elem * 2) / 2 for elem
                in numpy.random.uniform(0.0, 31.5, 17)]
         return att
 
@@ -195,7 +195,7 @@ class System(ListeningSystem):
 
     def _status(self, params):
         selected_board = next((sub for sub in self.boards
-                               if sub['Address'] == params [2]), None)
+                               if sub['Address'] == params[2]), None)
 
         if len(params) != 3:
             return self._error(params[0], 1001)
@@ -203,8 +203,8 @@ class System(ListeningSystem):
             return self._error(params[0], 1007, params[2])
         elif selected_board["Status"] != 0:
             return self._error(params[0], 1005, params[2])
-        retval = f'ACK REG={selected_board["REG"]}\
-                ATT={selected_board["ATT"]}\x0A'
+        retval = f'ACK\nREG=[{" ".join(map(str,selected_board["REG"]))}]\n'\
+            f'ATT=[{" ".join(map(str,selected_board["ATT"])) }]\x0A'
         return retval
 
     def _not_implemented(self, params):
@@ -214,7 +214,7 @@ class System(ListeningSystem):
         error_string = self.errors.get(error_code)
         if error_code == 1001:
             retval = f'NAK {error_string}\x0A'
-        elif error_code in [ 1005, 1007 ]:
+        elif error_code in [1005, 1007]:
             device_string = self.devices.get(device_code)
             retval = f'ERR {device_string} \
                 {error_string.replace("X", board_address)}{self.tail}\x0A'
