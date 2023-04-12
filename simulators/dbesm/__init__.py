@@ -26,6 +26,9 @@ class System(ListeningSystem):
         'DBE STATUS': '_status',
         'DBE SETATT': '_set_att',
         'DBE SETAMP': '_set_amp',
+        'DBE SETEQ': '_set_eq',
+        'DBE SETBPF ': '_set_bpf',
+        'DBE ALLDIAG': '_all_diag',
         'DBE DIAG': '_not_implemented',
         'DBE': '_not_implemented',
         'FBCB': '_not_implemented',
@@ -46,6 +49,8 @@ class System(ListeningSystem):
         1010: 'ATT X not existing',
         1011: 'value out of range',
         1012: 'AMP X not existing',
+        1013: 'EQ X not existing',
+        1014: 'BPF X not existing',
     }
 
     obs_mode = [
@@ -65,12 +70,15 @@ class System(ListeningSystem):
         self.boards = [
             {
                 'Address': '12',
-                "Status": -1,
+                "Status": 0,
                 "REG": self._init_reg(),
                 "ATT": self._init_att(),
                 "AMP": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 "EQ": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                "BPF": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                "BPF": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                "5V": 0.00,
+                "3V3": 0.00,
+                "T0": 00.00
             },
             {
                 'Address': '13',
@@ -79,7 +87,10 @@ class System(ListeningSystem):
                 "ATT": self._init_att(),
                 "AMP": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 "EQ": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                "BPF": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                "BPF": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                "5V": 0.00,
+                "3V3": 0.00,
+                "T0": 00.00
             },
             {
                 'Address': '14',
@@ -88,16 +99,22 @@ class System(ListeningSystem):
                 "ATT": self._init_att(),
                 "AMP": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 "EQ": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                "BPF": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                "BPF": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                "5V": 0.00,
+                "3V3": 0.00,
+                "T0": 00.00
             },
             {
                 'Address': '15',
-                "Status": -1,
+                "Status": 0,
                 "REG": self._init_reg(),
                 "ATT": self._init_att(),
                 "AMP": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 "EQ": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                "BPF": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                "BPF": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                "5V": 0.00,
+                "3V3": 0.00,
+                "T0": 00.00
             },
         ]
 
@@ -257,6 +274,62 @@ class System(ListeningSystem):
         else:
             selected_board["AMP"][int(params[1])-1]=params[5]
             return self.ack
+    
+    def _set_eq(self, params):
+        if len(params) != 6:
+            return self._error(params[0], 1001)
+        selected_board = next((sub for sub in self.boards
+                                   if sub['Address'] == params[3]), None)
+        if selected_board is None:
+            return self._error(params[0], 1007, params[3])
+        elif selected_board["Status"] != 0:
+            return self._error(params[0], 1005, params[3])
+        elif int(params[1]) not in list(range(1, 11)):
+            return self._error(params[0], 1013, params[1])
+        elif float(params[5]) not in [0, 1]:
+            return self._error(params[0], 1011)
+        else:
+            selected_board["EQ"][int(params[1])-1]=params[5]
+            return self.ack
+
+    def _set_bpf(self, params):
+        if len(params) != 6:
+            return self._error(params[0], 1001)
+        selected_board = next((sub for sub in self.boards
+                                   if sub['Address'] == params[3]), None)
+        if selected_board is None:
+            return self._error(params[0], 1007, params[3])
+        elif selected_board["Status"] != 0:
+            return self._error(params[0], 1005, params[3])
+        elif int(params[1]) not in list(range(1, 11)):
+            return self._error(params[0], 1014, params[1])
+        elif float(params[5]) not in [0, 1]:
+            return self._error(params[0], 1011)
+        else:
+            selected_board["BPF"][int(params[1])-1]=params[5]
+            return self.ack
+
+    def _all_diag(self, params):
+        err = []
+        if len(params) != 1:
+            return self._error(params[0], 1001)
+        for key in self.boards:
+            if key['Status'] != 0:
+                err.append(key['Address'])
+        if len(err) > 0:
+            if len(err) == 1:
+                return self._error(params[0], 1005, err[0])
+            else:
+                return self._error(params[0], 1005, ' '.join(map(str, err)))
+        else:
+            retval =self.ack
+            for board in self.boards:
+                retval += f'BOARD {board["Address"]}\n'
+                retval += f'5V {board["5V"]} 3V3 {board["3V3"]}\n'
+                retval += f'T0 {board["T0"]}\n\n'
+            #\nREG=[{" ".join(map(str,selected_board["REG"]))}]\n\n'\
+            #    f'ATT=[{" ".join(map(str,selected_board["ATT"])) }]\x0A'
+            return retval
 
     def _not_implemented(self, params):
         return self._error(params[0], 9999)
