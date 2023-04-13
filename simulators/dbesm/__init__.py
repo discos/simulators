@@ -30,6 +30,7 @@ class System(ListeningSystem):
         'DBE SETBPF': '_set_bpf',
         'DBE ALLDIAG': '_all_diag',
         'DBE DIAG': '_diag',
+        'DBE SETSTATUS': '_set_status',
         'DBE': '_not_implemented',
         'FBCB': '_not_implemented',
     }
@@ -172,21 +173,17 @@ class System(ListeningSystem):
         return cmd(params)
 
     def _set_allmode(self, params):
-        err = []
+        retval = ''
         if len(params) != 2:
             return self._error(params[0], 1001)
         elif params[1] not in self.obs_mode:
             return self._error(params[0], 1003)
         for key in self.boards:
             if key['Status'] != 0:
-                err.append(key['Address'])
-        if len(err) > 0:
-            if len(err) == 1:
-                return self._error(params[0], 1005, err[0])
+                retval += f'BOARD {key["Address"]} ERR DBE BOARD unreachable\n'
             else:
-                return self._error(params[0], 1005, ' '.join(map(str, err)))
-        else:
-            return self.ack
+                retval += f'BOARD {key["Address"]} '+self.ack
+        return retval
 
     def _set_mode(self, params):
         selected_board = next((sub for sub in self.boards
@@ -349,6 +346,17 @@ class System(ListeningSystem):
             retval += f'5V {selected_board["5V"]} 3V3 {selected_board["3V3"]}\n'
             retval += f'T0 {selected_board["T0"]}\n'
         return retval
+
+    def _set_status(self, params):
+        if len(params) != 5:
+            return self._error(params[0], 1001)
+        selected_board = next((sub for sub in self.boards
+                               if sub['Address'] == params[2]), None)
+        if selected_board is None:
+            return self._error(params[0], 1007, params[2])
+        else:
+            selected_board["Status"] = int(params[4])
+            return self.ack
 
     def _not_implemented(self, params):
         return self._error(params[0], 9999)
