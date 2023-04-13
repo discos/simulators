@@ -70,7 +70,7 @@ class System(ListeningSystem):
         self.boards = [
             {
                 'Address': '12',
-                "Status": -1,
+                "Status": 0,
                 "REG": self._init_reg(),
                 "ATT": self._init_att(),
                 "AMP": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -106,7 +106,7 @@ class System(ListeningSystem):
             },
             {
                 'Address': '15',
-                "Status": -1,
+                "Status": 0,
                 "REG": self._init_reg(),
                 "ATT": self._init_att(),
                 "AMP": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -217,6 +217,7 @@ class System(ListeningSystem):
             else:
                 return self._error(params[0], 1005, ' '.join(map(str, err)))
         else:
+            self.obs_mode.append(params[1])
             return self.ack
 
     def _clr_mode(self, params):
@@ -225,6 +226,7 @@ class System(ListeningSystem):
         elif params[1] not in self.obs_mode:
             return self._error(params[0], 1003)
         else:
+            self.obs_mode.remove(params[1])
             return self.ack
 
     def _status(self, params):
