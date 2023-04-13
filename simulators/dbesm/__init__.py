@@ -29,7 +29,7 @@ class System(ListeningSystem):
         'DBE SETEQ': '_set_eq',
         'DBE SETBPF': '_set_bpf',
         'DBE ALLDIAG': '_all_diag',
-        'DBE DIAG': '_not_implemented',
+        'DBE DIAG': '_diag',
         'DBE': '_not_implemented',
         'FBCB': '_not_implemented',
     }
@@ -331,6 +331,22 @@ class System(ListeningSystem):
                 else:
                     retval += 'ERR DBE BOARD unreachable\n\n'
             return retval
+
+    def _diag(self, params):
+        if len(params) != 3:
+            return self._error(params[0], 1001)
+        selected_board = next((sub for sub in self.boards
+                               if sub['Address'] == params[2]), None)
+        if selected_board is None:
+            return self._error(params[0], 1007, params[2])
+        elif selected_board["Status"] != 0:
+            return self._error(params[0], 1005, params[2])
+        else:
+            retval = self.ack+'\n'
+            retval += f'BOARD {selected_board["Address"]}\n'
+            retval += f'5V {selected_board["5V"]} 3V3 {selected_board["3V3"]}\n'
+            retval += f'T0 {selected_board["T0"]}\n'
+        return retval
 
     def _not_implemented(self, params):
         return self._error(params[0], 9999)
