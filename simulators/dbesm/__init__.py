@@ -255,7 +255,7 @@ class System(ListeningSystem):
         elif int(params[1]) not in list(range(0, 17)):
             return self._error(params[0], 1010, params[1])
         elif float(params[5]) not in list(numpy.arange(0, 31.5, 0.5)):
-            return self._error(params[0], 1011)
+            return self._error(params[0], 1011, selected_board["Address"])
         else:
             selected_board["ATT"][int(params[1])] = float(params[5])
             return self.ack
@@ -271,8 +271,8 @@ class System(ListeningSystem):
             return self._error(params[0], 1005, params[3])
         elif int(params[1]) not in list(range(1, 11)):
             return self._error(params[0], 1012, params[1])
-        elif float(params[5]) not in [0, 1]:
-            return self._error(params[0], 1011)
+        elif int(params[5]) not in [0, 1]:
+            return self._error(params[0], 1011, selected_board["Address"])
         else:
             selected_board["AMP"][int(params[1])-1] = params[5]
             return self.ack
@@ -289,7 +289,7 @@ class System(ListeningSystem):
         elif int(params[1]) not in list(range(1, 11)):
             return self._error(params[0], 1013, params[1])
         elif float(params[5]) not in [0, 1]:
-            return self._error(params[0], 1011)
+            return self._error(params[0], 1011, selected_board["Address"])
         else:
             selected_board["EQ"][int(params[1])-1] = params[5]
             return self.ack
@@ -307,7 +307,7 @@ class System(ListeningSystem):
         elif params[1] not in channels:
             return self._error(params[0], 1014, params[1])
         elif float(params[5]) not in [0, 1]:
-            return self._error(params[0], 1011)
+            return self._error(params[0], 1011, selected_board["Address"])
         else:
             channel = -1
             if params[1] == '1a':
