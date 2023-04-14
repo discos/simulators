@@ -174,7 +174,7 @@ class System(ListeningSystem):
 
     def _set_allmode(self, params):
         try:
-            params.remove('')
+            params = list(filter(('').__ne__, params))
         except ValueError:
             pass
         retval = ''
@@ -191,7 +191,7 @@ class System(ListeningSystem):
 
     def _set_mode(self, params):
         try:
-            params.remove('')
+            params = list(filter(('').__ne__, params))
         except ValueError:
             pass
         selected_board = next((sub for sub in self.boards
@@ -209,7 +209,7 @@ class System(ListeningSystem):
 
     def _store_allmode(self, params):
         try:
-            params.remove('')
+            params = list(filter(('').__ne__, params))
         except ValueError:
             pass
         err = []
@@ -231,7 +231,7 @@ class System(ListeningSystem):
 
     def _clr_mode(self, params):
         try:
-            params.remove('')
+            params = list(filter(('').__ne__, params))
         except ValueError:
             pass
         if len(params) != 2:
@@ -244,7 +244,7 @@ class System(ListeningSystem):
 
     def _status(self, params):
         try:
-            params.remove('')
+            params = list(filter(('').__ne__, params))
         except ValueError:
             pass
         if len(params) != 3:
@@ -262,7 +262,7 @@ class System(ListeningSystem):
 
     def _set_att(self, params):
         try:
-            params.remove('')
+            params = list(filter(('').__ne__, params))
         except ValueError:
             pass
         if len(params) != 6:
@@ -283,7 +283,7 @@ class System(ListeningSystem):
 
     def _set_amp(self, params):
         try:
-            params.remove('')
+            params = list(filter(('').__ne__, params))
         except ValueError:
             pass
         if len(params) != 6:
@@ -304,7 +304,7 @@ class System(ListeningSystem):
 
     def _set_eq(self, params):
         try:
-            params.remove('')
+            params = list(filter(('').__ne__, params))
         except ValueError:
             pass
         if len(params) != 6:
@@ -325,7 +325,7 @@ class System(ListeningSystem):
 
     def _set_bpf(self, params):
         try:
-            params.remove('')
+            params = list(filter(('').__ne__, params))
         except ValueError:
             pass
         channels = ['2', '3', '4', '5', '6', '7', '8', '9', '10', '1a', '1b']
@@ -354,7 +354,7 @@ class System(ListeningSystem):
 
     def _all_diag(self, params):
         try:
-            params.remove('')
+            params = list(filter(('').__ne__, params))
         except ValueError:
             pass
         retval = ''
@@ -393,7 +393,7 @@ class System(ListeningSystem):
 
     def _set_status(self, params):
         try:
-            params.remove('')
+            params = list(filter(('').__ne__, params))
         except ValueError:
             pass
         if len(params) != 5:
