@@ -186,7 +186,7 @@ class System(ListeningSystem):
             if key['Status'] != 0:
                 retval += f'BOARD {key["Address"]} ERR DBE BOARD unreachable\n'
             else:
-                retval += f'BOARD {key["Address"]} '+self.ack
+                retval += f'BOARD {key["Address"]} ' + self.ack
         return retval
 
     def _set_mode(self, params):
@@ -256,8 +256,9 @@ class System(ListeningSystem):
             return self._error(params[0], 1007, params[2])
         elif selected_board["Status"] != 0:
             return self._error(params[0], 1005, params[2])
-        retval = f'ACK\n\nREG=[{" ".join(map(str,selected_board["REG"]))}]\n\n'\
-            f'ATT=[{" ".join(map(str,selected_board["ATT"])) }]\x0A'
+        retval = f'ACK\n\n'
+        retval += f'REG=[{" ".join(map(str,selected_board["REG"]))}]\n\n'
+        retval += f'ATT=[{" ".join(map(str,selected_board["ATT"])) }]\x0A'
         return retval
 
     def _set_att(self, params):
@@ -290,17 +291,20 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
         selected_board = next((sub for sub in self.boards
                                if sub['Address'] == params[3]), None)
-        if selected_board is None:
-            return self._error(params[0], 1007, params[3])
-        elif selected_board["Status"] != 0:
-            return self._error(params[0], 1005, params[3])
-        elif int(params[1]) not in list(range(1, 11)):
-            return self._error(params[0], 1012, params[1])
-        elif int(params[5]) not in [0, 1]:
-            return self._error(params[0], 1011, selected_board["Address"])
-        else:
-            selected_board["AMP"][int(params[1])-1] = params[5]
-            return self.ack
+        try:
+            if selected_board is None:
+                return self._error(params[0], 1007, params[3])
+            elif selected_board["Status"] != 0:
+                return self._error(params[0], 1005, params[3])
+            elif int(params[1]) not in list(range(1, 11)):
+                return self._error(params[0], 1012, params[1])
+            elif int(params[5]) not in [0, 1]:
+                return self._error(params[0], 1011, selected_board["Address"])
+            else:
+                selected_board["AMP"][int(params[1]) - 1] = params[5]
+                return self.ack
+        except ValueError:
+            return self._error(params[0], 1001)
 
     def _set_eq(self, params):
         try:
@@ -309,19 +313,22 @@ class System(ListeningSystem):
             pass
         if len(params) != 6:
             return self._error(params[0], 1001)
-        selected_board = next((sub for sub in self.boards
-                               if sub['Address'] == params[3]), None)
-        if selected_board is None:
-            return self._error(params[0], 1007, params[3])
-        elif selected_board["Status"] != 0:
-            return self._error(params[0], 1005, params[3])
-        elif int(params[1]) not in list(range(1, 11)):
-            return self._error(params[0], 1013, params[1])
-        elif float(params[5]) not in [0, 1]:
-            return self._error(params[0], 1011, selected_board["Address"])
-        else:
-            selected_board["EQ"][int(params[1])-1] = params[5]
-            return self.ack
+        try:
+            selected_board = next((sub for sub in self.boards
+                                   if sub['Address'] == params[3]), None)
+            if selected_board is None:
+                return self._error(params[0], 1007, params[3])
+            elif selected_board["Status"] != 0:
+                return self._error(params[0], 1005, params[3])
+            elif int(params[1]) not in list(range(1, 11)):
+                return self._error(params[0], 1013, params[1])
+            elif float(params[5]) not in [0, 1]:
+                return self._error(params[0], 1011, selected_board["Address"])
+            else:
+                selected_board["EQ"][int(params[1]) - 1] = params[5]
+                return self.ack
+        except ValueError:
+            return self._error(params[0], 1001)
 
     def _set_bpf(self, params):
         try:
@@ -331,26 +338,29 @@ class System(ListeningSystem):
         channels = ['2', '3', '4', '5', '6', '7', '8', '9', '10', '1a', '1b']
         if len(params) != 6:
             return self._error(params[0], 1001)
-        selected_board = next((sub for sub in self.boards
-                               if sub['Address'] == params[3]), None)
-        if selected_board is None:
-            return self._error(params[0], 1007, params[3])
-        elif selected_board["Status"] != 0:
-            return self._error(params[0], 1005, params[3])
-        elif params[1] not in channels:
-            return self._error(params[0], 1014, params[1])
-        elif float(params[5]) not in [0, 1]:
-            return self._error(params[0], 1011, selected_board["Address"])
-        else:
-            channel = -1
-            if params[1] == '1a':
-                channel = 0
-            elif params[1] == '1b':
-                channel = 1
+        try:
+            selected_board = next((sub for sub in self.boards
+                                   if sub['Address'] == params[3]), None)
+            if selected_board is None:
+                return self._error(params[0], 1007, params[3])
+            elif selected_board["Status"] != 0:
+                return self._error(params[0], 1005, params[3])
+            elif params[1] not in channels:
+                return self._error(params[0], 1014, params[1])
+            elif float(params[5]) not in [0, 1]:
+                return self._error(params[0], 1011, selected_board["Address"])
             else:
-                channel = int(params[1])-1
-            selected_board["BPF"][channel] = params[5]
-            return self.ack
+                channel = -1
+                if params[1] == '1a':
+                    channel = 0
+                elif params[1] == '1b':
+                    channel = 1
+                else:
+                    channel = int(params[1]) - 1
+                selected_board["BPF"][channel] = params[5]
+                return self.ack
+        except ValueError:
+            return self._error(params[0], 1001)
 
     def _all_diag(self, params):
         try:
@@ -385,9 +395,10 @@ class System(ListeningSystem):
         elif selected_board["Status"] != 0:
             return self._error(params[0], 1005, params[2])
         else:
-            retval = self.ack+'\n'
+            retval = self.ack + '\n'
             retval += f'BOARD {selected_board["Address"]}\n'
-            retval += f'5V {selected_board["5V"]} 3V3 {selected_board["3V3"]}\n'
+            retval += f'5V {selected_board["5V"]}'
+            retval += f' 3V3 {selected_board["3V3"]}\n'
             retval += f'T0 {selected_board["T0"]}\n'
         return retval
 
