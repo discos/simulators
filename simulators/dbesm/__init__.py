@@ -270,17 +270,20 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
         selected_board = next((sub for sub in self.boards
                                if sub['Address'] == params[3]), None)
-        if selected_board is None:
-            return self._error(params[0], 1007, params[3])
-        elif selected_board["Status"] != 0:
-            return self._error(params[0], 1005, params[3])
-        elif int(params[1]) not in list(range(0, 17)):
-            return self._error(params[0], 1010, params[1])
-        elif float(params[5]) not in list(numpy.arange(0, 31.5, 0.5)):
-            return self._error(params[0], 1011, selected_board["Address"])
-        else:
-            selected_board["ATT"][int(params[1])] = float(params[5])
-            return self.ack
+        try:
+            if selected_board is None:
+                return self._error(params[0], 1007, params[3])
+            elif selected_board["Status"] != 0:
+                return self._error(params[0], 1005, params[3])
+            elif int(params[1]) not in list(range(0, 17)):
+                return self._error(params[0], 1010, params[1])
+            elif float(params[5]) not in list(numpy.arange(0, 31.5, 0.5)):
+                return self._error(params[0], 1011, selected_board["Address"])
+            else:
+                selected_board["ATT"][int(params[1])] = float(params[5])
+                return self.ack
+        except ValueError:
+            return self._error(params[0], 1001)
 
     def _set_amp(self, params):
         try:
