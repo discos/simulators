@@ -107,6 +107,18 @@ class TestWLocalOscillator(unittest.TestCase):
     def setUp(self):
         self.system = System(system_type='w_LO')
 
+    def test_enable_w_LO_Inter(self, w_lo_inter=1):
+        msg = 'enable W_LO_Inter\r\n'
+        for byte in msg:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.w_LO_Inter, w_lo_inter)
+
+    def test_disable_w_LO_Inter(self, w_lo_inter=0):
+        msg = 'disable W_LO_Inter\r\n'
+        for byte in msg:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.w_LO_Inter, w_lo_inter)
+
     def test_set_w_LO_freq_PolH(self, polh=12.23):
         msg = 'set W_LO_freq_PolH=12.23\r\n'
         for byte in msg:
@@ -124,37 +136,55 @@ class TestWLocalOscillator(unittest.TestCase):
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(
-            f'W_LO_freq_PolH={self.system.w_lo_freq_polH} Mhz',
-            f'W_LO_freq_PolH={polh} Mhz')
+            f'{self.system.w_lo_freq_polH}',
+            f'{polh}')
 
     def test_get_w_LO_PolV(self, polv=31.82):
         msg = 'set W_LO_freq_PolV=31.82\r\nget W_LO_PolV\r\n'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(
-            f'W_LO_freq_PolH={self.system.w_lo_freq_polV} Mhz',
-            f'W_LO_freq_PolH={polv} Mhz')
+            f'{self.system.w_lo_freq_polV}',
+            f'{polv}')
 
-    def test_get_w_LO(self, polh=12.23, polv=31.82):
+    def test_get_w_LO_Pols(self, polh=12.23, polv=31.82):
         msg = "set W_LO_freq_PolH=12.23\r\n" +\
-            "set W_LO_freq_PolV=31.82\r\nget W_LO\r\n"
+            "set W_LO_freq_PolV=31.82\r\nget W_LO_Pols\r\n"
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(
-            (f'W_LO_freq_PolH={self.system.w_lo_freq_polH} Mhz,'
-            f'\n W_LO_freq_PolV={self.system.w_lo_freq_polV} Mhz'),
-            (f'W_LO_freq_PolH={polh} Mhz,'
-            f'\n W_LO_freq_PolV={polv} Mhz'))
+            (f'{self.system.w_lo_freq_polH},'
+            f'{self.system.w_lo_freq_polV}'),
+            (f'{polh},' f'{polv}'))
 
-    def test_get_w_LO_status(self, stat_polh="Unlocked", stat_polv="Unlocked"):
+    def test_get_w_LO_Synths_Temp(self, c1=0., c2=0.):
+        msg = 'get W_LO_Synths_Temp\r\n'
+        for byte in msg:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(
+            (f'{self.system.w_LO_Synths_Temp[0]}',
+            f'{self.system.w_LO_Synths_Temp[1]}'),
+            (f'{c1}', f'{c2}'))
+
+    def test_get_w_LO_HKP_Temp(self, c1=0., c2=0., c3=0., c4=0.):
+        msg = 'get W_LO_HKP_Temp\r\n'
+        for byte in msg:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(
+            (f'{self.system.w_LO_HKP_Temp[0]}',
+            f'{self.system.w_LO_HKP_Temp[1]}',
+            f'{self.system.w_LO_HKP_Temp[2]}',
+            f'{self.system.w_LO_HKP_Temp[3]}'),
+            (f'{c1}', f'{c2}', f'{c3}', f'{c4}'))
+
+    def test_get_w_LO_status(self, stat_polh=0, stat_polv=0):
         msg = 'get W_LO_status\r\n'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(
-            (f'W_LO_PolH={self.system.status_W_LO_PolH} Mhz'
-            f'\nW_LO_PolV={self.system.status_W_LO_PolV} Mhz'),
-            (f'W_LO_PolH={stat_polh} Mhz'
-            f'\nW_LO_PolV={stat_polv} Mhz'))
+            (f'{self.system.status_W_LO_PolH}'
+            f'{self.system.status_W_LO_PolV}'),
+            (f'{stat_polh}' f'{stat_polv}'))
 
     def test_set_LO_att_PolH(self, att_polh=9.22):
         msg = 'set LO_att_PolH=9.22\r\n'
@@ -173,26 +203,26 @@ class TestWLocalOscillator(unittest.TestCase):
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(
-            f'LO_att_PolH={self.system.lo_att_polH}',
-            f'LO_att_PolH={att_polh}')
+            f'{self.system.lo_att_polH}',
+            f'{att_polh}')
 
     def test_get_LO_att_PolV(self, att_polv=12.51):
         msg = 'set LO_att_PolV=12.51\r\nget LO_att_PolV\r\n'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(
-            f'LO_att_PolH={self.system.lo_att_polV}',
-            f'LO_att_PolH={att_polv}')
+            f'{self.system.lo_att_polV}',
+            f'{att_polv}')
 
-    def test_get_LO_att(self, att_polh=9.22, att_polv=12.51):
-        msg = 'set LO_att_PolH=9.22\r\nset LO_att_PolV=12.51\r\nget LO_att\r\n'
+    def test_get_LO_atts(self, att_polh=9.22, att_polv=12.51):
+        msg = 'set LO_att_PolH=9.22\r\nset LO_att_PolV=12.51\
+        \r\nget LO_atts\r\n'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(
-            (f'LO_att_PolH={self.system.lo_att_polH},'
-            f'\nLO_att_PolV={self.system.lo_att_polV}'),
-            (f'LO_att_PolH={att_polh},'
-            f'\nLO_att_PolV={att_polv}'))
+            (f'{self.system.lo_att_polH},'
+            f'{self.system.lo_att_polV}'),
+            (f'{att_polh},' f'{att_polv}'))
 
 
 class TestLocalOscillatorUnknownType(unittest.TestCase):

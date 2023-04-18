@@ -19,6 +19,8 @@ class System(ListeningSystem):
     }
 
     tail = '\r\n'
+    ack = 'ack'
+    nack = 'nack'
 
     def __init__(self):
         self.mode = ""
@@ -57,15 +59,15 @@ class System(ListeningSystem):
 
     def set_w_solar_attn(self):
         self.mode = "attenuator"
-        return self.mode + self.tail
+        return self.ack + self.tail
 
     def set_w_cal(self):
         self.mode = "calibrator"
-        return self.mode + self.tail
+        return self.ack + self.tail
 
     def set_w_passthrough(self):
         self.mode = "pass-through"
-        return self.mode + self.tail
+        return self.ack + self.tail
 
     def get_w_cal_temp(self):
         return str(self.cal_temp) + self.tail
