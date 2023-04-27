@@ -258,8 +258,8 @@ class System(ListeningSystem):
         elif selected_board["Status"] != 0:
             return self._error(params[0], 1005, params[2])
         retval = f'ACK\n\n'
-        retval += f'REG=[{" ".join(map(str,selected_board["REG"]))}]\n\n'
-        retval += f'ATT=[{" ".join(map(str,selected_board["ATT"])) }]\x0A'
+        retval += f'REG=[ {" ".join(map(str,selected_board["REG"]))} ]\n\n'
+        retval += f'ATT=[ {"  ".join(map(str,selected_board["ATT"])) } ]\x0A'
         return retval
 
     def _set_att(self, params):
@@ -436,10 +436,10 @@ class System(ListeningSystem):
             return self._error(params[0], 1005, params[2])
         else:
             retval = 'ACK\n'
-            retval = f'BOARD {params[2]}\n\n'
-            retval += f'AMP=[{" ".join(map(str,selected_board["AMP"]))}]\n'
-            retval += f'EQ=[{" ".join(map(str,selected_board["EQ"]))}]\n'
-            retval += f'BPF=[{" ".join(map(str,selected_board["BPF"])) }]\x0A'
+            retval += f'BOARD {params[2]}\n\n'
+            retval += f'AMP=[ {" ".join(map(str,selected_board["AMP"]))} ]\n'
+            retval += f'EQ=[ {" ".join(map(str,selected_board["EQ"]))} ]\n'
+            retval += f'BPF=[ {" ".join(map(str,selected_board["BPF"])) } ]\x0A'
             return retval
 
     def _not_implemented(self, params):
