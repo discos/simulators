@@ -1,5 +1,6 @@
 # Author:
 #   Lorenzo Monti <lorenzo.monti@inaf.it>
+import re
 from socketserver import ThreadingTCPServer
 from simulators.common import ListeningSystem
 
@@ -36,13 +37,17 @@ class System(ListeningSystem):
             return True
 
     def _parse(self, msg):
-        commandList = msg.split(';')
+        commandList = msg.replace("\r", "").split(';')
         answer = ''
         for command in commandList:
-            args = command.split()
+            args = re.split('\W+', command)
             if len(args) < 2:
                 continue
             cmd_name = self.commands.get(args[0] + " " + args[1])
+            if len(args) > 2: # set methods
+                answer = getattr(self, cmd_name)(args[2])
+                return answer
+            # get methods
             method = getattr(self, cmd_name)
             ans = method()
             if isinstance(ans, str):
@@ -54,7 +59,7 @@ class System(ListeningSystem):
             return True
 
     def set_IF_switch_config(self, params):
-        self.sw_matrix.switch_matrix = params
+        self.sw_matrix.switch_matrix = int(params)
         return self.ack + self.tail
 
     def get_IF_switch_config(self):
@@ -64,8 +69,8 @@ class System(ListeningSystem):
 class SwitchMatrix:
 
     def __init__(self):
-        self.switch_matrix = 1
-        self.matrix = {
+        self._switch_matrix = 1
+        self._matrix = {
             1: [False, True, False, "H LSB", "H USB", "HBS"],
             2: [False, False, True, "V LSB", "V USB", "VBS"],
             3: [True, True, False, "H LSB", "V LSB", "LBP"],
@@ -74,8 +79,8 @@ class SwitchMatrix:
 
     @property
     def switch_matrix(self):
-        return f'{self.switch_matrix}:{self.matrix[self.switch_matrix][:-1]}'
+        return f'{self._switch_matrix}:{self._matrix[self._switch_matrix][-1]}'
 
     @switch_matrix.setter
     def switch_matrix(self, value):
-        self.switch_matrix = value
+        self._switch_matrix = value
