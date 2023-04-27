@@ -23,7 +23,7 @@ class System(ListeningSystem):
         'DBE MODE': '_set_mode',
         'DBE STOREALLMODE': '_store_allmode',
         'DBE CLRMODE': '_clr_mode',
-        'DBE STATUS': '_status',
+        'DBE GETSTATUS': '_status',
         'DBE SETATT': '_set_att',
         'DBE SETAMP': '_set_amp',
         'DBE SETEQ': '_set_eq',
@@ -31,6 +31,7 @@ class System(ListeningSystem):
         'DBE ALLDIAG': '_all_diag',
         'DBE DIAG': '_diag',
         'DBE SETSTATUS': '_set_status',
+        'DBE GETCOMP': '_getcomp',
         'DBE': '_not_implemented',
         'FBCB': '_not_implemented',
     }
@@ -323,7 +324,7 @@ class System(ListeningSystem):
                 return self._error(params[0], 1007, params[3])
             elif selected_board["Status"] != 0:
                 return self._error(params[0], 1005, params[3])
-            elif int(params[1]) not in list(range(1, 11)):
+            elif float(params[1]) not in list(range(1, 11)):
                 return self._error(params[0], 1013, params[1])
             elif float(params[5]) not in [0, 1]:
                 return self._error(params[0], 1011, selected_board["Address"])
@@ -420,6 +421,27 @@ class System(ListeningSystem):
             selected_board["Status"] = int(params[4])
             return self.ack
 
+    def _getcomp(self, params):
+        try:
+            params.remove('')
+        except ValueError:
+            pass
+        if len(params) != 3:
+            return self._error(params[0], 1001)
+        selected_board = next((sub for sub in self.boards
+                               if sub['Address'] == params[2]), None)
+        if selected_board is None:
+            return self._error(params[0], 1007, params[2])
+        elif selected_board["Status"] != 0:
+            return self._error(params[0], 1005, params[2])
+        else:
+            retval = 'ACK\n'
+            retval = f'BOARD {params[2]}\n\n'
+            retval += f'AMP=[{" ".join(map(str,selected_board["AMP"]))}]\n'
+            retval += f'EQ=[{" ".join(map(str,selected_board["EQ"]))}]\n'
+            retval += f'BPF=[{" ".join(map(str,selected_board["BPF"])) }]\x0A'
+            return retval
+
     def _not_implemented(self, params):
         return self._error(params[0], 9999)
 
@@ -427,7 +449,7 @@ class System(ListeningSystem):
         error_string = self.errors.get(error_code)
         if error_code == 1001:
             retval = f'NAK {error_string}\x0A'
-        elif error_code in [1005, 1007, 1010, 1011, 1014]:
+        elif error_code in [1005, 1007, 1010, 1011, 1013, 1014]:
             device_string = self.devices.get(device_code)
             retval = f'ERR {device_string} '\
                 f'{error_string.replace("X", board_address)}{self.tail}\x0A'
