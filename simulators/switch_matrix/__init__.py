@@ -40,15 +40,14 @@ class System(ListeningSystem):
         commandList = msg.replace("\r", "").split(';')
         answer = ''
         for command in commandList:
-            args = re.split('\W+', command)
+            args = re.split(r'\W+', command)
             if len(args) < 2:
                 continue
             cmd_name = self.commands.get(args[0] + " " + args[1])
-            if len(args) > 2: # set methods
+            if len(args) > 2:  # set methods
                 answer = getattr(self, cmd_name)(args[2])
                 return answer
-            # get methods
-            method = getattr(self, cmd_name)
+            method = getattr(self, cmd_name)  # get methods
             ans = method()
             if isinstance(ans, str):
                 answer += ans + ';'
