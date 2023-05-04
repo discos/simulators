@@ -4,24 +4,33 @@ from simulators.common import ListeningSystem
 class System(ListeningSystem):
 
     commands = {
+        'enable W_LO_Inter': 'enable_w_LO_Inter',
+        'disable W_LO_Inter': 'disable_w_LO_Inter',
         'set W_LO_freq_PolH': 'set_w_LO_freq_PolH',
         'set W_LO_freq_PolV': 'set_w_LO_freq_PolV',
         'get W_LO_PolH': 'get_w_LO_PolH',
         'get W_LO_PolV': 'get_w_LO_PolV',
-        'get W_LO': 'get_w_LO',
+        'get W_LO_Pols': 'get_w_LO_Pols',
+        'get W_LO_Synths_Temp': 'get_w_LO_Synths_Temp',
+        'get W_LO_HKP_Temp': 'get_w_LO_HKP_Temp',
         'get W_LO_status': 'get_w_LO_status',
         'set LO_att_PolH': 'set_LO_att_PolH',
         'set LO_att_PolV': 'set_LO_att_PolV',
         'get LO_att_PolH': 'get_LO_att_PolH',
         'get LO_att_PolV': 'get_LO_att_PolV',
-        'get LO_att': 'get_LO_att',
+        'get LO_atts': 'get_LO_atts',
     }
 
     tail = '\r\n'
+    ack = 'ack'
+    nack = 'nack'
 
     def __init__(self):
-        self.status_W_LO_PolH = "Unlocked"
-        self.status_W_LO_PolV = "Unlocked"
+        self.w_LO_Inter = 0
+        self.w_LO_Synths_Temp = [0., 0.]
+        self.w_LO_HKP_Temp = [0., 0., 0., 0.]
+        self.status_W_LO_PolH = 0
+        self.status_W_LO_PolV = 0
         self.w_lo_freq_polH = 0.0
         self.w_lo_freq_polV = 0.0
         self.lo_att_polH = 0.0
@@ -58,42 +67,59 @@ class System(ListeningSystem):
         answer = answer[:-1]
         return answer
 
+    def enable_w_LO_Inter(self):
+        self.w_LO_Inter = 1
+        return self.ack + self.tail
+
+    def disable_w_LO_Inter(self):
+        self.w_LO_Inter = 0
+        return self.ack + self.tail
+
     def set_w_LO_freq_PolH(self, params):
         self.w_lo_freq_polH = params
-        return f'W_LO_freq_PolH={self.w_lo_freq_polH} Mhz'
+        return self.ack + self.tail
 
     def set_w_LO_freq_PolV(self, params):
         self.w_lo_freq_polV = params
-        return f'W_LO_freq_PolV={self.w_lo_freq_polV} Mhz'
+        return self.ack + self.tail
 
     def get_w_LO_PolH(self):
-        return f'W_LO_freq_PolH={self.w_lo_freq_polH} Mhz'
+        return f'{self.w_lo_freq_polH}' + self.tail
 
     def get_w_LO_PolV(self):
-        return f'W_LO_freq_PolV={self.w_lo_freq_polV} Mhz'
+        return f'{self.w_lo_freq_polV}' + self.tail
 
-    def get_w_LO(self):
-        return (f'W_LO_freq_PolH={self.w_lo_freq_polH} Mhz,'
-        f'\n W_LO_freq_PolV={self.w_lo_freq_polV} Mhz')
+    def get_w_LO_Pols(self):
+        return (f'{self.w_lo_freq_polH},'
+        f'{self.w_lo_freq_polV}' + self.tail)
+
+    def get_w_LO_Synths_Temp(self):
+        return (f'C1={self.w_LO_Synths_Temp[0]},'
+        f'C2={self.w_LO_Synths_Temp[1]}' + self.tail)
+
+    def get_w_LO_HKP_Temp(self):
+        return (f'C1={self.w_LO_HKP_Temp[0]},'
+        f'C2={self.w_LO_HKP_Temp[1]}' f'C3={self.w_LO_HKP_Temp[2]}'
+        f'C4={self.w_LO_HKP_Temp[3]}' + self.tail)
 
     def get_w_LO_status(self):
-        return (f'W_LO_PolH={self.status_W_LO_PolH} Mhz'
-        f'\nW_LO_PolV={self.status_W_LO_PolV} Mhz')
+        return (f'{self.status_W_LO_PolH},'
+        f'{self.status_W_LO_PolV}' + self.tail)
 
     def set_LO_att_PolH(self, params):
         self.lo_att_polH = params
-        return f'LO_att_PolH={self.lo_att_polH}'
+        return self.ack + self.tail
 
     def set_LO_att_PolV(self, params):
         self.lo_att_polV = params
-        return f'LO_att_PolV={self.lo_att_polV}'
+        return self.ack + self.tail
 
     def get_LO_att_PolH(self):
-        return f'LO_att_PolH={self.lo_att_polH}'
+        return f'{self.lo_att_polH}' + self.tail
 
     def get_LO_att_PolV(self):
-        return f'LO_att_PolV={self.lo_att_polV}'
+        return f'{self.lo_att_polV}' + self.tail
 
-    def get_LO_att(self):
-        return (f'LO_att_PolH={self.lo_att_polH},'
-        f'\nLO_att_PolV={self.lo_att_polV}')
+    def get_LO_atts(self):
+        return (f'{self.lo_att_polH},'
+        f'{self.lo_att_polV}' + self.tail)
