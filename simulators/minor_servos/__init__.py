@@ -1,6 +1,17 @@
 import time
 import re
 import random
+import pprint
+try:
+    import numpy as np
+except ImportError as ex:  # pragma: no cover
+    raise ImportError('The `numpy` package, required for the simulator'
+        + ' to run, is missing!') from ex
+try:
+    from scipy import interpolate
+except ImportError as ex:  # pragma: no cover
+    raise ImportError('The `scipy` package, required for the simulator'
+        + ' to run, is missing!') from ex
 from socketserver import ThreadingTCPServer
 from simulators.common import ListeningSystem
 
@@ -186,27 +197,31 @@ class System(ListeningSystem):
             return self.bad
         if servo_id not in self.servos:
             return self.bad
-        if len(args) != 4 + self.servos.get(servo_id).DOF:
+        servo = self.servos.get(servo_id)
+        if not servo.program_track_capable:
+            return self.bad
+        if len(args) != 4 + servo.DOF:
             return self.bad
         try:
-            _ = int(args[1])  # TRAJECTORY ID
-            _ = int(args[2])  # POINT ID
+            trajectory_id = int(args[1])
+            point_id = int(args[2])
             start_time = args[3]
+            coords = args[4:]
+            for coord in coords:
+                coord = float(coord)
             if start_time == '*':
                 # Should append the point to the last known trajectory
-                pass
+                servo.trajectories[max(servo.trajectories.keys())].append(coords)
             else:
                 start_time = float(start_time)
                 # Point is in the past
                 if start_time < time.time():
                     return self.bad
-            coords = args[4:]
-            for coord in coords:
-                coord = float(coord)
+            pprint.pprint(servo.trajectories)
         except ValueError:
             return self.bad
         self.last_executed_command = self.plc_time()
-        self.servos[servo_id].operative_mode = 50  # PROGRAMTRACK
+        servo.operative_mode = 50  # PROGRAMTRACK
         return self.good
 
     def _offset(self, args):
@@ -237,6 +252,8 @@ class Servo:
         40: 'PRESET',
         50: 'PROGRAMTRACK'
     }
+    program_track_capable = False
+    timegap = 0.2
 
     def __init__(self, name, dof=1):
         self.name = name
@@ -247,6 +264,8 @@ class Servo:
         self.DOF = dof
         self.coords = [random.uniform(0, 100) for _ in range(self.DOF)]
         self.offsets = [0] * self.DOF
+        if self.program_track_capable:
+            trajectories = {}
 
     def get_status(self):
         answer = f',{self.name}_ENABLED={self.enabled}|'
@@ -275,6 +294,7 @@ class PFP(Servo):
         self.tx = random.uniform(0, 100)
         self.tz = random.uniform(0, 100)
         self.rtheta = random.uniform(0, 100)
+        self.program_track_capable = True
         super().__init__('PFP', 3)
 
     def get_status(self):
@@ -313,6 +333,7 @@ class SRP(Servo):
         self.rx = random.uniform(0, 100)
         self.ry = random.uniform(0, 100)
         self.rz = random.uniform(0, 100)
+        self.program_track_capable = True
         super().__init__('SRP', 6)
 
     def get_status(self):
@@ -387,6 +408,7 @@ class Derotator(Servo):
     def __init__(self, name):
         self.rotary_axis_enabled = 1
         self.rotation = random.uniform(1, 100)
+        self.program_track_capable = True
         super().__init__(name)
 
     def get_status(self):
