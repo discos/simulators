@@ -174,6 +174,7 @@ class System(ListeningSystem):
         return cmd(params)
 
     def _set_allmode(self, params):
+        retval = ''
         if len(params) != 2:
             return self._error(params[0], 1001)
         elif params[1] not in self.obs_mode:
