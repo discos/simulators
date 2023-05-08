@@ -174,11 +174,6 @@ class System(ListeningSystem):
         return cmd(params)
 
     def _set_allmode(self, params):
-        try:
-            params = list(filter(('').__ne__, params))
-        except ValueError:
-            pass
-        retval = ''
         if len(params) != 2:
             return self._error(params[0], 1001)
         elif params[1] not in self.obs_mode:
@@ -191,10 +186,6 @@ class System(ListeningSystem):
         return retval
 
     def _set_mode(self, params):
-        try:
-            params = list(filter(('').__ne__, params))
-        except ValueError:
-            pass
         selected_board = next((sub for sub in self.boards
                                if sub['Address'] == params[2]), None)
         if len(params) != 4:
@@ -209,10 +200,6 @@ class System(ListeningSystem):
             return self.ack
 
     def _store_allmode(self, params):
-        try:
-            params = list(filter(('').__ne__, params))
-        except ValueError:
-            pass
         err = []
         if len(params) != 2:
             return self._error(params[0], 1001)
@@ -231,10 +218,6 @@ class System(ListeningSystem):
             return self.ack
 
     def _clr_mode(self, params):
-        try:
-            params = list(filter(('').__ne__, params))
-        except ValueError:
-            pass
         if len(params) != 2:
             return self._error(params[0], 1001)
         elif params[1] not in self.obs_mode:
@@ -244,10 +227,6 @@ class System(ListeningSystem):
             return self.ack
 
     def _status(self, params):
-        try:
-            params = list(filter(('').__ne__, params))
-        except ValueError:
-            pass
         if len(params) != 3:
             return self._error(params[0], 1001)
 
@@ -263,10 +242,6 @@ class System(ListeningSystem):
         return retval
 
     def _set_att(self, params):
-        try:
-            params = list(filter(('').__ne__, params))
-        except ValueError:
-            pass
         if len(params) != 6:
             return self._error(params[0], 1001)
         selected_board = next((sub for sub in self.boards
@@ -287,10 +262,6 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
 
     def _set_amp(self, params):
-        try:
-            params = list(filter(('').__ne__, params))
-        except ValueError:
-            pass
         if len(params) != 6:
             return self._error(params[0], 1001)
         selected_board = next((sub for sub in self.boards
@@ -311,10 +282,6 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
 
     def _set_eq(self, params):
-        try:
-            params = list(filter(('').__ne__, params))
-        except ValueError:
-            pass
         if len(params) != 6:
             return self._error(params[0], 1001)
         try:
@@ -335,10 +302,6 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
 
     def _set_bpf(self, params):
-        try:
-            params = list(filter(('').__ne__, params))
-        except ValueError:
-            pass
         channels = ['2', '3', '4', '5', '6', '7', '8', '9', '10', '1a', '1b']
         if len(params) != 6:
             return self._error(params[0], 1001)
@@ -367,10 +330,6 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
 
     def _all_diag(self, params):
-        try:
-            params = list(filter(('').__ne__, params))
-        except ValueError:
-            pass
         retval = ''
         if len(params) != 1:
             return self._error(params[0], 1001)
@@ -386,10 +345,6 @@ class System(ListeningSystem):
             return retval
 
     def _diag(self, params):
-        try:
-            params.remove('')
-        except ValueError:
-            pass
         if len(params) != 3:
             return self._error(params[0], 1001)
         selected_board = next((sub for sub in self.boards
@@ -407,10 +362,6 @@ class System(ListeningSystem):
         return retval
 
     def _set_status(self, params):
-        try:
-            params = list(filter(('').__ne__, params))
-        except ValueError:
-            pass
         if len(params) != 5:
             return self._error(params[0], 1001)
         selected_board = next((sub for sub in self.boards
@@ -422,10 +373,6 @@ class System(ListeningSystem):
             return self.ack
 
     def _getcomp(self, params):
-        try:
-            params.remove('')
-        except ValueError:
-            pass
         if len(params) != 3:
             return self._error(params[0], 1001)
         selected_board = next((sub for sub in self.boards
