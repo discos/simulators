@@ -391,7 +391,7 @@ class System(ListeningSystem):
             return retval
 
     def _not_implemented(self, params):
-        return self._error(params[0], 9999)
+        return self.nak
 
     def _error(self, device_code, error_code, board_address=None):
         error_string = self.errors.get(error_code)
