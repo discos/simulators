@@ -77,7 +77,7 @@ class System(ListeningSystem):
                 "ATT": self._init_att(),
                 "AMP": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 "EQ": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                "BPF": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                "BPF": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 "5V": 0.00,
                 "3V3": 0.00,
                 "T0": 00.00
@@ -89,7 +89,7 @@ class System(ListeningSystem):
                 "ATT": self._init_att(),
                 "AMP": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 "EQ": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                "BPF": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                "BPF": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 "5V": 0.00,
                 "3V3": 0.00,
                 "T0": 00.00
@@ -101,7 +101,7 @@ class System(ListeningSystem):
                 "ATT": self._init_att(),
                 "AMP": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 "EQ": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                "BPF": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                "BPF": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 "5V": 0.00,
                 "3V3": 0.00,
                 "T0": 00.00
@@ -113,7 +113,7 @@ class System(ListeningSystem):
                 "ATT": self._init_att(),
                 "AMP": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 "EQ": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                "BPF": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                "BPF": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 "5V": 0.00,
                 "3V3": 0.00,
                 "T0": 00.00
@@ -324,7 +324,7 @@ class System(ListeningSystem):
                 elif params[1] == '1b':
                     channel = 1
                 else:
-                    channel = int(params[1]) - 1
+                    channel = int(params[1])
                 selected_board["BPF"][channel] = params[5]
                 return self.ack
         except ValueError:
