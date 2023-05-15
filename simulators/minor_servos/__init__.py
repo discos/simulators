@@ -2,14 +2,12 @@ import time
 import re
 import random
 try:
-    from scipy import interpolate
+    from scipy.interpolate import splrep, splev
 except ImportError as ex:  # pragma: no cover
     raise ImportError('The `scipy` package, required for the simulator'
         + ' to run, is missing!') from ex
+from threading import Lock
 from bisect import bisect_left
-from threading import Thread
-from multiprocessing import Value, Manager
-from ctypes import c_bool
 from socketserver import ThreadingTCPServer
 from simulators.common import ListeningSystem
 
@@ -74,7 +72,6 @@ class System(ListeningSystem):
         self.emergency = 2
         self.enabled = 1
         self.last_executed_command = 0
-        self.manager = Manager()
         self.servos = {
             'PFP': PFP(),
             'SRP': SRP(),
@@ -85,46 +82,6 @@ class System(ListeningSystem):
             'DerotatoreGFR3': Derotator('GFR3'),
             'DerotatorePFP': Derotator('PFP'),
         }
-        for _, servo in self.servos.items():
-            if servo.program_track_capable:
-                servo.trajectory = [
-                    self.manager.list() for _ in range(servo.DOF + 1)
-                ]
-        self.stop_thread = Value(c_bool, False)
-        self.program_track_thread = Thread(
-            target=self._program_track_thread,
-            args=(self.servos, self.stop_thread)
-        )
-        self.program_track_thread.daemon = True
-        self.program_track_thread.start()
-
-    def __del__(self):
-        self.system_stop()
-
-    def system_stop(self):
-        self.stop_thread.value = True
-        self.program_track_thread.join()
-
-    @staticmethod
-    def _program_track_thread(servos, stop_thread):
-        while not stop_thread.value:
-            current_time = time.time()
-            try:
-                for _, servo in servos.items():
-                    if not servo.program_track_capable:
-                        continue
-                    pt_index = bisect_left(
-                        servo.trajectory[0],
-                        current_time + 1
-                    )
-                    for index, trajectory in enumerate(servo.trajectory):
-                        servo.trajectory[index] = trajectory[pt_index:]
-                    if (len(servo.trajectory) == 0 and
-                            current_time > servo.trajectory_start_time):
-                        del servo.trajectory
-            except BrokenPipeError:
-                pass
-            time.sleep(0.05)
 
     def parse(self, byte):
         self.msg += byte
@@ -253,40 +210,58 @@ class System(ListeningSystem):
             for coord in coords:
                 coord = float(coord)
             if start_time == '*':
-                try:
-                    start_time = servo.trajectory_start_time
-                except IndexError:
-                    # Unknown trajectory
+                if trajectory_id != servo.trajectory_id:
+                    # New trajectory with no start time, error
                     return self.bad
+                elif point_id != servo.trajectory_point_id + 1:
+                    # Unexpected point_id
+                    return self.bad
+                start_time = servo.trajectory_start_time
             else:
                 start_time = float(start_time)
                 # Point is in the past
                 if start_time < time.time():
                     return self.bad
-                # Create a new trajectory
+                if point_id != 0:
+                    # Wrong starting point_id
+                    return self.bad
+                # Initialize a new trajectory
+                servo.trajectory_lock.acquire()
                 servo.trajectory = [
-                    self.manager.list() for _ in range(servo.DOF + 1)
+                    [] for _ in range(servo.DOF + 1)
                 ]
                 servo.trajectory_id = trajectory_id
                 servo.trajectory_start_time = start_time
+                servo.trajectory_lock.release()
 
+            servo.trajectory_lock.acquire()
+            servo.trajectory_point_id = point_id
+            servo.trajectory_lock.release()
             point_time = start_time
             point_time += point_id * self.program_track_timegap
             # Point is in the past
             if point_time < time.time():
                 return self.bad
-            # Finally insert the point and update the spline
+            # Everything seems correct, insert the point
+            servo.trajectory_lock.acquire()
             servo.trajectory[0].append(point_time)
             for index in range(servo.DOF):
                 servo.trajectory[index + 1].append(coords[index])
+
+            # Delete points older than 1 second before the current time
+            pt_index = bisect_left(
+                servo.trajectory[0],
+                time.time() - 1
+            )
+            for index, trajectory in enumerate(servo.trajectory):
+                servo.trajectory[index] = trajectory[pt_index:]
             if len(servo.trajectory[0]) > 3:
                 pt_table = []
                 temp = list(map(list, servo.trajectory))
                 for index in range(servo.DOF):
-                    pt_table.append(
-                        interpolate.splrep(temp[0], temp[index + 1])
-                    )
+                    pt_table.append(splrep(temp[0], temp[index + 1]))
                 servo.pt_table = pt_table
+            servo.trajectory_lock.release()
         except ValueError:
             return self.bad
         self.last_executed_command = self.plc_time()
@@ -323,9 +298,6 @@ class Servo:
         50: 'PROGRAMTRACK'
     }
     program_track_capable = False
-    trajectory_id = None
-    trajectory_start_time = None
-    timegap = 0.2
 
     def __init__(self, name, dof=1):
         self.name = name
@@ -336,20 +308,34 @@ class Servo:
         self.DOF = dof
         self.coords = [random.uniform(0, 100) for _ in range(self.DOF)]
         self.offsets = [0] * self.DOF
-        self.pt_table = []
+        if self.program_track_capable:
+            self.trajectory_lock = Lock()
+            self.trajectory_id = None
+            self.trajectory_start_time = None
+            self.trajectory_point_id = None
+            self.trajectory = [[] for _ in range(self.DOF + 1)]
+            self.pt_table = []
 
     def get_status(self):
         answer = f',{self.name}_ENABLED={self.enabled}|'
         answer += f'{self.name}_STATUS={self.status}|'
         answer += f'{self.name}_BLOCK={self.block}|'
         answer += f'{self.name}_OPERATIVE_MODE={self.operative_mode}|'
-        if self.operative_mode == 50 and self.pt_table:
-            now = time.time()
-            for index in range(self.DOF):
-                self.coords[index] = interpolate.splev(
-                    now,
-                    self.pt_table[index]
-                ).item(0)
+        if self.operative_mode == 50:
+            pt_table = []
+            with self.trajectory_lock:
+                pt_table = self.pt_table
+            if pt_table:
+                now = time.time()
+                for index in range(self.DOF):
+                    self.coords[index] = splev(now, pt_table[index]).item(0)
+            if now > self.trajectory[0][-1]:
+                with self.trajectory_lock:
+                    self.trajectory_id = None
+                    self.trajectory_start_time = None
+                    self.trajectory_point_id = None
+                    self.trajectory = [[] for _ in range(self.DOF)]
+                    self.pt_table = []
         return answer
 
     def set_coords(self, coords):

@@ -294,16 +294,84 @@ class TestMinorServos(unittest.TestCase):
 
     def test_program_track(self):
         for servo_id, servo in self.system.servos.items():
-            DOF = servo.DOF
-            coords = [random.uniform(0, 100) for _ in range(DOF)]
+            coords = [random.uniform(0, 100) for _ in range(servo.DOF)]
             cmd = f'PROGRAMTRACK={servo_id},0,0,{time.time()+3:.6f},'
             cmd += f'{",".join(map(str, coords))}{tail}'
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
-            self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
-            self.assertEqual(servo.operative_mode, 50)  # PROGRAMTRACK mode
+            if servo.program_track_capable:
+                self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
+                self.assertEqual(servo.operative_mode, 50)  # PROGRAMTRACK mode
+            else:
+                self.assertRegex(self.system.parse(cmd[-1]), bad)
 
-    def test_program_track_append(self):
+    def test_program_track_spline(self):
+        for servo_id, servo in self.system.servos.items():
+            for point_id in range(10):
+                cmd = f'PROGRAMTRACK={servo_id},0,{point_id},'
+                if point_id == 0:
+                    cmd += f'{time.time()+3:.6f},'
+                    coords = [0.0 for _ in range(servo.DOF)]
+                else:
+                    cmd += '*,'
+                    coords = [random.uniform(0, 100) for _ in range(servo.DOF)]
+                cmd += f'{",".join(map(str, coords))}{tail}'
+                for byte in cmd[:-1]:
+                    self.assertTrue(self.system.parse(byte))
+                if servo.program_track_capable:
+                    self.assertRegex(
+                        self.system.parse(cmd[-1]),
+                        f'{good}{tail}$'
+                    )
+                    self.assertEqual(servo.operative_mode, 50)  # PROGRAMTRACK
+                else:
+                    self.assertRegex(self.system.parse(cmd[-1]), bad)
+
+        time.sleep(3.1)
+        # Check the trajectory is been tracked
+        for servo_id, servo in self.system.servos.items():
+            if servo.program_track_capable:
+                cmd = f'STATUS={servo_id}{tail}'
+                for byte in cmd[:-1]:
+                    self.assertTrue(self.system.parse(byte))
+                self.system.parse(cmd[-1])
+                for index in range(servo.DOF):
+                    self.assertNotEqual(servo.coords[index], 0)
+        # Let the trajectory be completed
+        time.sleep(2)
+        for servo_id, servo in self.system.servos.items():
+            if servo.program_track_capable:
+                cmd = f'STATUS={servo_id}{tail}'
+                for byte in cmd[:-1]:
+                    self.assertTrue(self.system.parse(byte))
+                self.system.parse(cmd[-1])
+                self.assertEqual(servo.pt_table, [])
+
+    def test_program_track_start_with_wrong_point_id(self):
+        for servo_id, servo in self.system.servos.items():
+            coords = [random.uniform(0, 100) for _ in range(servo.DOF)]
+            cmd = f'PROGRAMTRACK={servo_id},0,10,{time.time()+3:.6f},'
+            cmd += f'{",".join(map(str, coords))}{tail}'
+            for byte in cmd[:-1]:
+                self.assertTrue(self.system.parse(byte))
+            self.assertRegex(self.system.parse(cmd[-1]), bad)
+
+    def test_program_track_append_with_start(self):
+        self.test_program_track()
+        for servo_id, servo in self.system.servos.items():
+            DOF = servo.DOF
+            coords = [random.uniform(0, 100) for _ in range(DOF)]
+            cmd = f'PROGRAMTRACK={servo_id},0,1,*,'
+            cmd += f'{",".join(map(str, coords))}{tail}'
+            for byte in cmd[:-1]:
+                self.assertTrue(self.system.parse(byte))
+            if servo.program_track_capable:
+                self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
+                self.assertEqual(servo.operative_mode, 50)  # PROGRAMTRACK mode
+            else:
+                self.assertRegex(self.system.parse(cmd[-1]), bad)
+
+    def test_program_track_append_without_start(self):
         for servo_id, servo in self.system.servos.items():
             DOF = servo.DOF
             coords = [random.uniform(0, 100) for _ in range(DOF)]
@@ -311,14 +379,47 @@ class TestMinorServos(unittest.TestCase):
             cmd += f'{",".join(map(str, coords))}{tail}'
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
-            self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
-            self.assertEqual(servo.operative_mode, 50)  # PROGRAMTRACK mode
+            self.assertRegex(self.system.parse(cmd[-1]), bad)
+
+    def test_program_track_append_with_wrong_point_id(self):
+        self.test_program_track()
+        for servo_id, servo in self.system.servos.items():
+            DOF = servo.DOF
+            coords = [random.uniform(0, 100) for _ in range(DOF)]
+            cmd = f'PROGRAMTRACK={servo_id},0,10,*,'
+            cmd += f'{",".join(map(str, coords))}{tail}'
+            for byte in cmd[:-1]:
+                self.assertTrue(self.system.parse(byte))
+            self.assertRegex(self.system.parse(cmd[-1]), bad)
+
+    def test_program_track_append_old_time(self):
+        self.test_program_track()
+        time.sleep(3.5)
+        for servo_id, servo in self.system.servos.items():
+            DOF = servo.DOF
+            coords = [random.uniform(0, 100) for _ in range(DOF)]
+            cmd = f'PROGRAMTRACK={servo_id},0,1,*,'
+            cmd += f'{",".join(map(str, coords))}{tail}'
+            for byte in cmd[:-1]:
+                self.assertTrue(self.system.parse(byte))
+            self.assertRegex(self.system.parse(cmd[-1]), bad)
 
     def test_program_track_old_start_time(self):
         for servo_id, servo in self.system.servos.items():
             DOF = servo.DOF
             coords = [random.uniform(0, 100) for _ in range(DOF)]
             cmd = f'PROGRAMTRACK={servo_id},0,0,{time.time()-3:.6f},'
+            cmd += f'{",".join(map(str, coords))}{tail}'
+            for byte in cmd[:-1]:
+                self.assertTrue(self.system.parse(byte))
+            self.assertRegex(self.system.parse(cmd[-1]), bad)
+
+    def test_program_track_old_point_id(self):
+        self.test_program_track()
+        for servo_id, servo in self.system.servos.items():
+            DOF = servo.DOF
+            coords = [random.uniform(0, 100) for _ in range(DOF)]
+            cmd = f'PROGRAMTRACK={servo_id},0,-10,*,'
             cmd += f'{",".join(map(str, coords))}{tail}'
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
