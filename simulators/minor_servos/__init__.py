@@ -329,13 +329,13 @@ class Servo:
                 now = time.time()
                 for index in range(self.DOF):
                     self.coords[index] = splev(now, pt_table[index]).item(0)
-            if now > self.trajectory[0][-1]:
-                with self.trajectory_lock:
-                    self.trajectory_id = None
-                    self.trajectory_start_time = None
-                    self.trajectory_point_id = None
-                    self.trajectory = [[] for _ in range(self.DOF)]
-                    self.pt_table = []
+                if now > self.trajectory[0][-1]:
+                    with self.trajectory_lock:
+                        self.trajectory_id = None
+                        self.trajectory_start_time = None
+                        self.trajectory_point_id = None
+                        self.trajectory = [[] for _ in range(self.DOF)]
+                        self.pt_table = []
         return answer
 
     def set_coords(self, coords):
