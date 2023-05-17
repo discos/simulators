@@ -306,6 +306,15 @@ class TestMinorServos(unittest.TestCase):
             else:
                 self.assertRegex(self.system.parse(cmd[-1]), bad)
 
+    def test_program_track_wrong_start_time_format(self):
+        for servo_id, servo in self.system.servos.items():
+            coords = [random.uniform(0, 100) for _ in range(servo.DOF)]
+            cmd = f'PROGRAMTRACK={servo_id},0,0,START_TIME,'
+            cmd += f'{",".join(map(str, coords))}{tail}'
+            for byte in cmd[:-1]:
+                self.assertTrue(self.system.parse(byte))
+            self.assertRegex(self.system.parse(cmd[-1]), bad)
+
     def test_program_track_spline(self):
         start_time = time.time() + 3
         for servo_id, servo in self.system.servos.items():
@@ -328,8 +337,7 @@ class TestMinorServos(unittest.TestCase):
                     self.assertEqual(servo.operative_mode, 50)  # PROGRAMTRACK
                 else:
                     self.assertRegex(self.system.parse(cmd[-1]), bad)
-
-        # Check the trajectory is been tracked
+        # Check if the trajectory is being tracked
         for servo_id, servo in self.system.servos.items():
             if servo.program_track_capable:
                 servo.get_status(start_time + 0.5)
