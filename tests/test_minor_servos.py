@@ -293,9 +293,10 @@ class TestMinorServos(unittest.TestCase):
             self.assertRegex(self.system.parse(cmd[-1]), bad)
 
     def test_program_track(self):
+        start_time = time.time() + 0.05
         for servo_id, servo in self.system.servos.items():
             coords = [random.uniform(0, 100) for _ in range(servo.DOF)]
-            cmd = f'PROGRAMTRACK={servo_id},0,0,{time.time()+3:.6f},'
+            cmd = f'PROGRAMTRACK={servo_id},0,0,{start_time:.6f},'
             cmd += f'{",".join(map(str, coords))}{tail}'
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
@@ -306,11 +307,12 @@ class TestMinorServos(unittest.TestCase):
                 self.assertRegex(self.system.parse(cmd[-1]), bad)
 
     def test_program_track_spline(self):
+        start_time = time.time() + 3
         for servo_id, servo in self.system.servos.items():
             for point_id in range(10):
                 cmd = f'PROGRAMTRACK={servo_id},0,{point_id},'
                 if point_id == 0:
-                    cmd += f'{time.time()+3:.6f},'
+                    cmd += f'{start_time:.6f},'
                     coords = [0.0 for _ in range(servo.DOF)]
                 else:
                     cmd += '*,'
@@ -327,30 +329,23 @@ class TestMinorServos(unittest.TestCase):
                 else:
                     self.assertRegex(self.system.parse(cmd[-1]), bad)
 
-        time.sleep(3.1)
         # Check the trajectory is been tracked
         for servo_id, servo in self.system.servos.items():
             if servo.program_track_capable:
-                cmd = f'STATUS={servo_id}{tail}'
-                for byte in cmd[:-1]:
-                    self.assertTrue(self.system.parse(byte))
-                self.system.parse(cmd[-1])
+                servo.get_status(start_time + 0.5)
                 for index in range(servo.DOF):
                     self.assertNotEqual(servo.coords[index], 0)
-        # Let the trajectory be completed
-        time.sleep(2)
+        # Check if the trajectory has been completed
         for servo_id, servo in self.system.servos.items():
             if servo.program_track_capable:
-                cmd = f'STATUS={servo_id}{tail}'
-                for byte in cmd[:-1]:
-                    self.assertTrue(self.system.parse(byte))
-                self.system.parse(cmd[-1])
+                servo.get_status(start_time + 10)
                 self.assertEqual(servo.pt_table, [])
 
     def test_program_track_start_with_wrong_point_id(self):
+        start_time = time.time() + 3
         for servo_id, servo in self.system.servos.items():
             coords = [random.uniform(0, 100) for _ in range(servo.DOF)]
-            cmd = f'PROGRAMTRACK={servo_id},0,10,{time.time()+3:.6f},'
+            cmd = f'PROGRAMTRACK={servo_id},0,10,{start_time:.6f},'
             cmd += f'{",".join(map(str, coords))}{tail}'
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
@@ -392,9 +387,9 @@ class TestMinorServos(unittest.TestCase):
                 self.assertTrue(self.system.parse(byte))
             self.assertRegex(self.system.parse(cmd[-1]), bad)
 
-    def test_program_track_append_old_time(self):
+    def test_program_track_append_too_late(self):
         self.test_program_track()
-        time.sleep(3.5)
+        time.sleep(0.3)
         for servo_id, servo in self.system.servos.items():
             DOF = servo.DOF
             coords = [random.uniform(0, 100) for _ in range(DOF)]
@@ -405,10 +400,11 @@ class TestMinorServos(unittest.TestCase):
             self.assertRegex(self.system.parse(cmd[-1]), bad)
 
     def test_program_track_old_start_time(self):
+        start_time = time.time() - 3
         for servo_id, servo in self.system.servos.items():
             DOF = servo.DOF
             coords = [random.uniform(0, 100) for _ in range(DOF)]
-            cmd = f'PROGRAMTRACK={servo_id},0,0,{time.time()-3:.6f},'
+            cmd = f'PROGRAMTRACK={servo_id},0,0,{start_time:.6f},'
             cmd += f'{",".join(map(str, coords))}{tail}'
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
@@ -432,26 +428,29 @@ class TestMinorServos(unittest.TestCase):
         self.assertRegex(self.system.parse(cmd[-1]), bad)
 
     def test_program_track_too_many_arguments(self):
+        start_time = time.time() + 3
         for servo_id in self.system.servos:
             DOF = 10  # Too many coordinates
             coords = [random.uniform(0, 100) for _ in range(DOF)]
-            cmd = f'PROGRAMTRACK={servo_id},0,0,{time.time()+3:.6f},'
+            cmd = f'PROGRAMTRACK={servo_id},0,0,{start_time:.6f},'
             cmd += f'{",".join(map(str, coords))}{tail}'
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
             self.assertRegex(self.system.parse(cmd[-1]), bad)
 
     def test_program_track_unknown_servo(self):
-        cmd = f'PROGRAMTRACK=UNKNOWN,0,0,{time.time()+3:-6f},0{tail}'
+        start_time = time.time() + 3
+        cmd = f'PROGRAMTRACK=UNKNOWN,0,0,{start_time:.6f},0{tail}'
         for byte in cmd[:-1]:
             self.assertTrue(self.system.parse(byte))
         self.assertRegex(self.system.parse(cmd[-1]), bad)
 
     def test_program_track_non_numeric_trajectory_id(self):
+        start_time = time.time() + 3
         for servo_id, servo in self.system.servos.items():
             DOF = servo.DOF
             coords = [random.uniform(0, 100) for _ in range(DOF)]
-            cmd = f'PROGRAMTRACK={servo_id},NAN,0,{time.time()+3:.6f},'
+            cmd = f'PROGRAMTRACK={servo_id},NAN,0,{start_time:.6f},'
             cmd += f'{",".join(map(str, coords))}{tail}'
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))

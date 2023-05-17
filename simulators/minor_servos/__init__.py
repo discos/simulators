@@ -2,6 +2,11 @@ import time
 import re
 import random
 try:
+    from numpy import sign
+except ImportError as ex:  # pragma: no cover
+    raise ImportError('The `numpy` package, required for the simulator'
+        + ' to run, is missing!') from ex
+try:
     from scipy.interpolate import splrep, splev
 except ImportError as ex:  # pragma: no cover
     raise ImportError('The `scipy` package, required for the simulator'
@@ -28,13 +33,14 @@ class System(ListeningSystem):
     bad = 'OUTPUT:BAD'
     program_track_timegap = 0.2
 
-    @property
-    def good(self):
-        return f'OUTPUT:GOOD,{self.plc_time()}'
+    def good(self, now=None):
+        return f'OUTPUT:GOOD,{self.plc_time(now)}'
 
     @staticmethod
-    def plc_time():
-        return f'{time.time():.6f}'
+    def plc_time(now=None):
+        if not now:
+            now = time.time()
+        return f'{now:.6f}'
 
     commands = {
         'STATUS': '_status',
@@ -114,12 +120,13 @@ class System(ListeningSystem):
             servo_id = args[0]
             if servo_id not in self.servos:
                 return self.bad
-            answer = self.good
             servo = self.servos.get(servo_id)
-            answer += servo.get_status()
+            now = time.time()
+            answer = self.good(now)
+            answer += servo.get_status(now)
             return answer
         else:
-            answer = self.good
+            answer = self.good()
             plc_time = answer.split(',')[-1]
             answer += f',CURRENT_CONFIG={self.configuration}|'
             answer += f'SIMULATION_ENABLED={self.simulation}|'
@@ -142,7 +149,7 @@ class System(ListeningSystem):
         for _, servo in self.servos.items():
             servo.operative_mode = 10  # SETUP
         self.last_executed_command = self.plc_time()
-        return self.good
+        return self.good()
 
     def _stow(self, args):
         if len(args) != 2:
@@ -157,7 +164,7 @@ class System(ListeningSystem):
         servo = self.servos.get(servo_id)
         servo.operative_mode = 20  # STOW
         self.last_executed_command = self.plc_time()
-        return self.good
+        return self.good()
 
     def _stop(self, args):
         if len(args) != 1:
@@ -168,7 +175,7 @@ class System(ListeningSystem):
         servo = self.servos.get(servo_id)
         servo.operative_mode = 30  # STOP
         self.last_executed_command = self.plc_time()
-        return self.good
+        return self.good()
 
     def _preset(self, args):
         if len(args) < 2:
@@ -188,7 +195,7 @@ class System(ListeningSystem):
         servo.operative_mode = 40  # PRESET
         servo.set_coords(coords)
         self.last_executed_command = self.plc_time()
-        return self.good
+        return self.good()
 
     def _programTrack(self, args):
         try:
@@ -202,13 +209,21 @@ class System(ListeningSystem):
             return self.bad
         if len(args) != 4 + servo.DOF:
             return self.bad
+        trajectory_id = None
+        point_id = None
+        start_time = None
+        coords = []
         try:
             trajectory_id = int(args[1])
             point_id = int(args[2])
             start_time = args[3]
             coords = args[4:]
-            for coord in coords:
-                coord = float(coord)
+            for index, coord in enumerate(coords):
+                coords[index] = float(coord)
+        except ValueError:
+            return self.bad
+
+        with servo.trajectory_lock:
             if start_time == '*':
                 if trajectory_id != servo.trajectory_id:
                     # New trajectory with no start time, error
@@ -218,55 +233,85 @@ class System(ListeningSystem):
                     return self.bad
                 start_time = servo.trajectory_start_time
             else:
-                start_time = float(start_time)
-                # Point is in the past
+                try:
+                    start_time = float(start_time)
+                except ValueError:
+                    return self.bad
                 if start_time < time.time():
+                    # Point is in the past
                     return self.bad
                 if point_id != 0:
                     # Wrong starting point_id
                     return self.bad
+
                 # Initialize a new trajectory
-                servo.trajectory_lock.acquire()
                 servo.trajectory = [
                     [] for _ in range(servo.DOF + 1)
                 ]
                 servo.trajectory_id = trajectory_id
                 servo.trajectory_start_time = start_time
-                servo.trajectory_lock.release()
 
-            servo.trajectory_lock.acquire()
-            servo.trajectory_point_id = point_id
-            servo.trajectory_lock.release()
+                # Backtrace trajectory to now
+                t = start_time
+                now = time.time()
+                while t > now:
+                    t -= self.program_track_timegap
+                    servo.trajectory[0].append(t)
+                servo.trajectory[0].reverse()
+
+                n_points = len(servo.trajectory[0])
+                # First thing first insert the current coordinates
+                for index in range(servo.DOF):
+                    coord = servo.coords[index]
+                    delta = coords[index] - coord
+                    direction = sign(delta)
+                    delta = abs(delta)
+                    delta /= n_points
+                    delta = min(
+                        delta,
+                        servo.max_delta[index] * self.program_track_timegap
+                    )
+                    delta *= direction
+                    for n in range(n_points):
+                        servo.trajectory[index + 1].append(coord + delta * n)
+
             point_time = start_time
             point_time += point_id * self.program_track_timegap
             # Point is in the past
             if point_time < time.time():
                 return self.bad
             # Everything seems correct, insert the point
-            servo.trajectory_lock.acquire()
+            servo.trajectory_point_id = point_id
             servo.trajectory[0].append(point_time)
             for index in range(servo.DOF):
-                servo.trajectory[index + 1].append(coords[index])
+                coord = servo.trajectory[index + 1][-1]
+                delta = coords[index] - coord
+                direction = sign(delta)
+                delta = abs(delta)
+                delta = min(
+                    delta,
+                    servo.max_delta[index] * self.program_track_timegap
+                )
+                delta *= direction
+                servo.trajectory[index + 1].append(coord + delta)
 
-            # Delete points older than 1 second before the current time
+            # Delete points older than 5 seconds before the current time
             pt_index = bisect_left(
                 servo.trajectory[0],
-                time.time() - 1
+                time.time() - 5
             )
             for index, trajectory in enumerate(servo.trajectory):
                 servo.trajectory[index] = trajectory[pt_index:]
+
             if len(servo.trajectory[0]) > 3:
                 pt_table = []
                 temp = list(map(list, servo.trajectory))
                 for index in range(servo.DOF):
                     pt_table.append(splrep(temp[0], temp[index + 1]))
                 servo.pt_table = pt_table
-            servo.trajectory_lock.release()
-        except ValueError:
-            return self.bad
-        self.last_executed_command = self.plc_time()
-        servo.operative_mode = 50  # PROGRAMTRACK
-        return self.good
+            self.last_executed_command = self.plc_time()
+            servo.operative_mode = 50  # PROGRAMTRACK
+            return self.good()
 
     def _offset(self, args):
         if len(args) < 2:
@@ -285,7 +330,7 @@ class System(ListeningSystem):
             return self.bad
         servo.set_offsets(coords)
         self.last_executed_command = self.plc_time()
-        return self.good
+        return self.good()
 
 
 class Servo:
@@ -316,7 +361,7 @@ class Servo:
             self.trajectory = [[] for _ in range(self.DOF + 1)]
             self.pt_table = []
 
-    def get_status(self):
+    def get_status(self, now):
         answer = f',{self.name}_ENABLED={self.enabled}|'
         answer += f'{self.name}_STATUS={self.status}|'
         answer += f'{self.name}_BLOCK={self.block}|'
@@ -326,10 +371,9 @@ class Servo:
             with self.trajectory_lock:
                 pt_table = self.pt_table
             if pt_table:
-                now = time.time()
                 for index in range(self.DOF):
                     self.coords[index] = splev(now, pt_table[index]).item(0)
-                if now > self.trajectory[0][-1]:
+                if now > self.trajectory[0][-1] + 5:
                     with self.trajectory_lock:
                         self.trajectory_id = None
                         self.trajectory_start_time = None
@@ -359,10 +403,12 @@ class PFP(Servo):
         self.tz = random.uniform(0, 100)
         self.rtheta = random.uniform(0, 100)
         self.program_track_capable = True
+        self.max_coord = [50.0, 110.0, 50.0]
+        self.max_delta = [4.0, 4.0, 4.0]
         super().__init__('PFP', 3)
 
-    def get_status(self):
-        answer = super().get_status()
+    def get_status(self, now):
+        answer = super().get_status(now)
         answer += f'PFP_X_ENABLED={self.x_enabled}|'
         answer += f'PFP_Z_MASTER_ENABLED={self.z_master_enabled}|'
         answer += f'PFP_Z_SLAVE_ENABLED={self.z_slave_enabled}|'
@@ -398,10 +444,12 @@ class SRP(Servo):
         self.ry = random.uniform(0, 100)
         self.rz = random.uniform(0, 100)
         self.program_track_capable = True
+        self.max_coord = [50.0, 110.0, 50.0, 0.25, 0.25, 0.25]
+        self.max_delta = [4.0, 4.0, 4.0, 0.38, 0.38, 0.38]
         super().__init__('SRP', 6)
 
-    def get_status(self):
-        answer = super().get_status()
+    def get_status(self, now):
+        answer = super().get_status(now)
         answer += f'SRP_Z1_ENABLED={self.z1_enabled}|'
         answer += f'SRP_Z2_ENABLED={self.z2_enabled}|'
         answer += f'SRP_Z3_ENABLED={self.z3_enabled}|'
@@ -437,8 +485,8 @@ class M3R(Servo):
         self.rotation = random.uniform(1, 100)
         super().__init__('M3R')
 
-    def get_status(self):
-        answer = super().get_status()
+    def get_status(self, now):
+        answer = super().get_status(now)
         answer += f'M3R_CLOCKWISE_ENABLED={self.cw_enabled}|'
         answer += f'M3R_COUNTERCLOCKWISE_ENABLED={self.ccw_enabled}|'
         answer += f'M3R_CLOCKWISE={random.uniform(0, 100):.6f}|'
@@ -456,8 +504,8 @@ class GFR(Servo):
         self.rotation = random.uniform(1, 100)
         super().__init__('GFR')
 
-    def get_status(self):
-        answer = super().get_status()
+    def get_status(self, now):
+        answer = super().get_status(now)
         answer += f'GFR_CLOCKWISE_ENABLED={self.cw_enabled}|'
         answer += f'GFR_COUNTERCLOCKWISE_ENABLED={self.ccw_enabled}|'
         answer += f'GFR_CLOCKWISE={random.uniform(0, 100):.6f}|'
@@ -473,10 +521,12 @@ class Derotator(Servo):
         self.rotary_axis_enabled = 1
         self.rotation = random.uniform(1, 100)
         self.program_track_capable = True
+        self.max_coord = [50.0]
+        self.max_delta = [4.0]
         super().__init__(name)
 
-    def get_status(self):
-        answer = super().get_status()
+    def get_status(self, now):
+        answer = super().get_status(now)
         answer += f'{self.name}_ROTARY_AXIS_ENABLED='
         answer += f'{self.rotary_axis_enabled}|'
         answer += f'{self.name}_ROTATION={self.coords[0]:.6f}|'
