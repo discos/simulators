@@ -273,7 +273,10 @@ class System(ListeningSystem):
                     )
                     delta *= direction
                     for n in range(n_points):
-                        servo.trajectory[index + 1].append(coord + delta * n)
+                        coord *= delta * n
+                        coord = min(coord, servo.max_coord[index])
+                        coord = max(coord, servo.min_coord[index])
+                        servo.trajectory[index + 1].append(coord)
 
             point_time = start_time
             point_time += point_id * self.program_track_timegap
@@ -293,7 +296,10 @@ class System(ListeningSystem):
                     servo.max_delta[index] * self.program_track_timegap
                 )
                 delta *= direction
-                servo.trajectory[index + 1].append(coord + delta)
+                coord += delta
+                coord = min(coord, servo.max_coord[index])
+                coord = max(coord, servo.min_coord[index])
+                servo.trajectory[index + 1].append(coord)
 
             # Delete points older than 5 seconds before the current time
             pt_index = bisect_left(
@@ -403,8 +409,9 @@ class PFP(Servo):
         self.tz = random.uniform(0, 100)
         self.rtheta = random.uniform(0, 100)
         self.program_track_capable = True
-        self.max_coord = [50.0, 110.0, 50.0]
-        self.max_delta = [4.0, 4.0, 4.0]
+        self.max_coord = [1490.0, 50.0, 77.0]
+        self.min_coord = [-1490.0, -200.0, -1]
+        self.max_delta = [25.0, 5.0, 0.42]
         super().__init__('PFP', 3)
 
     def get_status(self, now):
@@ -445,6 +452,7 @@ class SRP(Servo):
         self.rz = random.uniform(0, 100)
         self.program_track_capable = True
         self.max_coord = [50.0, 110.0, 50.0, 0.25, 0.25, 0.25]
+        self.min_coord = [-50.0, -110.0, -50.0, -0.25, -0.25, -0.25]
         self.max_delta = [4.0, 4.0, 4.0, 0.38, 0.38, 0.38]
         super().__init__('SRP', 6)
 
@@ -521,8 +529,9 @@ class Derotator(Servo):
         self.rotary_axis_enabled = 1
         self.rotation = random.uniform(1, 100)
         self.program_track_capable = True
-        self.max_coord = [50.0]
-        self.max_delta = [4.0]
+        self.max_coord = [220.0]
+        self.min_coord = [-220.0]
+        self.max_delta = [3.3]
         super().__init__(name)
 
     def get_status(self, now):
