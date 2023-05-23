@@ -8,9 +8,9 @@ servers = [(('0.0.0.0', 11111), (), ThreadingTCPServer, {})]
 
 class System(ListeningSystem):
     header = '#'
-    tail = '\x0D'
-    ack = 'ACK\x0D\x0A'
-    nak = 'NAK\x0D\x0A'
+    tail = '\x0A'
+    ack = 'ACK'
+    nak = 'NAK'
     max_msg_length = 15
 
     devices = {
@@ -39,7 +39,7 @@ class System(ListeningSystem):
     errors = {
         9999: 'NOT_IMPLEMENTED',
         1000: 'ERROR_ARGS_NOT_VALID',
-        1001: 'unknow command',
+        1001: 'unknown command',
         1002: 'ERROR_DEVICE_UNKNOWN',
         1003: 'CFG file not existing',
         1004: 'reading cfg file',
@@ -183,8 +183,8 @@ class System(ListeningSystem):
             if key['Status'] != 0:
                 retval += f'BOARD {key["Address"]} ERR DBE BOARD unreachable\n'
             else:
-                retval += f'BOARD {key["Address"]} ' + self.ack
-        return retval
+                retval += f'BOARD {key["Address"]} ACK\n' 
+        return retval[:-1] + '\x0D\x0A'
 
     def _set_mode(self, params):
         selected_board = next((sub for sub in self.boards
@@ -198,7 +198,7 @@ class System(ListeningSystem):
         elif selected_board["Status"] != 0:
             return self._error(params[0], 1005, params[2])
         else:
-            return self.ack
+            return self.ack + '\x0D\x0A'
 
     def _store_allmode(self, params):
         err = []
@@ -216,7 +216,7 @@ class System(ListeningSystem):
                 return self._error(params[0], 1005, ' '.join(map(str, err)))
         else:
             self.obs_mode.append(params[1])
-            return self.ack
+            return self.ack + '\x0D\x0A'
 
     def _clr_mode(self, params):
         if len(params) != 2:
@@ -225,7 +225,7 @@ class System(ListeningSystem):
             return self._error(params[0], 1003)
         else:
             self.obs_mode.remove(params[1])
-            return self.ack
+            return self.ack + '\x0D\x0A'
 
     def _status(self, params):
         if len(params) != 3:
@@ -237,17 +237,18 @@ class System(ListeningSystem):
             return self._error(params[0], 1007, params[2])
         elif selected_board["Status"] != 0:
             return self._error(params[0], 1005, params[2])
-        retval = f'ACK\n\n'
+        retval = self.ack + '\n'
+        retval += f'BOARD {selected_board["Address"]}\n\n'
         retval += f'REG=[ {" ".join(map(str,selected_board["REG"]))} ]\n\n'
-        retval += f'ATT=[ {"  ".join(map(str,selected_board["ATT"])) } ]\x0A'
-        return retval
+        retval += f'ATT=[ {"  ".join(map(str,selected_board["ATT"])) } ]'
+        return retval + '\x0D\x0A'
 
     def _set_att(self, params):
         if len(params) != 6:
             return self._error(params[0], 1001)
-        selected_board = next((sub for sub in self.boards
-                               if sub['Address'] == params[3]), None)
         try:
+            selected_board = next((sub for sub in self.boards
+                                   if sub['Address'] == params[3]), None)
             if selected_board is None:
                 return self._error(params[0], 1007, params[3])
             elif selected_board["Status"] != 0:
@@ -258,27 +259,27 @@ class System(ListeningSystem):
                 return self._error(params[0], 1011, selected_board["Address"])
             else:
                 selected_board["ATT"][int(params[1])] = float(params[5])
-                return self.ack
+                return self.ack + '\x0D\x0A'
         except ValueError:
             return self._error(params[0], 1001)
 
     def _set_amp(self, params):
         if len(params) != 6:
             return self._error(params[0], 1001)
-        selected_board = next((sub for sub in self.boards
-                               if sub['Address'] == params[3]), None)
         try:
+            selected_board = next((sub for sub in self.boards
+                                   if sub['Address'] == params[3]), None)
             if selected_board is None:
                 return self._error(params[0], 1007, params[3])
             elif selected_board["Status"] != 0:
                 return self._error(params[0], 1005, params[3])
             elif int(params[1]) not in list(range(1, 11)):
                 return self._error(params[0], 1012, params[1])
-            elif int(params[5]) not in [0, 1]:
+            elif float(params[5]) not in [0, 1]:
                 return self._error(params[0], 1011, selected_board["Address"])
             else:
                 selected_board["AMP"][int(params[1]) - 1] = params[5]
-                return self.ack
+                return self.ack + '\x0D\x0A'
         except ValueError:
             return self._error(params[0], 1001)
 
@@ -298,7 +299,7 @@ class System(ListeningSystem):
                 return self._error(params[0], 1011, selected_board["Address"])
             else:
                 selected_board["EQ"][int(params[1]) - 1] = params[5]
-                return self.ack
+                return self.ack + '\x0D\x0A'
         except ValueError:
             return self._error(params[0], 1001)
 
@@ -326,7 +327,7 @@ class System(ListeningSystem):
                 else:
                     channel = int(params[1])
                 selected_board["BPF"][channel] = params[5]
-                return self.ack
+                return self.ack + '\x0D\x0A'
         except ValueError:
             return self._error(params[0], 1001)
 
@@ -338,12 +339,12 @@ class System(ListeningSystem):
             for board in self.boards:
                 retval += f'BOARD {board["Address"]} '
                 if board['Status'] == 0:
-                    retval += self.ack
+                    retval += self.ack + '\n'
                     retval += f'5V {board["5V"]} 3V3 {board["3V3"]}\n'
                     retval += f'T0 {board["T0"]}\n\n'
                 else:
                     retval += 'ERR DBE BOARD unreachable\n\n'
-            return retval
+            return retval[:-2] + '\x0D\x0A'
 
     def _diag(self, params):
         if len(params) != 3:
@@ -356,11 +357,11 @@ class System(ListeningSystem):
             return self._error(params[0], 1005, params[2])
         else:
             retval = self.ack + '\n'
-            retval += f'BOARD {selected_board["Address"]}\n'
+            retval += f'BOARD {selected_board["Address"]}\n\n'
             retval += f'5V {selected_board["5V"]}'
             retval += f' 3V3 {selected_board["3V3"]}\n'
-            retval += f'T0 {selected_board["T0"]}\n'
-        return retval
+            retval += f'T0 {selected_board["T0"]}'
+        return retval + '\x0D\x0A'
 
     def _set_status(self, params):
         if len(params) != 5:
@@ -371,7 +372,7 @@ class System(ListeningSystem):
             return self._error(params[0], 1007, params[2])
         else:
             selected_board["Status"] = int(params[4])
-            return self.ack
+            return self.ack + '\x0D\x0A'
 
     def _getcomp(self, params):
         if len(params) != 3:
@@ -387,21 +388,19 @@ class System(ListeningSystem):
             retval += f'BOARD {params[2]}\n\n'
             retval += f'AMP=[ {" ".join(map(str,selected_board["AMP"]))} ]\n'
             retval += f'EQ=[ {" ".join(map(str,selected_board["EQ"]))} ]\n'
-            retval += f'BPF=[ {" ".join(map(str,selected_board["BPF"])) } ]\x0A'
-            return retval
+            retval += f'BPF=[ {" ".join(map(str,selected_board["BPF"])) } ]'
+            return retval + '\x0D\x0A'
 
-    def _not_implemented(self, params):
-        return self.nak
 
     def _error(self, device_code, error_code, board_address=None):
         error_string = self.errors.get(error_code)
         if error_code == 1001:
-            retval = f'NAK {error_string}\x0A'
-        elif error_code in [1005, 1007, 1010, 1011, 1013, 1014]:
+            retval = f'NAK {error_string}'
+        elif error_code in [1005, 1007, 1010, 1011, 1012, 1013, 1014]:
             device_string = self.devices.get(device_code)
             retval = f'ERR {device_string} '\
-                f'{error_string.replace("X", board_address)}{self.tail}\x0A'
+                f'{error_string.replace("X", board_address)}'
         else:
             device_string = self.devices.get(device_code)
-            retval = f'ERR {device_string} {error_string}{self.tail}\x0A'
-        return retval
+            retval = f'ERR {device_string} {error_string}'
+        return retval + '\x0D\x0A'
