@@ -25,7 +25,7 @@ class TestDBESM(unittest.TestCase):
     		else:
     			self.assertRegex(response, f'BOARD {board} ERR DBE BOARD unreachable')
     	
-#       NAK
+#       NAK generic
 
 
     def test_nak_generic(self):
@@ -40,8 +40,8 @@ class TestDBESM(unittest.TestCase):
         print(response)
         self.assertEqual(response, 'NAK unknown command\x0D\x0A')
         
-    def test_nak_alldiag(self):
-        message = "DBE ALLDIAG ?????\x0D\x0A"
+    def test_nak_dbe(self):
+        message = "DBE\x0D\x0A"
         response = self._send(message)
         print(response)
         self.assertEqual(response, 'NAK unknown command\x0D\x0A')      
@@ -81,7 +81,41 @@ class TestDBESM(unittest.TestCase):
         response = self._send(message)
         print(response)
         self.assertEqual(response, 'NAK unknown command\x0D\x0A') 
+        
+        
+#       SETSTATUS
 
+
+    def test_setstatus_ok(self, board=13, val=1):        
+        message = f"DBE SETSTATUS BOARD {board} VALUE {val}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'ACK\x0D\x0A')
+        
+    def test_setstatus_noBoard(self, board=0, val=1):        
+        message = f"DBE SETSTATUS BOARD {board} VALUE {val}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, f'ERR DBE BOARD {board} not existing\x0D\x0A')    
+        
+    def test_nak_setstaus_missing(self, board=15):
+        message = f"DBE SETSTATUS BOARD {board} VALUE\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')
+        
+    def test_nak_setstaus_notIntBoard(self, board='BOARD', val=1):
+        message = f"DBE SETSTATUS BOARD {board} VALUE {val}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')
+        
+    def test_nak_setstaus_notIntVal(self, board=15, val='VALUE'):
+        message = f"DBE SETSTATUS BOARD {board} VALUE {val}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')     
+        
 
 #       ALLDIAG, CLRMODE
 
@@ -99,7 +133,13 @@ class TestDBESM(unittest.TestCase):
         self._disable_board(err_board)
         response = self._send(message)
         print(response)
-        self._test_all_boards(response, err_board)     
+        self._test_all_boards(response, err_board)
+        
+    def test_nak_alldiag(self):
+        message = "DBE ALLDIAG ?????\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')    
 
     
     def test_clrmode_ok(self, obs_mode='CustomCfg'):
@@ -116,6 +156,12 @@ class TestDBESM(unittest.TestCase):
         print(response)
         self.assertEqual(response, 'ERR DBE CFG file not existing\x0D\x0A')    
         
+    def test_nak_clr_missing(self):
+        message = "DBE CLRMODE\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')
+            
 
 #       SETALLMODE, STOREALLMODE
 
@@ -145,6 +191,12 @@ class TestDBESM(unittest.TestCase):
         response = self._send(message)
         print(response)
         self.assertEqual(response, 'ERR DBE CFG file not existing\x0D\x0A') 
+        
+    def test_nak_setall_missing(self):
+        message = "DBE SETALLMODE\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')    
         
 
     def test_storeallmode_ok(self, obs_mode='CustomCfg'):
@@ -181,6 +233,12 @@ class TestDBESM(unittest.TestCase):
         print(response)
         self.assertEqual(response, 'ERR DBE writing cfg file\x0D\x0A')     
         
+    def test_nak_storeall_missing(self):
+        message = "DBE STOREALLMODE\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')     
+        
           
 #      MODE
 
@@ -209,7 +267,25 @@ class TestDBESM(unittest.TestCase):
         self._disable_board(board)
         response = self._send(message)
         print(response)
-        self.assertEqual(response, 'ERR DBE CFG file not existing\x0D\x0A')      
+        self.assertEqual(response, 'ERR DBE CFG file not existing\x0D\x0A')
+        
+    def test_mode_noBoard(self, board=10, obs_mode='MFS_7'):
+        message = f"DBE MODE BOARD {board} {obs_mode}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, f'ERR DBE BOARD {board} not existing\x0D\x0A')      
+    
+    def test_nak_mode_missing(self):
+        message = "DBE MODE BOARD\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')
+        
+    def test_nak_mode_NotInt(self, obs_mode='MFS_7'):
+        message = f"DBE MODE BOARD BOARD {obs_mode}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')     
         
         
 #      DIAG, GETSTATUS, GETCOMP        
@@ -228,6 +304,24 @@ class TestDBESM(unittest.TestCase):
         print(response)
         self.assertEqual(response, f'ERR DBE BOARD {board} unreachable\x0D\x0A')
         
+    def test_diag_noBoard(self, board=0):
+        message = f"DBE DIAG BOARD {board}\x0D\x0A"
+        response = self._send(message)
+        print(response)    
+        self.assertEqual(response, f'ERR DBE BOARD {board} not existing\x0D\x0A')    
+        
+    def test_nak_diag_missing(self):
+        message = "DBE DIAG BOARD\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')
+        
+    def test_nak_diag_NotInt(self):
+        message = "DBE DIAG BOARD BOARD\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')     
+        
         
     def test_getstatus_ok(self, board=15):
         message = f"DBE GETSTATUS BOARD {board}\x0D\x0A"
@@ -243,6 +337,24 @@ class TestDBESM(unittest.TestCase):
         response = self._send(message)
         print(response)
         self.assertEqual(response, f'ERR DBE BOARD {board} unreachable\x0D\x0A')
+        
+    def test_getstatus_noBoard(self, board=0):
+        message = f"DBE GETSTATUS BOARD {board}\x0D\x0A"
+        response = self._send(message)
+        print(response)    
+        self.assertEqual(response, f'ERR DBE BOARD {board} not existing\x0D\x0A')    
+    
+    def test_nak_gestatus_missing(self):
+        message = "DBE GETSTATUS BOARD\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')
+        
+    def test_nak_getstatus_NotInt(self):
+        message = "DBE GETSTATUS BOARD BOARD\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')     
         
         
     def test_getcomp_ok(self, board=15):
@@ -260,7 +372,25 @@ class TestDBESM(unittest.TestCase):
         response = self._send(message)
         print(response)
         self.assertEqual(response, f'ERR DBE BOARD {board} unreachable\x0D\x0A')
-          
+        
+    def test_getcomp_noBoard(self, board=0):
+        message = f"DBE GETCOMP BOARD {board}\x0D\x0A"
+        response = self._send(message)
+        print(response)    
+        self.assertEqual(response, f'ERR DBE BOARD {board} not existing\x0D\x0A')
+    
+    def test_nak_getcomp_missing(self):
+        message = "DBE GETCOMP\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')
+        
+    def test_nak_getcomp_NotInt(self):
+        message = "DBE GETCOMP BOARD BOARD\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')     
+              
         
 #      SETATT
 
@@ -313,9 +443,27 @@ class TestDBESM(unittest.TestCase):
         self._disable_board(board)
         response = self._send(message)
         print(response)
-        self.assertEqual(response, f'ERR DBE BOARD {board} unreachable\x0D\x0A')    
-         
-
+        self.assertEqual(response, f'ERR DBE BOARD {board} unreachable\x0D\x0A')
+        
+    def test_setatt_noBoard(self, ch=0, board=0, val=0.0):
+        message = f"DBE SETATT {ch} BOARD {board} VALUE {val}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, f'ERR DBE BOARD {board} not existing\x0D\x0A')     
+        
+    def test_nak_setatt_missing(self):
+        message = "DBE SETATT\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')
+        
+    def test_nak_setatt_NotInt(self):
+        message = "DBE SETATT 1 BOARD BOARD VALUE 0\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')     
+        
+        
 #      SETAMP
 
 
@@ -369,6 +517,24 @@ class TestDBESM(unittest.TestCase):
         print(response)
         self.assertEqual(response, f'ERR DBE BOARD {board} unreachable\x0D\x0A')
         
+    def test_setamp_noBoard(self, ch=0, board=0, val=0):
+        message = f"DBE SETAMP {ch} BOARD {board} VALUE {val}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, f'ERR DBE BOARD {board} not existing\x0D\x0A') 
+        
+    def test_nak_setamp_missing(self):
+        message = "DBE SETAMP\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')
+    
+    def test_nak_setamp_NotInt(self):
+        message = "DBE SETAMP 1 BOARD BOARD VALUE 0\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')     
+            
         
 #      SETEQ
 
@@ -423,15 +589,46 @@ class TestDBESM(unittest.TestCase):
         print(response)
         self.assertEqual(response, f'ERR DBE BOARD {board} unreachable\x0D\x0A')
         
+    def test_seteq_noBoard(self, ch=0, board=0, val=0):
+        message = f"DBE SETEQ {ch} BOARD {board} VALUE {val}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, f'ERR DBE BOARD {board} not existing\x0D\x0A')
+        
+    def test_nak_seteq_missing(self):
+        message = "DBE SETEQ\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')   
+        
+    def test_nak_seteq_NotInt(self):
+        message = "DBE SETEQ 1 BOARD BOARD VALUE 0\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')       
+            
+        
 #      SETBPF
 
 
-    def test_setbpf_ok(self, ch='1a', board=15, val=0):
+    def test_setbpf_ok_1a(self, ch='1a', board=15, val=0):
         message = f"DBE SETBPF {ch} BOARD {board} VALUE {val}\x0D\x0A"
         response = self._send(message)
         print(response)
         self.assertEqual(response, 'ACK\x0D\x0A')        
         
+    def test_setbpf_ok_1b(self, ch='1b', board=15, val=0):
+        message = f"DBE SETBPF {ch} BOARD {board} VALUE {val}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'ACK\x0D\x0A') 
+        
+    def test_setbpf_ok_2(self, ch='2', board=15, val=0):
+        message = f"DBE SETBPF {ch} BOARD {board} VALUE {val}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'ACK\x0D\x0A')     
+            
     def test_setbpf_chErr1(self, ch=11, board=15, val=0):
         message = f"DBE SETBPF {ch} BOARD {board} VALUE {val}\x0D\x0A"
         response = self._send(message)
@@ -474,7 +671,26 @@ class TestDBESM(unittest.TestCase):
         self._disable_board(board)
         response = self._send(message)
         print(response)
-        self.assertEqual(response, f'ERR DBE BOARD {board} unreachable\x0D\x0A')              
+        self.assertEqual(response, f'ERR DBE BOARD {board} unreachable\x0D\x0A')
+        
+    def test_setbpf_noBoard(self, ch=0, board=0, val=0):
+        message = f"DBE SETBPF {ch} BOARD {board} VALUE {val}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, f'ERR DBE BOARD {board} not existing\x0D\x0A')
+        
+    def test_nak_setbpf_missing(self):
+        message = "DBE SETBPF\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')
+        
+    def test_nak_setbpf_NotInt(self):
+        message = "DBE SETBPF 1a BOARD BOARD VALUE 0\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')        
+                
               
 if __name__ == '__main__':
     unittest.main()

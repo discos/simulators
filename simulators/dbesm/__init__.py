@@ -7,7 +7,7 @@ servers = [(('0.0.0.0', 11111), (), ThreadingTCPServer, {})]
 
 
 class System(ListeningSystem):
-    header = '#'
+#    header = '#'
     tail = '\x0A'
     ack = 'ACK'
     nak = 'NAK'
@@ -32,13 +32,9 @@ class System(ListeningSystem):
         'DBE DIAG': '_diag',
         'DBE SETSTATUS': '_set_status',
         'DBE GETCOMP': '_getcomp',
-        'DBE': '_not_implemented',
-        'FBCB': '_not_implemented',
     }
 
     errors = {
-        9999: 'NOT_IMPLEMENTED',
-        1000: 'ERROR_ARGS_NOT_VALID',
         1001: 'unknown command',
         1002: 'ERROR_DEVICE_UNKNOWN',
         1003: 'CFG file not existing',
@@ -130,7 +126,7 @@ class System(ListeningSystem):
         return att
 
     def _set_default(self):
-        self.msg = ''
+        self.msg = ''      # not covered
 
     def parse(self, byte):
         self.msg += byte
@@ -169,7 +165,7 @@ class System(ListeningSystem):
         try:
             for param in args:
                 params.append(param)
-        except ValueError:
+        except ValueError:                  # 168,169 not covered
             return self.nak
         return cmd(params)
 
@@ -187,11 +183,15 @@ class System(ListeningSystem):
         return retval[:-1] + '\x0D\x0A'
 
     def _set_mode(self, params):
-        selected_board = next((sub for sub in self.boards
-                               if sub['Address'] == params[2]), None)
         if len(params) != 4:
             return self._error(params[0], 1001)
-        elif selected_board is None:
+        try:
+           selected_board = next((sub for sub in self.boards
+		              if int(sub['Address']) == int(params[2])), None)
+        except ValueError:
+            return self._error(params[0], 1001)
+        
+        if selected_board is None:
             return self._error(params[0], 1007, params[2])
         elif params[3] not in self.obs_mode:
             return self._error(params[0], 1003)
@@ -230,9 +230,12 @@ class System(ListeningSystem):
     def _status(self, params):
         if len(params) != 3:
             return self._error(params[0], 1001)
-
-        selected_board = next((sub for sub in self.boards
-                               if sub['Address'] == params[2]), None)
+        try:
+           selected_board = next((sub for sub in self.boards
+		              if int(sub['Address']) == int(params[2])), None)
+        except ValueError:
+            return self._error(params[0], 1001)
+            
         if selected_board is None:
             return self._error(params[0], 1007, params[2])
         elif selected_board["Status"] != 0:
@@ -248,7 +251,7 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
         try:
             selected_board = next((sub for sub in self.boards
-                                   if sub['Address'] == params[3]), None)
+		              if int(sub['Address']) == int(params[3])), None)
             if selected_board is None:
                 return self._error(params[0], 1007, params[3])
             elif selected_board["Status"] != 0:
@@ -268,7 +271,7 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
         try:
             selected_board = next((sub for sub in self.boards
-                                   if sub['Address'] == params[3]), None)
+		              if int(sub['Address']) == int(params[3])), None)
             if selected_board is None:
                 return self._error(params[0], 1007, params[3])
             elif selected_board["Status"] != 0:
@@ -288,7 +291,7 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
         try:
             selected_board = next((sub for sub in self.boards
-                                   if sub['Address'] == params[3]), None)
+		              if int(sub['Address']) == int(params[3])), None)
             if selected_board is None:
                 return self._error(params[0], 1007, params[3])
             elif selected_board["Status"] != 0:
@@ -309,7 +312,7 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
         try:
             selected_board = next((sub for sub in self.boards
-                                   if sub['Address'] == params[3]), None)
+		              if int(sub['Address']) == int(params[3])), None)
             if selected_board is None:
                 return self._error(params[0], 1007, params[3])
             elif selected_board["Status"] != 0:
@@ -349,8 +352,12 @@ class System(ListeningSystem):
     def _diag(self, params):
         if len(params) != 3:
             return self._error(params[0], 1001)
-        selected_board = next((sub for sub in self.boards
-                               if sub['Address'] == params[2]), None)
+        try:
+           selected_board = next((sub for sub in self.boards
+		              if int(sub['Address']) == int(params[2])), None)
+        except ValueError:
+            return self._error(params[0], 1001)
+            
         if selected_board is None:
             return self._error(params[0], 1007, params[2])
         elif selected_board["Status"] != 0:
@@ -365,20 +372,28 @@ class System(ListeningSystem):
 
     def _set_status(self, params):
         if len(params) != 5:
-            return self._error(params[0], 1001)
-        selected_board = next((sub for sub in self.boards
-                               if sub['Address'] == params[2]), None)
-        if selected_board is None:
-            return self._error(params[0], 1007, params[2])
-        else:
-            selected_board["Status"] = int(params[4])
-            return self.ack + '\x0D\x0A'
+             return self._error(params[0], 1001)
+        try:
+           selected_board = next((sub for sub in self.boards
+		              if int(sub['Address']) == int(params[2])), None)
+            
+           if selected_board is None:
+               return self._error(params[0], 1007, params[2])
+           else: 	
+               selected_board["Status"] = int(params[4])   	   
+               return self.ack + '\x0D\x0A'
+        except ValueError:
+            return self._error(params[0], 1001) 
 
     def _getcomp(self, params):
         if len(params) != 3:
-            return self._error(params[0], 1001)
-        selected_board = next((sub for sub in self.boards
-                               if sub['Address'] == params[2]), None)
+             return self._error(params[0], 1001)
+        try:
+           selected_board = next((sub for sub in self.boards
+		              if int(sub['Address']) == int(params[2])), None)
+        except ValueError:
+            return self._error(params[0], 1001) 	              
+		                                    
         if selected_board is None:
             return self._error(params[0], 1007, params[2])
         elif selected_board["Status"] != 0:
