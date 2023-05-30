@@ -264,7 +264,7 @@ class System(ListeningSystem):
                 steps += 5
 
                 t = start_time
-                for step in range(steps):
+                for _ in range(steps):
                     t -= self.program_track_timegap
                     servo.trajectory[0].append(t)
                 servo.trajectory[0].reverse()
