@@ -13,6 +13,7 @@ except ImportError as ex:  # pragma: no cover
         + ' to run, is missing!') from ex
 from threading import Lock
 from bisect import bisect_left
+from math import ceil
 from socketserver import ThreadingTCPServer
 from simulators.common import ListeningSystem
 
@@ -251,10 +252,19 @@ class System(ListeningSystem):
                 servo.trajectory_id = trajectory_id
                 servo.trajectory_start_time = start_time
 
-                # Backtrace trajectory to now
+                # Backtrace trajectory to current position
+                steps = 0
+                for index in range(servo.DOF):
+                    delta = abs(coords[index] - servo.coords[index])
+                    steps = max(
+                        steps,
+                        ceil(delta / servo.max_delta[index] / 5)
+                    )
+                # Add 1 second
+                steps += 5
+
                 t = start_time
-                now = time.time()
-                while t > now:
+                for step in range(steps):
                     t -= self.program_track_timegap
                     servo.trajectory[0].append(t)
                 servo.trajectory[0].reverse()
