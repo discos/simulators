@@ -62,7 +62,6 @@ class System(ListeningSystem):
 
     def __init__(self):
         self.msg = ''
-        self.cmd_id = ''
 
         # Status -1 -> board not available
         self.boards = [
@@ -125,18 +124,15 @@ class System(ListeningSystem):
                in numpy.random.uniform(0.0, 31.5, 17)]
         return att
 
-    def _set_default(self):
-        self.msg = ''      # not covered
-
     def parse(self, byte):
-        self.msg += byte
-
         if byte == self.tail:
             msg = self.msg[:-1]
             self.msg = ''
-            return self._execute(msg)
+            return self._execute(msg)        
+        self.msg += byte
+        
         return True
-
+    
     def _execute(self, msg):
         """This method parses and executes a command the moment it is
         completely received.
@@ -162,11 +158,10 @@ class System(ListeningSystem):
         if not cmd:
             return self._error(params[0], 1001)
         cmd = getattr(self, cmd)
-        try:
-            for param in args:
-                params.append(param)
-        except ValueError:                  # 168,169 not covered
-            return self.nak
+ 
+        for param in args:
+            params.append(param)
+        
         return cmd(params)
 
     def _set_allmode(self, params):
@@ -254,12 +249,12 @@ class System(ListeningSystem):
 		              if int(sub['Address']) == int(params[3])), None)
             if selected_board is None:
                 return self._error(params[0], 1007, params[3])
-            elif selected_board["Status"] != 0:
-                return self._error(params[0], 1005, params[3])
             elif int(params[1]) not in list(range(0, 17)):
                 return self._error(params[0], 1010, params[1])
             elif float(params[5]) not in list(numpy.arange(0, 31.5, 0.5)):
                 return self._error(params[0], 1011, selected_board["Address"])
+            elif selected_board["Status"] != 0:
+                return self._error(params[0], 1005, params[3])
             else:
                 selected_board["ATT"][int(params[1])] = float(params[5])
                 return self.ack + '\x0D\x0A'
@@ -274,12 +269,12 @@ class System(ListeningSystem):
 		              if int(sub['Address']) == int(params[3])), None)
             if selected_board is None:
                 return self._error(params[0], 1007, params[3])
-            elif selected_board["Status"] != 0:
-                return self._error(params[0], 1005, params[3])
             elif int(params[1]) not in list(range(1, 11)):
                 return self._error(params[0], 1012, params[1])
             elif float(params[5]) not in [0, 1]:
                 return self._error(params[0], 1011, selected_board["Address"])
+            elif selected_board["Status"] != 0:
+                return self._error(params[0], 1005, params[3])    
             else:
                 selected_board["AMP"][int(params[1]) - 1] = params[5]
                 return self.ack + '\x0D\x0A'
@@ -294,12 +289,12 @@ class System(ListeningSystem):
 		              if int(sub['Address']) == int(params[3])), None)
             if selected_board is None:
                 return self._error(params[0], 1007, params[3])
-            elif selected_board["Status"] != 0:
-                return self._error(params[0], 1005, params[3])
-            elif float(params[1]) not in list(range(1, 11)):
+            elif int(params[1]) not in list(range(1, 11)):
                 return self._error(params[0], 1013, params[1])
             elif float(params[5]) not in [0, 1]:
                 return self._error(params[0], 1011, selected_board["Address"])
+            elif selected_board["Status"] != 0:
+                return self._error(params[0], 1005, params[3])
             else:
                 selected_board["EQ"][int(params[1]) - 1] = params[5]
                 return self.ack + '\x0D\x0A'
@@ -315,12 +310,24 @@ class System(ListeningSystem):
 		              if int(sub['Address']) == int(params[3])), None)
             if selected_board is None:
                 return self._error(params[0], 1007, params[3])
-            elif selected_board["Status"] != 0:
-                return self._error(params[0], 1005, params[3])
-            elif params[1] not in channels:
-                return self._error(params[0], 1014, params[1])
+            elif params[1] not in channels:      #accept 1, 1a NOT a1, 1aa, a,
+                chars = 0
+                for char in params[1]:
+                    if char.isalpha():
+                       chars+=1
+                if params[1][0].isalpha() or chars>1:
+                    return self._error(params[0], 1001)
+                elif not params[1].isnumeric():
+                    if params[1][-1].isalpha():
+                       return self._error(params[0], 1014, params[1])
+                    else:
+                       return self._error(params[0], 1001)
+                else:
+                    return self._error(params[0], 1014, params[1])       
             elif float(params[5]) not in [0, 1]:
                 return self._error(params[0], 1011, selected_board["Address"])
+            elif selected_board["Status"] != 0:
+                return self._error(params[0], 1005, params[3])
             else:
                 channel = -1
                 if params[1] == '1a':
