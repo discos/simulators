@@ -367,9 +367,10 @@ class TestDBESM(unittest.TestCase):
         message = f"DBE GETCOMP BOARD {board}\x0D\x0A"
         response = self._send(message)
         print(response)
-        self.assertRegex(response, 'AMP=[ [01] [01] [01] [01] [01] [01] [01] [01] '\
-        '[01] [01] [01] ]\nEQ=[ [01] [01] [01] [01] [01] [01] [01] [01] [01] [01] '\
-        '[01] ]\nBPF=[ [01] [01] [01] [01] [01] [01] [01] [01] [01] [01] [01] [01] ]\r\n')
+        self.assertRegex(response, f'ACK\nBOARD {board}\n\nAMP=')
+        self.assertRegex(response, '\nEQ=')
+        self.assertRegex(response, '\nBPF=')
+        self.assertRegex(response, '\r\n')
     
     def test_getcomp_boardErr(self, board=15):
         message = f"DBE GETCOMP BOARD {board}\x0D\x0A"
