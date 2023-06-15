@@ -89,4 +89,4 @@ the ``list`` action:
 .. code-block:: bash
 
    $ discos-simulator list
-   Available simulators: 'active_surface', 'acu', 'backend', 'calmux', 'if_distributor', 'lo', 'mscu', 'weather_station'.
+   Available simulators: 'active_surface', 'acu', 'backend', 'calmux', 'dbesm', 'if_distributor', 'lo', 'mscu', 'weather_station'.
