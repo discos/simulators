@@ -58,14 +58,10 @@ class System(ListeningSystem):
     def _parse(self, msg):
         commandList = msg.split(';')
         answer = ''
-        print(commandList)
         for command in commandList:
             args = command.split('=')
-            print(args)
             if len(args) >= 2:  # set methods
                 cmd_name = self.commands.get(args[0])
-                print(cmd_name)
-                print(type(cmd_name))
                 method = getattr(self, cmd_name)
                 try:
                     ans = method(float(args[1]))
