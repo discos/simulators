@@ -11,10 +11,10 @@ servers = [
 class System(ListeningSystem):
 
     commands = {
+        'set W_home': 'set_w_home',
         'set W_solar_attn': 'set_w_solar_attn',
         'set W_cal': 'set_w_cal',
         'set W_passthrough': 'set_w_passthrough',
-        'get W_cal_temp': 'get_w_cal_temp',
         'get W_mode': 'get_w_mod',
     }
 
@@ -24,6 +24,7 @@ class System(ListeningSystem):
 
     def __init__(self):
         self.mode = ""
+        self.home = 1
         self.cal_temp = 21.0
         self._set_default()
 
@@ -57,6 +58,10 @@ class System(ListeningSystem):
         else:
             return True
 
+    def set_w_home(self):
+        self.home = 1
+        return self.ack + self.tail
+
     def set_w_solar_attn(self):
         self.mode = "attenuator"
         return self.ack + self.tail
@@ -68,9 +73,6 @@ class System(ListeningSystem):
     def set_w_passthrough(self):
         self.mode = "pass-through"
         return self.ack + self.tail
-
-    def get_w_cal_temp(self):
-        return str(self.cal_temp) + self.tail
 
     def get_w_mod(self):
         return self.mode + self.tail

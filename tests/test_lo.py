@@ -107,17 +107,17 @@ class TestWLocalOscillator(unittest.TestCase):
     def setUp(self):
         self.system = System(system_type='w_LO')
 
-    def test_enable_w_LO_Inter(self, w_lo_inter=1):
-        msg = 'enable W_LO_Inter\r\n'
+    def test_enable_USB_devs(self, w_usb_devs=1):
+        msg = 'enable USB_devs\r\n'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.w_LO_Inter, w_lo_inter)
+        self.assertEqual(self.system.w_USB_devs, w_usb_devs)
 
-    def test_disable_w_LO_Inter(self, w_lo_inter=0):
-        msg = 'disable W_LO_Inter\r\n'
+    def test_disable_w_LO_Inter(self, w_usb_devs=0):
+        msg = 'disable USB_devs\r\n'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.w_LO_Inter, w_lo_inter)
+        self.assertEqual(self.system.w_USB_devs, w_usb_devs)
 
     def test_set_w_LO_freq_PolH(self, polh=12.23):
         msg = 'set W_LO_freq_PolH=12.23\r\n'
@@ -176,6 +176,34 @@ class TestWLocalOscillator(unittest.TestCase):
             f'{self.system.w_LO_HKP_Temp[2]}',
             f'{self.system.w_LO_HKP_Temp[3]}'),
             (f'{c1}', f'{c2}', f'{c3}', f'{c4}'))
+
+    def test_set_W_LO_RefH(self, w_lo_refh='INT'):
+        msg = 'set W_LO_RefH=INT\r\n'
+        for byte in msg:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.w_LO_refH, w_lo_refh)
+
+    def test_set_W_LO_RefV(self, w_lo_refv='INT'):
+        msg = 'set W_LO_RefV=INT\r\n'
+        for byte in msg:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.w_LO_refV, w_lo_refv)
+
+    def test_get_W_LO_RefH(self, w_lo_refh='INT'):
+        msg = 'set W_LO_RefH=INT\r\nget W_LO_RefH\r\n'
+        for byte in msg:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(
+            f'{self.system.w_LO_refH}',
+            f'{w_lo_refh}')
+
+    def test_get_W_LO_RefV(self, w_lo_refv='INT'):
+        msg = 'set W_LO_RefV=INT\r\nget W_LO_RefV\r\n'
+        for byte in msg:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(
+            f'{self.system.w_LO_refV}',
+            f'{w_lo_refv}')
 
     def test_get_w_LO_status(self, stat_polh=0, stat_polv=0):
         msg = 'get W_LO_status\r\n'

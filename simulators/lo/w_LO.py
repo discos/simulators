@@ -4,8 +4,8 @@ from simulators.common import ListeningSystem
 class System(ListeningSystem):
 
     commands = {
-        'enable W_LO_Inter': 'enable_w_LO_Inter',
-        'disable W_LO_Inter': 'disable_w_LO_Inter',
+        'enable USB_devs': 'enable_USB_devs',
+        'disable USB_devs': 'disable_USB_devs',
         'set W_LO_freq_PolH': 'set_w_LO_freq_PolH',
         'set W_LO_freq_PolV': 'set_w_LO_freq_PolV',
         'get W_LO_PolH': 'get_w_LO_PolH',
@@ -13,6 +13,10 @@ class System(ListeningSystem):
         'get W_LO_Pols': 'get_w_LO_Pols',
         'get W_LO_Synths_Temp': 'get_w_LO_Synths_Temp',
         'get W_LO_HKP_Temp': 'get_w_LO_HKP_Temp',
+        'set W_LO_RefH': 'set_W_LO_RefH',
+        'set W_LO_RefV': 'set_W_LO_RefV',
+        'get W_LO_RefH': 'get_W_LO_RefH',
+        'get W_LO_RefV': 'get_W_LO_RefH',
         'get W_LO_status': 'get_w_LO_status',
         'set LO_att_PolH': 'set_LO_att_PolH',
         'set LO_att_PolV': 'set_LO_att_PolV',
@@ -26,9 +30,11 @@ class System(ListeningSystem):
     nack = 'nack'
 
     def __init__(self):
-        self.w_LO_Inter = 0
+        self.w_USB_devs = 0
         self.w_LO_Synths_Temp = [0., 0.]
         self.w_LO_HKP_Temp = [0., 0., 0., 0.]
+        self.w_LO_refH = ''
+        self.w_LO_refV = ''
         self.status_W_LO_PolH = 0
         self.status_W_LO_PolV = 0
         self.w_lo_freq_polH = 0.0
@@ -57,7 +63,10 @@ class System(ListeningSystem):
             if len(args) >= 2:  # set methods
                 cmd_name = self.commands.get(args[0])
                 method = getattr(self, cmd_name)
-                ans = method(float(args[1]))
+                try:
+                    ans = method(float(args[1]))
+                except ValueError:
+                    ans = method(args[1][:-1])
             else:  # get methods (without params)
                 cmd_name = self.commands.get(args[0][:-1])
                 method = getattr(self, cmd_name)
@@ -67,12 +76,12 @@ class System(ListeningSystem):
         answer = answer[:-1]
         return answer
 
-    def enable_w_LO_Inter(self):
-        self.w_LO_Inter = 1
+    def enable_USB_devs(self):
+        self.w_USB_devs = 1
         return self.ack + self.tail
 
-    def disable_w_LO_Inter(self):
-        self.w_LO_Inter = 0
+    def disable_USB_devs(self):
+        self.w_USB_devs = 0
         return self.ack + self.tail
 
     def set_w_LO_freq_PolH(self, params):
@@ -101,6 +110,20 @@ class System(ListeningSystem):
         return (f'C1={self.w_LO_HKP_Temp[0]},'
         f'C2={self.w_LO_HKP_Temp[1]}' f'C3={self.w_LO_HKP_Temp[2]}'
         f'C4={self.w_LO_HKP_Temp[3]}' + self.tail)
+
+    def set_W_LO_RefH(self, params):
+        self.w_LO_refH = params
+        return self.ack + self.tail
+
+    def set_W_LO_RefV(self, params):
+        self.w_LO_refV = params
+        return self.ack + self.tail
+
+    def get_W_LO_RefH(self):
+        return self.w_LO_refH + self.tail
+
+    def get_W_LO_RefV(self):
+        return self.w_LO_refV + self.tail
 
     def get_w_LO_status(self):
         return (f'{self.status_W_LO_PolH},'

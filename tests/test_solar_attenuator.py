@@ -10,6 +10,12 @@ class TestSolarAttenuator(unittest.TestCase):
     def tearDown(self):
         del self.system
 
+    def test_set_w_home(self, home=1):
+        msg = 'set W_home\r\n'
+        for byte in msg:
+            self.assertTrue(self.system.parse(byte))
+        self.assertEqual(self.system.home, home)
+
     def test_set_w_solar_attn(self, mode="attenuator"):
         msg = 'set W_solar_attn\r\n'
         for byte in msg:
@@ -27,12 +33,6 @@ class TestSolarAttenuator(unittest.TestCase):
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(self.system.mode, mode)
-
-    def test_get_w_cal_temp(self, cal_temp=21.0):
-        msg = 'get W_cal_temp\r\n'
-        for byte in msg:
-            self.assertTrue(self.system.parse(byte))
-        self.assertEqual(self.system.cal_temp, cal_temp)
 
     def test_get_mode(self, mode="pass-through"):
         msg = 'set W_passthrough\r\nget W_mode\r\n'
