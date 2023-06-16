@@ -253,15 +253,22 @@ class System(ListeningSystem):
                 servo.trajectory_start_time = start_time
 
                 # Backtrace trajectory to current position
-                steps = 0
+                trajectory_steps = 0
                 for index in range(servo.DOF):
                     delta = abs(coords[index] - servo.coords[index])
-                    steps = max(
-                        steps,
-                        ceil(delta / servo.max_delta[index] / 5)
+                    interval_delta = servo.max_delta[index]
+                    interval_delta *= self.program_track_timegap
+                    trajectory_steps = max(
+                        trajectory_steps,
+                        ceil(delta / interval_delta)
                     )
-                # Add 1 second
-                steps += 5
+
+                now = time.time() + self.program_track_timegap
+                time_steps = int(
+                    (start_time - now) / self.program_track_timegap
+                )
+
+                steps = min(trajectory_steps, time_steps)
 
                 t = start_time
                 for _ in range(steps):
@@ -269,24 +276,24 @@ class System(ListeningSystem):
                     servo.trajectory[0].append(t)
                 servo.trajectory[0].reverse()
 
-                n_points = len(servo.trajectory[0])
-                # First thing first insert the current coordinates
-                for index in range(servo.DOF):
-                    coord = servo.coords[index]
-                    delta = coords[index] - coord
-                    direction = sign(delta)
-                    delta = abs(delta)
-                    delta /= n_points
-                    delta = min(
-                        delta,
-                        servo.max_delta[index] * self.program_track_timegap
-                    )
-                    delta *= direction
-                    for n in range(n_points):
-                        coord *= delta * n
-                        coord = min(coord, servo.max_coord[index])
-                        coord = max(coord, servo.min_coord[index])
+                if steps:
+                    for index in range(servo.DOF):
+                        coord = servo.coords[index]
+                        delta = coords[index] - coord
+                        direction = sign(delta)
+                        delta = abs(delta)
+                        delta /= steps
+                        delta = min(
+                            delta,
+                            servo.max_delta[index] * self.program_track_timegap
+                        )
+                        delta *= direction
                         servo.trajectory[index + 1].append(coord)
+                        for _ in range(steps - 1):
+                            coord += delta
+                            coord = min(coord, servo.max_coord[index])
+                            coord = max(coord, servo.min_coord[index])
+                            servo.trajectory[index + 1].append(coord)
 
             point_time = start_time
             point_time += point_id * self.program_track_timegap
@@ -297,7 +304,10 @@ class System(ListeningSystem):
             servo.trajectory_point_id = point_id
             servo.trajectory[0].append(point_time)
             for index in range(servo.DOF):
-                coord = servo.trajectory[index + 1][-1]
+                try:
+                    coord = servo.trajectory[index + 1][-1]
+                except IndexError:
+                    coord = servo.coords[index]
                 delta = coords[index] - coord
                 direction = sign(delta)
                 delta = abs(delta)
@@ -321,9 +331,11 @@ class System(ListeningSystem):
 
             if len(servo.trajectory[0]) > 3:
                 pt_table = []
-                temp = list(map(list, servo.trajectory))
                 for index in range(servo.DOF):
-                    pt_table.append(splrep(temp[0], temp[index + 1]))
+                    pt_table.append(splrep(
+                        servo.trajectory[0],
+                        servo.trajectory[index + 1]
+                    ))
                 servo.pt_table = pt_table
             self.last_executed_command = self.plc_time()
             servo.operative_mode = 50  # PROGRAMTRACK
@@ -367,7 +379,7 @@ class Servo:
         self.block = 2
         self.operative_mode = 0
         self.DOF = dof
-        self.coords = [random.uniform(0, 100) for _ in range(self.DOF)]
+        self.coords = [random.uniform(-1, 1) for _ in range(self.DOF)]
         self.offsets = [0] * self.DOF
         if self.program_track_capable:
             self.trajectory_lock = Lock()
@@ -387,9 +399,15 @@ class Servo:
             with self.trajectory_lock:
                 pt_table = self.pt_table
             if pt_table:
-                for index in range(self.DOF):
-                    self.coords[index] = splev(now, pt_table[index]).item(0)
-                if now > self.trajectory[0][-1] + 5:
+                first_time = self.trajectory[0][0]
+                last_time = self.trajectory[0][-1]
+                if now >= first_time:
+                    for index in range(self.DOF):
+                        coord = splev(now, pt_table[index]).item(0)
+                        coord = max(coord, self.min_coord[index])
+                        coord = min(coord, self.max_coord[index])
+                        self.coords[index] = coord
+                if now > last_time:
                     with self.trajectory_lock:
                         self.trajectory_id = None
                         self.trajectory_start_time = None
@@ -415,9 +433,6 @@ class PFP(Servo):
         self.z_slave_enabled = 1
         self.theta_master_enabled = 1
         self.theta_slave_enabled = 1
-        self.tx = random.uniform(0, 100)
-        self.tz = random.uniform(0, 100)
-        self.rtheta = random.uniform(0, 100)
         self.program_track_capable = True
         self.max_coord = [1490.0, 50.0, 77.0]
         self.min_coord = [-1490.0, -200.0, -1]
@@ -431,11 +446,11 @@ class PFP(Servo):
         answer += f'PFP_Z_SLAVE_ENABLED={self.z_slave_enabled}|'
         answer += f'PFP_THETA_MASTER_ENABLED={self.theta_master_enabled}|'
         answer += f'PFP_THETA_SLAVE_ENABLED={self.theta_slave_enabled}|'
-        answer += f'PFP_ELONG_X={random.uniform(0, 100):.6f}|'
-        answer += f'PFP_ELONG_Z_MASTER={random.uniform(0, 100):.6f}|'
-        answer += f'PFP_ELONG_Z_SLAVE={random.uniform(0, 100):.6f}|'
-        answer += f'PFP_ELONG_THETA_MASTER={random.uniform(0, 100):.6f}|'
-        answer += f'PFP_ELONG_THETA_SLAVE={random.uniform(0, 100):.6f}|'
+        answer += f'PFP_ELONG_X={random.uniform(-10, 10):.6f}|'
+        answer += f'PFP_ELONG_Z_MASTER={random.uniform(-10, 10):.6f}|'
+        answer += f'PFP_ELONG_Z_SLAVE={random.uniform(-10, 10):.6f}|'
+        answer += f'PFP_ELONG_THETA_MASTER={random.uniform(-10, 10):.6f}|'
+        answer += f'PFP_ELONG_THETA_SLAVE={random.uniform(-10, 10):.6f}|'
         answer += f'PFP_TX={self.coords[0]:.6f}|'
         answer += f'PFP_TZ={self.coords[1]:.6f}|'
         answer += f'PFP_RTHETA={self.coords[2]:.6f}|'
@@ -454,12 +469,6 @@ class SRP(Servo):
         self.y4_enabled = 1
         self.y5_enabled = 1
         self.x6_enabled = 1
-        self.tx = random.uniform(0, 100)
-        self.ty = random.uniform(0, 100)
-        self.tz = random.uniform(0, 100)
-        self.rx = random.uniform(0, 100)
-        self.ry = random.uniform(0, 100)
-        self.rz = random.uniform(0, 100)
         self.program_track_capable = True
         self.max_coord = [50.0, 110.0, 50.0, 0.25, 0.25, 0.25]
         self.min_coord = [-50.0, -110.0, -50.0, -0.25, -0.25, -0.25]
@@ -474,12 +483,12 @@ class SRP(Servo):
         answer += f'SRP_Y1_ENABLED={self.y4_enabled}|'
         answer += f'SRP_Y2_ENABLED={self.y5_enabled}|'
         answer += f'SRP_X1_ENABLED={self.x6_enabled}|'
-        answer += f'SRP_ELONG_Z1={random.uniform(0, 100):.6f}|'
-        answer += f'SRP_ELONG_Z2={random.uniform(0, 100):.6f}|'
-        answer += f'SRP_ELONG_Z3={random.uniform(0, 100):.6f}|'
-        answer += f'SRP_ELONG_Y1={random.uniform(0, 100):.6f}|'
-        answer += f'SRP_ELONG_Y2={random.uniform(0, 100):.6f}|'
-        answer += f'SRP_ELONG_X1={random.uniform(0, 100):.6f}|'
+        answer += f'SRP_ELONG_Z1={random.uniform(-10, 10):.6f}|'
+        answer += f'SRP_ELONG_Z2={random.uniform(-10, 10):.6f}|'
+        answer += f'SRP_ELONG_Z3={random.uniform(-10, 10):.6f}|'
+        answer += f'SRP_ELONG_Y1={random.uniform(-10, 10):.6f}|'
+        answer += f'SRP_ELONG_Y2={random.uniform(-10, 10):.6f}|'
+        answer += f'SRP_ELONG_X1={random.uniform(-10, 10):.6f}|'
         answer += f'SRP_TX={self.coords[0]:.6f}|'
         answer += f'SRP_TY={self.coords[1]:.6f}|'
         answer += f'SRP_TZ={self.coords[2]:.6f}|'
@@ -500,15 +509,14 @@ class M3R(Servo):
     def __init__(self):
         self.cw_enabled = 1
         self.ccw_enabled = 1
-        self.rotation = random.uniform(1, 100)
         super().__init__('M3R')
 
     def get_status(self, now):
         answer = super().get_status(now)
         answer += f'M3R_CLOCKWISE_ENABLED={self.cw_enabled}|'
         answer += f'M3R_COUNTERCLOCKWISE_ENABLED={self.ccw_enabled}|'
-        answer += f'M3R_CLOCKWISE={random.uniform(0, 100):.6f}|'
-        answer += f'M3R_COUNTERCLOCKWISE={random.uniform(0, 100):.6f}|'
+        answer += f'M3R_CLOCKWISE={random.uniform(-2, 2):.6f}|'
+        answer += f'M3R_COUNTERCLOCKWISE={random.uniform(-2, 2):.6f}|'
         answer += f'M3R_ROTATION={self.coords[0]:.6f}|'
         answer += f'M3R_OFFSET={self.offsets[0]:.6f}'
         return answer
@@ -519,15 +527,14 @@ class GFR(Servo):
     def __init__(self):
         self.cw_enabled = 1
         self.ccw_enabled = 1
-        self.rotation = random.uniform(1, 100)
         super().__init__('GFR')
 
     def get_status(self, now):
         answer = super().get_status(now)
         answer += f'GFR_CLOCKWISE_ENABLED={self.cw_enabled}|'
         answer += f'GFR_COUNTERCLOCKWISE_ENABLED={self.ccw_enabled}|'
-        answer += f'GFR_CLOCKWISE={random.uniform(0, 100):.6f}|'
-        answer += f'GFR_COUNTERCLOCKWISE={random.uniform(0, 100):.6f}|'
+        answer += f'GFR_CLOCKWISE={random.uniform(-2, 2):.6f}|'
+        answer += f'GFR_COUNTERCLOCKWISE={random.uniform(-2, 2):.6f}|'
         answer += f'GFR_ROTATION={self.coords[0]:.6f}|'
         answer += f'GFR_OFFSET={self.offsets[0]:.6f}'
         return answer
@@ -537,7 +544,6 @@ class Derotator(Servo):
 
     def __init__(self, name):
         self.rotary_axis_enabled = 1
-        self.rotation = random.uniform(1, 100)
         self.program_track_capable = True
         self.max_coord = [220.0]
         self.min_coord = [-220.0]
