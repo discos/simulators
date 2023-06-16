@@ -16,7 +16,7 @@ class System(ListeningSystem):
         'set W_LO_RefH': 'set_W_LO_RefH',
         'set W_LO_RefV': 'set_W_LO_RefV',
         'get W_LO_RefH': 'get_W_LO_RefH',
-        'get W_LO_RefV': 'get_W_LO_RefH',
+        'get W_LO_RefV': 'get_W_LO_RefV',
         'get W_LO_status': 'get_w_LO_status',
         'set LO_att_PolH': 'set_LO_att_PolH',
         'set LO_att_PolV': 'set_LO_att_PolV',

@@ -62,7 +62,7 @@ class System(ListeningSystem):
         return self.ack + self.tail
 
     def get_IF_switch_config(self):
-        return self.sw_matrix.switch_matrix
+        return self.sw_matrix.switch_matrix + self.tail
 
 
 class SwitchMatrix:
