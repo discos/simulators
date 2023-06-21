@@ -17,8 +17,8 @@ class System(ListeningSystem):
     }
 
     tail = '\r\n'
-    ack = 'ack'
-    nack = 'nack'
+    ack = 'ACK'
+    nack = 'NACK'
 
     def __init__(self):
         self._set_default()

@@ -25,7 +25,7 @@ class TestSwitchMatrix(unittest.TestCase):
         response = self.system.parse(msg)
         self.assertEqual(response, ans)
 
-    def test_set_IF_switch_matrix(self, ans="ack\r\n"):
+    def test_set_IF_switch_matrix(self, ans="ACK\r\n"):
         msg = 'set IF_switch_config=2\r\n'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
