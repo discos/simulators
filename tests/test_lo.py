@@ -171,11 +171,11 @@ class TestWLocalOscillator(unittest.TestCase):
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
         self.assertEqual(
-            (f'{self.system.w_LO_HKP_Temp[0]}',
-            f'{self.system.w_LO_HKP_Temp[1]}',
-            f'{self.system.w_LO_HKP_Temp[2]}',
-            f'{self.system.w_LO_HKP_Temp[3]}'),
-            (f'{c1}', f'{c2}', f'{c3}', f'{c4}'))
+            (f'+{self.system.w_LO_HKP_Temp[0]}',
+            f'+{self.system.w_LO_HKP_Temp[1]}',
+            f'+{self.system.w_LO_HKP_Temp[2]}',
+            f'+{self.system.w_LO_HKP_Temp[3]}'),
+            (f'+{c1}', f'+{c2}', f'+{c3}', f'+{c4}'))
 
     def test_set_W_LO_RefH(self, w_lo_refh='INT'):
         msg = 'set W_LO_RefH=INT\r\n'

@@ -16,7 +16,7 @@ class System(ListeningSystem):
         'set W_LO_RefH': 'set_W_LO_RefH',
         'set W_LO_RefV': 'set_W_LO_RefV',
         'get W_LO_RefH': 'get_W_LO_RefH',
-        'get W_LO_RefV': 'get_W_LO_RefH',
+        'get W_LO_RefV': 'get_W_LO_RefV',
         'get W_LO_status': 'get_w_LO_status',
         'set LO_att_PolH': 'set_LO_att_PolH',
         'set LO_att_PolV': 'set_LO_att_PolV',
@@ -26,8 +26,8 @@ class System(ListeningSystem):
     }
 
     tail = '\r\n'
-    ack = 'ack'
-    nack = 'nack'
+    ack = 'ACK'
+    nack = 'NACK'
 
     def __init__(self):
         self.w_USB_devs = 0
@@ -93,23 +93,23 @@ class System(ListeningSystem):
         return self.ack + self.tail
 
     def get_w_LO_PolH(self):
-        return f'{self.w_lo_freq_polH}' + self.tail
+        return f'{self.w_lo_freq_polH}MHz' + self.tail
 
     def get_w_LO_PolV(self):
-        return f'{self.w_lo_freq_polV}' + self.tail
+        return f'{self.w_lo_freq_polV}MHz' + self.tail
 
     def get_w_LO_Pols(self):
-        return (f'{self.w_lo_freq_polH},'
-        f'{self.w_lo_freq_polV}' + self.tail)
+        return (f'{self.w_lo_freq_polH}MHz,'
+        f'{self.w_lo_freq_polV}MHz' + self.tail)
 
     def get_w_LO_Synths_Temp(self):
-        return (f'C1={self.w_LO_Synths_Temp[0]},'
-        f'C2={self.w_LO_Synths_Temp[1]}' + self.tail)
+        return (f'{self.w_LO_Synths_Temp[0]}C,'
+        f'{self.w_LO_Synths_Temp[1]}C' + self.tail)
 
     def get_w_LO_HKP_Temp(self):
-        return (f'C1={self.w_LO_HKP_Temp[0]},'
-        f'C2={self.w_LO_HKP_Temp[1]}' f'C3={self.w_LO_HKP_Temp[2]}'
-        f'C4={self.w_LO_HKP_Temp[3]}' + self.tail)
+        return (f'+{self.w_LO_HKP_Temp[0]}C,'
+        f'+{self.w_LO_HKP_Temp[1]}C' f'+{self.w_LO_HKP_Temp[2]}C'
+        f'+{self.w_LO_HKP_Temp[3]}C' + self.tail)
 
     def set_W_LO_RefH(self, params):
         self.w_LO_refH = params
@@ -120,10 +120,10 @@ class System(ListeningSystem):
         return self.ack + self.tail
 
     def get_W_LO_RefH(self):
-        return self.w_LO_refH + self.tail
+        return f'{self.w_LO_refH.capitalize()}.{self.tail}'
 
     def get_W_LO_RefV(self):
-        return self.w_LO_refV + self.tail
+        return f'{self.w_LO_refV.capitalize()}.{self.tail}'
 
     def get_w_LO_status(self):
         return (f'{self.status_W_LO_PolH},'
@@ -138,11 +138,11 @@ class System(ListeningSystem):
         return self.ack + self.tail
 
     def get_LO_att_PolH(self):
-        return f'{self.lo_att_polH}' + self.tail
+        return f'{self.lo_att_polH}dB' + self.tail
 
     def get_LO_att_PolV(self):
-        return f'{self.lo_att_polV}' + self.tail
+        return f'{self.lo_att_polV}dB' + self.tail
 
     def get_LO_atts(self):
-        return (f'{self.lo_att_polH},'
-        f'{self.lo_att_polV}' + self.tail)
+        return (f'{self.lo_att_polH}dB,'
+        f'{self.lo_att_polV}dB' + self.tail)
