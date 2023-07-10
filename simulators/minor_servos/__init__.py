@@ -11,9 +11,10 @@ try:
 except ImportError as ex:  # pragma: no cover
     raise ImportError('The `scipy` package, required for the simulator'
         + ' to run, is missing!') from ex
-from threading import Lock
+from ctypes import c_bool
+from threading import Lock, Thread
+from multiprocessing import Value
 from bisect import bisect_left
-from math import ceil
 from socketserver import ThreadingTCPServer
 from simulators.common import ListeningSystem
 
@@ -89,6 +90,29 @@ class System(ListeningSystem):
             'DerotatoreGFR3': Derotator('GFR3'),
             'DerotatorePFP': Derotator('PFP'),
         }
+        self.stop = Value(c_bool, False)
+        self.update_thread = Thread(
+            target=self._update,
+            args=(self.stop, self.servos)
+        )
+        self.update_thread.daemon = True
+        self.update_thread.start()
+
+    def __del__(self):
+        self.system_stop()
+
+    def system_stop(self):
+        self.stop.value = True
+        self.update_thread.join()
+        return '$server_shutdown%%%%%'
+
+    @staticmethod
+    def _update(stop, servos):
+        while not stop.value:
+            now = time.time()
+            for _, servo in servos.items():
+                servo.get_status(now)
+            time.sleep(0.01)
 
     def parse(self, byte):
         self.msg += byte
@@ -252,72 +276,31 @@ class System(ListeningSystem):
                 servo.trajectory_id = trajectory_id
                 servo.trajectory_start_time = start_time
 
-                # Backtrace trajectory to current position
-                trajectory_steps = 0
-                for index in range(servo.DOF):
-                    delta = abs(coords[index] - servo.coords[index])
-                    interval_delta = servo.max_delta[index]
-                    interval_delta *= self.program_track_timegap
-                    trajectory_steps = max(
-                        trajectory_steps,
-                        ceil(delta / interval_delta)
-                    )
-
-                now = time.time() + self.program_track_timegap
-                time_steps = int(
-                    (start_time - now) / self.program_track_timegap
-                )
-
-                steps = min(trajectory_steps, time_steps)
-
-                t = start_time
-                for _ in range(steps):
-                    t -= self.program_track_timegap
-                    servo.trajectory[0].append(t)
-                servo.trajectory[0].reverse()
-
-                if steps:
-                    for index in range(servo.DOF):
-                        coord = servo.coords[index]
-                        delta = coords[index] - coord
-                        direction = sign(delta)
-                        delta = abs(delta)
-                        delta /= steps
-                        delta = min(
-                            delta,
-                            servo.max_delta[index] * self.program_track_timegap
-                        )
-                        delta *= direction
-                        servo.trajectory[index + 1].append(coord)
-                        for _ in range(steps - 1):
-                            coord += delta
-                            coord = min(coord, servo.max_coord[index])
-                            coord = max(coord, servo.min_coord[index])
-                            servo.trajectory[index + 1].append(coord)
-
             point_time = start_time
             point_time += point_id * self.program_track_timegap
             # Point is in the past
             if point_time < time.time():
                 return self.bad
-            # Everything seems correct, insert the point
+
+            if len(servo.trajectory[0]) == 1 and point_id == 1:
+                for i in range(1, 21):
+                    servo.trajectory[0].append(
+                        servo.trajectory[0][0] - self.program_track_timegap * i
+                    )
+                servo.trajectory[0].reverse()
+                for index in range(servo.DOF):
+                    delta = coords[index] - servo.trajectory[index + 1][0]
+                    for i in range(1, 21):
+                        coord = servo.trajectory[index + 1][0] - delta * i
+                        coord = min(coord, servo.max_coord[index])
+                        coord = max(coord, servo.min_coord[index])
+                        servo.trajectory[index + 1].append(coord)
+                    servo.trajectory[index + 1].reverse()
+
             servo.trajectory_point_id = point_id
             servo.trajectory[0].append(point_time)
             for index in range(servo.DOF):
-                try:
-                    coord = servo.trajectory[index + 1][-1]
-                except IndexError:
-                    coord = servo.coords[index]
-                delta = coords[index] - coord
-                direction = sign(delta)
-                delta = abs(delta)
-                delta = min(
-                    delta,
-                    servo.max_delta[index] * self.program_track_timegap
-                )
-                delta *= direction
-                coord += delta
-                coord = min(coord, servo.max_coord[index])
+                coord = min(coords[index], servo.max_coord[index])
                 coord = max(coord, servo.min_coord[index])
                 servo.trajectory[index + 1].append(coord)
 
@@ -381,6 +364,7 @@ class Servo:
         self.DOF = dof
         self.coords = [random.uniform(-1, 1) for _ in range(self.DOF)]
         self.offsets = [0] * self.DOF
+        self.last_status_read = 0
         if self.program_track_capable:
             self.trajectory_lock = Lock()
             self.trajectory_id = None
@@ -390,6 +374,8 @@ class Servo:
             self.pt_table = []
 
     def get_status(self, now):
+        elapsed = now - self.last_status_read
+        self.last_status_read = now
         answer = f',{self.name}_ENABLED={self.enabled}|'
         answer += f'{self.name}_STATUS={self.status}|'
         answer += f'{self.name}_BLOCK={self.block}|'
@@ -406,7 +392,12 @@ class Servo:
                         coord = splev(now, pt_table[index]).item(0)
                         coord = max(coord, self.min_coord[index])
                         coord = min(coord, self.max_coord[index])
-                        self.coords[index] = coord
+                        delta = coord - self.coords[index]
+                        direction = sign(delta)
+                        delta = min(
+                            self.max_delta[index] * elapsed, abs(delta)
+                        )
+                        self.coords[index] += direction * delta
                 if now > last_time:
                     with self.trajectory_lock:
                         self.trajectory_id = None
