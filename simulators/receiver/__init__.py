@@ -5,6 +5,7 @@ from simulators.receiver.slaves import Slave, Dewar, LNA, Switch
 
 
 servers = []
+# C band - 7GHz
 servers.append((
     ('0.0.0.0', 12900),
     (),
@@ -17,6 +18,7 @@ servers.append((
     ThreadingTCPServer,
     {'slave_type': LNA}
 ))
+# K band
 servers.append((
     ('0.0.0.0', 12902),
     (),
@@ -29,6 +31,7 @@ servers.append((
     ThreadingTCPServer,
     {'slave_type': LNA, 'feeds': 7}
 ))
+# LP band
 servers.append((
     ('0.0.0.0', 12904),
     (),
@@ -47,6 +50,7 @@ servers.append((
     ThreadingTCPServer,
     {'slave_type': Slave}
 ))
+# TriBand
 servers.append((
     ('0.0.0.0', 12907),
     (),
@@ -65,6 +69,7 @@ servers.append((
     ThreadingTCPServer,
     {'slave_type': Switch}
 ))
+# Q band
 servers.append((
     ('0.0.0.0', 12910),
     (),
@@ -76,6 +81,19 @@ servers.append((
     (),
     ThreadingTCPServer,
     {'slave_type': Dewar}
+))
+# C band - 5GHz
+servers.append((
+    ('0.0.0.0', 12912),
+    (),
+    ThreadingTCPServer,
+    {'slave_type': Dewar}
+))
+servers.append((
+    ('0.0.0.0', 12913),
+    (),
+    ThreadingTCPServer,
+    {'slave_type': LNA}
 ))
 
 
