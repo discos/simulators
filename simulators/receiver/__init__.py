@@ -4,30 +4,31 @@ from simulators.receiver import DEFINITIONS as DEF
 from simulators.receiver.slaves import Slave, Dewar, LNA, Switch
 
 
-servers = []
-# C band - 7GHz
-servers.append((('0.0.0.0', 12900), (), Tcp, {'slave_type': Dewar}))
-servers.append((('0.0.0.0', 12901), (), Tcp, {'slave_type': LNA}))
-# K band
-servers.append((('0.0.0.0', 12902), (), Tcp, {'slave_type': Dewar}))
-servers.append((('0.0.0.0', 12903), (), Tcp, {'slave_type': LNA, 'feeds': 7}))
-# LP band
-servers.append((('0.0.0.0', 12904), (), Tcp, {'slave_type': Dewar}))
-servers.append(
-    (('0.0.0.0', 12905), (), Tcp,
-    {'slave_type': LNA, 'min_index': 0x7D, 'max_index': 0x7D, 'feeds': 2})
-)
-servers.append((('0.0.0.0', 12906), (), Tcp, {'slave_type': Slave}))
-# TriBand
-servers.append((('0.0.0.0', 12907), (), Tcp, {'slave_type': LNA, 'feeds': 3}))
-servers.append((('0.0.0.0', 12908), (), Tcp, {'slave_type': Dewar}))
-servers.append((('0.0.0.0', 12909), (), Tcp, {'slave_type': Switch}))
-# Q band
-servers.append((('0.0.0.0', 12910), (), Tcp, {'slave_type': LNA, 'feeds': 19}))
-servers.append((('0.0.0.0', 12911), (), Tcp, {'slave_type': Dewar}))
-# C band - 5GHz
-servers.append((('0.0.0.0', 12912), (), Tcp, {'slave_type': Dewar}))
-servers.append((('0.0.0.0', 12913), (), Tcp, {'slave_type': LNA}))
+servers = [
+    # C band - 7GHz
+    (('0.0.0.0', 12900), (), Tcp, {'slave_type': Dewar}),
+    (('0.0.0.0', 12901), (), Tcp, {'slave_type': LNA}),
+    # K band
+    (('0.0.0.0', 12902), (), Tcp, {'slave_type': Dewar}),
+    (('0.0.0.0', 12903), (), Tcp, {'slave_type': LNA, 'feeds': 7}),
+    # LP band
+    (('0.0.0.0', 12904), (), Tcp, {'slave_type': Dewar}),
+    (
+        ('0.0.0.0', 12905), (), Tcp,
+        {'slave_type': LNA, 'min_index': 0x7D, 'max_index': 0x7D, 'feeds': 2}
+    ),
+    (('0.0.0.0', 12906), (), Tcp, {'slave_type': Slave}),
+    # TriBand
+    (('0.0.0.0', 12907), (), Tcp, {'slave_type': LNA, 'feeds': 3}),
+    (('0.0.0.0', 12908), (), Tcp, {'slave_type': Dewar}),
+    (('0.0.0.0', 12909), (), Tcp, {'slave_type': Switch}),
+    # Q band
+    (('0.0.0.0', 12910), (), Tcp, {'slave_type': LNA, 'feeds': 19}),
+    (('0.0.0.0', 12911), (), Tcp, {'slave_type': Dewar}),
+    # C band - 5GHz
+    (('0.0.0.0', 12912), (), Tcp, {'slave_type': Dewar}),
+    (('0.0.0.0', 12913), (), Tcp, {'slave_type': LNA})
+]
 
 
 class System(ListeningSystem):
