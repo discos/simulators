@@ -29,6 +29,7 @@ def address_generator_function():
         try:
             s.bind(address)
             s.close()
+            time.sleep(0.01)
             yield address
         except OSError:
             pass

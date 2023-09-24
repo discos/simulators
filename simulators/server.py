@@ -105,7 +105,7 @@ class ListenHandler(BaseHandler):
             msg += '\n'
             self._handle(msg)
         else:  # TCP client
-            while True:
+            while not self.stop_me.value:
                 try:
                     msg = self.socket.recv(1)
                     if not msg:
@@ -175,7 +175,7 @@ class SendHandler(BaseHandler):
         self.socket.setblocking(False)
 
         self.system.subscribe(message_queue)
-        while True:
+        while not self.stop_me.value:
             try:
                 if msg:
                     custom_msg = msg.decode('raw_unicode_escape')
@@ -270,6 +270,7 @@ class Server:
         for server in self.servers:
             server.RequestHandlerClass.system = self.system
             server.RequestHandlerClass.stop = self.stop
+            server.RequestHandlerClass.stop_me = self.stop_me
 
         threads = []
         for server in self.servers:
@@ -287,6 +288,7 @@ class Server:
     def start(self):
         """Starts a daemon thread which calls the `serve_forever` method. The
         server is therefore started as a daemon."""
+        self.stop_me.value = False
         t = threading.Thread(target=self.serve_forever)
         t.daemon = True
         t.start()
@@ -399,7 +401,6 @@ class Simulator:
                     logging.debug(ex)
                 finally:
                     sockobj.close()
-                break
         threads = []
         for entry in self.system_module.servers:
             t = threading.Thread(target=_send_stop, args=(entry,))
