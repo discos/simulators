@@ -89,7 +89,7 @@ class System(ListeningSystem):
             },
             {
                 'Address': '13',
-                "Status": 1,
+                "Status": 0,
                 "Configuration": "default",
                 "REG": self._init_reg(),
                 "ATT": self._init_att(),
