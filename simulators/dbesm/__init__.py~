@@ -22,18 +22,20 @@ class System(ListeningSystem):
         'DBE SETALLMODE': '_set_allmode',
         'DBE MODE': '_set_mode',
         'DBE STOREALLMODE': '_store_allmode',
-        'DBE CLRMODE': '_clr_mode',
+        'DBE DELETEFILE': '_delete_file',
         'DBE GETSTATUS': '_get_status',
         'DBE SETATT': '_set_att',
         'DBE SETAMP': '_set_amp',
         'DBE SETEQ': '_set_eq',
         'DBE SETBPF': '_set_bpf',
-        'DBE ALLDIAG': '_all_diag',
-        'DBE DIAG': '_diag',
+        'DBE ReadALLDIAG': '_all_diag',
+        'DBE ReadDIAG': '_diag',
         'DBE SETSTATUS': '_set_status',
         'DBE GETCOMP': '_get_comp',
         'DBE GETCFG': '_get_cfg',
-        'DBE DBEATT': '_dbeatt',
+        'DBE SETDBEATT': '_set_dbeatt',
+        'DBE GETDBEATT': '_get_dbeatt',
+        'DBE FIRM': '_get_firm'
     }
 
     errors = {
@@ -63,10 +65,10 @@ class System(ListeningSystem):
         'MFS_7',
     ]
     
-    out_boards = ['15','15','15','14','13','13','12']
-    out_dbe = ['DBBC_02','prova','SARDA_01','prova','Space_Debris','prova','SARDA_14']
+    out_boards = ['15','15','15','14','14','13','13','12','12']
+    out_dbe = ['DBBC_02','prova','SARDA_01','prova','prova2','Space_Debris','prova','prova2','SARDA_14']
     outputs = list(zip(out_boards, out_dbe))
-    out_att = [11, 3, 2, 1, 1, 5, 7]
+    out_att = [11, 3, 2, 1, 8, 1, 5, 16, 7]
     atts_in_boards = list(zip(out_boards, out_att))
 
     def __init__(self):
@@ -85,7 +87,8 @@ class System(ListeningSystem):
                 "BPF": [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1],
                 "5V": 1.11,
                 "3V3": 0.11,
-                "T0": 05.10
+                "T0": 05.10,
+                "FIRM": "0.116_NEW_win"
             },
             {
                 'Address': '13',
@@ -98,7 +101,8 @@ class System(ListeningSystem):
                 "BPF": [1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
                 "5V": 0.00,
                 "3V3": 0.01,
-                "T0": 50.51
+                "T0": 50.51,
+                "FIRM": "0.116_NEW_win"
             },
             {
                 'Address': '14',
@@ -111,7 +115,8 @@ class System(ListeningSystem):
                 "BPF": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
                 "5V": 1.00,
                 "3V3": 0.10,
-                "T0": 15.50
+                "T0": 15.50,
+                "FIRM": "0.116_NEW_win"
             },
             {
                 'Address': '15',
@@ -124,7 +129,8 @@ class System(ListeningSystem):
                 "BPF": [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
                 "5V": 0.01,
                 "3V3": 1.00,
-                "T0": 05.05
+                "T0": 05.05,
+                "FIRM": "0.116_NEW_win"
             },
         ]
 
@@ -230,7 +236,7 @@ class System(ListeningSystem):
             self.obs_mode.append(params[1])
             return self.ack + '\x0D\x0A'
 
-    def _clr_mode(self, params):
+    def _delete_file(self, params):
         if len(params) != 2:
             return self._error(params[0], 1001)
         elif params[1] not in self.obs_mode:
@@ -444,7 +450,7 @@ class System(ListeningSystem):
         	   	 	retval += 'ERR DBE BOARD unreachable\n\n'
         return retval[:-2] + '\x0D\x0A'
 
-    def _dbeatt(self, params):
+    def _set_dbeatt(self, params):
         retval = ''
         boardx = {}
         selected_boards = []
@@ -479,6 +485,54 @@ class System(ListeningSystem):
                        board["ATT"][a[out_idx[b_idx]]] = float(params[2])
                     retval += f'DBE {params[1]} BOARD {board["Address"]} ACK\n'
         return retval[:-1] + '\x0D\x0A'
+
+    def _get_dbeatt(self, params):
+        retval = ''
+        boardx = {}
+        selected_boards = []
+        out_idx = []
+        if len(params) != 2:
+        	   return self._error(params[0], 1001)
+        b,d = zip(*self.outputs)
+        for i,v in enumerate(d):
+            if v==params[1]:
+               out_idx.append(i)
+               boardx = next((sub for sub in self.boards
+                               if int(sub['Address']) == int(b[i])), None)
+               selected_boards.append(boardx)
+        if len(selected_boards) == 0:
+            return self._error(params[0], 1015)
+        else:
+            brd,a = zip(*self.atts_in_boards)
+            for board in selected_boards:
+               b_idx = selected_boards.index(board)
+               print(board["ATT"])
+               print(board["ATT"][a[out_idx[b_idx]]])
+
+               if board["Status"] != 0:
+                    retval += f'ERR DBE {params[1]} BOARD {board["Address"]} unreachable\n'
+               else:
+                    retval += f'ACK {params[1]} BOARD {board["Address"]} ATT {a[out_idx[b_idx]]} VALUE {board["ATT"][a[out_idx[b_idx]]]}\n'
+        return retval[:-1] + '\x0D\x0A'
+
+    def _get_firm(self, params):
+        if len(params) != 3 or params[1] != 'BOARD':
+            return self._error(params[0], 1001)
+        try:
+            selected_board = next((sub for sub in self.boards
+                               if int(sub['Address']) == int(params[2])), None)
+        except ValueError:
+            return self._error(params[0], 1001)
+
+        if selected_board is None:
+            return self._error(params[0], 1007, params[2])
+        elif selected_board["Status"] != 0:
+            return self._error(params[0], 1005, params[2])
+        else:
+            retval = self.ack + '\n'
+            retval += f'BOARD {selected_board["Address"]} '
+            retval += f'Prog=DBESM, Rev=rev {selected_board["FIRM"]}'
+        return retval + '\x0D\x0A'
 
     def _error(self, device_code, error_code, board_address=None):
         error_string = self.errors.get(error_code)
