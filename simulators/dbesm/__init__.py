@@ -3,9 +3,8 @@ from socketserver import ThreadingTCPServer
 import numpy
 from simulators.common import ListeningSystem
 
-"""setstatus command and status attribute only have testing purposes"""
-
 servers = [(('0.0.0.0', 11111), (), ThreadingTCPServer, {})]
+
 
 class System(ListeningSystem):
     tail = '\x0A'
@@ -64,9 +63,10 @@ class System(ListeningSystem):
         '3-Band',
         'MFS_7',
     ]
-    
-    out_boards = ['0','0','0','1','1','2','2','3','3']
-    out_dbe = ['1_DBBC2','prova','SARDA_01','prova','prova2','Space_Debris','prova','prova2','SARDA_14']
+
+    out_boards = ['0', '0', '0', '1', '1', '2', '2', '3', '3']
+    out_dbe = ['1_DBBC2', 'prova', 'SARDA_01', 'prova',
+        'prova2', 'Space_Debris', 'prova', 'prova2', 'SARDA_14']
     outputs = list(zip(out_boards, out_dbe))
     out_att = [11, 3, 2, 1, 8, 1, 5, 16, 7]
     atts_in_boards = list(zip(out_boards, out_att))
@@ -195,8 +195,8 @@ class System(ListeningSystem):
             if key['Status'] != 0:
                 retval += f'BOARD {key["Address"]} ERR DBE BOARD unreachable\n'
             else:
-            	 key["Configuration"] = params[1]
-            	 retval += f'BOARD {key["Address"]} ACK\n'
+                key["Configuration"] = params[1]
+                retval += f'BOARD {key["Address"]} ACK\n'
         return retval[:-1] + '\x0D\x0A'
 
     def _set_mode(self, params):
@@ -441,13 +441,13 @@ class System(ListeningSystem):
         if len(params) != 1:
             return self._error(params[0], 1001)
         else:
-        	   retval += self.ack + '\n'
-        	   for board in self.boards:
-        	   	 retval += f'BOARD {board["Address"]} '
-        	   	 if board['Status'] == 0:
-        	   	 	retval += f'{board["Configuration"]}\n\n'
-        	   	 else:
-        	   	 	retval += 'ERR DBE BOARD unreachable\n\n'
+            retval += self.ack + '\n'
+            for board in self.boards:
+                retval += f'BOARD {board["Address"]} '
+                if board['Status'] == 0:
+                    retval += f'{board["Configuration"]}\n\n'
+                else:
+                    retval += 'ERR DBE BOARD unreachable\n\n'
         return retval[:-2] + '\x0D\x0A'
 
     def _set_dbeatt(self, params):
@@ -456,33 +456,41 @@ class System(ListeningSystem):
         selected_boards = []
         out_idx = []
         if len(params) != 3:
-        	   return self._error(params[0], 1001)
-        b,d = zip(*self.outputs)
-        for i,v in enumerate(d):
-            if v==params[1]:
-               out_idx.append(i)
-               boardx = next((sub for sub in self.boards
-                               if int(sub['Address']) == int(b[i])), None)
-               selected_boards.append(boardx)
+            return self._error(params[0], 1001)
+        b, d = zip(*self.outputs)
+        for i, v in enumerate(d):
+            if v == params[1]:
+                out_idx.append(i)
+                boardx = next((sub for sub in self.boards
+                        if int(sub['Address']) == int(b[i])), None)
+                selected_boards.append(boardx)
         if len(selected_boards) == 0:
             return self._error(params[0], 1015)
         else:
-            brd,a = zip(*self.atts_in_boards)
+            brd, a = zip(*self.atts_in_boards)
             for board in selected_boards:
-               b_idx = selected_boards.index(board)
-               print(board["ATT"])
-               print(board["ATT"][a[out_idx[b_idx]]])
-               if (params[2]== '+3' or params[2]== '-3') and not (0<=(float(board["ATT"][a[out_idx[b_idx]]])+ float(params[2]))<=31.5):
-                    retval += f'ERR DBE {params[1]} BOARD {board["Address"]} value out of range\n'
-               elif params[2] !='+3' and params[2] !='-3' and float(params[2]) not in list(numpy.arange(0, 32, 0.5)):
-                    retval += f'ERR DBE {params[1]} BOARD {board["Address"]} value out of range\n'
-               elif board["Status"] != 0:
-                    retval += f'ERR DBE {params[1]} BOARD {board["Address"]} unreachable\n'
-               else:
-                    if params[2]== '+3' or params[2]== '-3':
-                       board["ATT"][a[out_idx[b_idx]]] += float(params[2])
+                b_idx = selected_boards.index(board)
+                print(brd)
+                print(board["ATT"])
+                print(board["ATT"][a[out_idx[b_idx]]])
+                if ((params[2] == '+3' or params[2] == '-3') and
+                        not (0 <= (float(board["ATT"][a[out_idx[b_idx]]]) +
+                        float(params[2])) <= 31.5)):
+                    retval += (f'ERR DBE {params[1]} BOARD '
+                    f'{board["Address"]} value out of range\n')
+                elif (params[2] != '+3' and params[2] != '-3'
+                        and float(params[2]) not in
+                        list(numpy.arange(0, 32, 0.5))):
+                    retval += (f'ERR DBE {params[1]} BOARD '
+                    f'{board["Address"]} value out of range\n')
+                elif board["Status"] != 0:
+                    retval += (f'ERR DBE {params[1]} BOARD '
+                    f'{board["Address"]} unreachable\n')
+                else:
+                    if params[2] == '+3' or params[2] == '-3':
+                        board["ATT"][a[out_idx[b_idx]]] += float(params[2])
                     else:
-                       board["ATT"][a[out_idx[b_idx]]] = float(params[2])
+                        board["ATT"][a[out_idx[b_idx]]] = float(params[2])
                     retval += f'DBE {params[1]} BOARD {board["Address"]} ACK\n'
         return retval[:-1] + '\x0D\x0A'
 
@@ -492,27 +500,31 @@ class System(ListeningSystem):
         selected_boards = []
         out_idx = []
         if len(params) != 2:
-        	   return self._error(params[0], 1001)
-        b,d = zip(*self.outputs)
-        for i,v in enumerate(d):
-            if v==params[1]:
-               out_idx.append(i)
-               boardx = next((sub for sub in self.boards
-                               if int(sub['Address']) == int(b[i])), None)
-               selected_boards.append(boardx)
+            return self._error(params[0], 1001)
+        b, d = zip(*self.outputs)
+        for i, v in enumerate(d):
+            if v == params[1]:
+                out_idx.append(i)
+                boardx = next((sub for sub in self.boards
+                        if int(sub['Address']) == int(b[i])), None)
+                selected_boards.append(boardx)
         if len(selected_boards) == 0:
             return self._error(params[0], 1015)
         else:
-            brd,a = zip(*self.atts_in_boards)
+            brd, a = zip(*self.atts_in_boards)
             for board in selected_boards:
-               b_idx = selected_boards.index(board)
-               print(board["ATT"])
-               print(board["ATT"][a[out_idx[b_idx]]])
+                b_idx = selected_boards.index(board)
+                print(brd)
+                print(board["ATT"])
+                print(board["ATT"][a[out_idx[b_idx]]])
 
-               if board["Status"] != 0:
-                    retval += f'ERR DBE {params[1]} BOARD {board["Address"]} unreachable\n'
-               else:
-                    retval += f'ACK {params[1]} BOARD {board["Address"]} ATT {a[out_idx[b_idx]]} VALUE {board["ATT"][a[out_idx[b_idx]]]}\n'
+                if board["Status"] != 0:
+                    retval += (f'ERR DBE {params[1]} BOARD '
+                    f'{board["Address"]} unreachable\n')
+                else:
+                    retval += (f'ACK {params[1]} BOARD {board["Address"]} '
+                    f'ATT {a[out_idx[b_idx]]} VALUE '
+                    f'{board["ATT"][a[out_idx[b_idx]]]}\n')
         return retval[:-1] + '\x0D\x0A'
 
     def _get_firm(self, params):

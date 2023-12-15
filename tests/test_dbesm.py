@@ -306,7 +306,7 @@ class TestDBESM(unittest.TestCase):
         message = f"DBE FIRM BOARD {board}\x0D\x0A"
         response = self._send(message)
         print(response)
-        self.assertRegex(response, f'ACK\nBOARD [0-9]+ '
+        self.assertRegex(response, 'ACK\nBOARD [0-9]+ '
         'Prog=DBESM, Rev=rev [0-9]+.[0-9]+_[A-Za-z]+_[A-Za-z]+\r\n')
 
     def test_firm_boardErr(self, board=0):
@@ -833,13 +833,13 @@ class TestDBESM(unittest.TestCase):
         print(response)
         self.assertEqual(response, 'NAK unknown command\x0D\x0A')
 
-    def test_setdbeatt_single(self,out_dbe='1_DBBC2'):
+    def test_setdbeatt_single(self, out_dbe='1_DBBC2'):
         message = f"DBE SETDBEATT {out_dbe} 1.0\x0D\x0A"
         response = self._send(message)
         print(response)
         self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
 
-    def test_setdbeatt_single_plus3_ok(self,out_dbe='1_DBBC2'):
+    def test_setdbeatt_single_plus3_ok(self, out_dbe='1_DBBC2'):
         message1 = f"DBE SETDBEATT {out_dbe} 1.0\x0D\x0A"
         self._send(message1)
         message2 = f"DBE SETDBEATT {out_dbe} +3\x0D\x0A"
@@ -847,7 +847,7 @@ class TestDBESM(unittest.TestCase):
         print(response)
         self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
 
-    def test_setdbeatt_single_plus3_err(self,out_dbe='1_DBBC2'):
+    def test_setdbeatt_single_plus3_err(self, out_dbe='1_DBBC2'):
         message1 = f"DBE SETDBEATT {out_dbe} 31.0\x0D\x0A"
         self._send(message1)
         message2 = f"DBE SETDBEATT {out_dbe} +3\x0D\x0A"
@@ -856,7 +856,7 @@ class TestDBESM(unittest.TestCase):
         self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
         '[0-9]+ value out of range\r\n')
 
-    def test_setdbeatt_single_minus3_ok(self,out_dbe='1_DBBC2'):
+    def test_setdbeatt_single_minus3_ok(self, out_dbe='1_DBBC2'):
         message1 = f"DBE SETDBEATT {out_dbe} 4.0\x0D\x0A"
         self._send(message1)
         message2 = f"DBE SETDBEATT {out_dbe} -3\x0D\x0A"
@@ -864,7 +864,7 @@ class TestDBESM(unittest.TestCase):
         print(response)
         self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
 
-    def test_setdbeatt_single_minus3_err(self,out_dbe='1_DBBC2'):
+    def test_setdbeatt_single_minus3_err(self, out_dbe='1_DBBC2'):
         message1 = f"DBE SETDBEATT {out_dbe} 1.0\x0D\x0A"
         self._send(message1)
         message2 = f"DBE SETDBEATT {out_dbe} -3\x0D\x0A"
@@ -873,14 +873,14 @@ class TestDBESM(unittest.TestCase):
         self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
         '[0-9]+ value out of range\r\n')
 
-    def test_setdbeatt_mult(self,out_dbe='prova'):
+    def test_setdbeatt_mult(self, out_dbe='prova'):
         message = f"DBE SETDBEATT {out_dbe} 1.0\x0D\x0A"
         response = self._send(message)
         print(response)
         self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
         self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
 
-    def test_setdbeatt_mult_minus3(self,out_dbe='prova'):
+    def test_setdbeatt_mult_minus3(self, out_dbe='prova'):
         message1 = f"DBE SETDBEATT {out_dbe} 4.0\x0D\x0A"
         self._send(message1)
         message2 = f"DBE SETDBEATT {out_dbe} -3\x0D\x0A"
@@ -889,7 +889,7 @@ class TestDBESM(unittest.TestCase):
         self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
         self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
 
-    def test_setdbeatt_mult_minus3_err(self,out_dbe='prova'):
+    def test_setdbeatt_mult_minus3_err(self, out_dbe='prova'):
         message1 = f"DBE SETDBEATT {out_dbe} 1.0\x0D\x0A"
         self._send(message1)
         message2 = f"DBE SETDBEATT {out_dbe} -3\x0D\x0A"
@@ -900,14 +900,14 @@ class TestDBESM(unittest.TestCase):
         self.assertRegex(response, f'DBE {out_dbe} BOARD '
         '[0-9]+ value out of range\r\n')
 
-    def test_setdbeatt_single_ValErr(self,out_dbe='1_DBBC2'):
+    def test_setdbeatt_single_ValErr(self, out_dbe='1_DBBC2'):
         message = f"DBE SETDBEATT {out_dbe} 32\x0D\x0A"
         response = self._send(message)
         print(response)
         self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
         '[0-9]+ value out of range\r\n')
 
-    def test_setdbeatt_mult_ValErr(self,out_dbe='prova'):
+    def test_setdbeatt_mult_ValErr(self, out_dbe='prova'):
         message = f"DBE SETDBEATT {out_dbe} 32\x0D\x0A"
         response = self._send(message)
         print(response)
@@ -928,14 +928,14 @@ class TestDBESM(unittest.TestCase):
         message = f"DBE SETDBEATT {out_dbe} 1.0\x0D\x0A"
         response = self._send(message)
         print(response)
-        self.assertRegex(response, f'ERR DBE Output not existing\r\n')
+        self.assertEqual(response, 'ERR DBE Output not existing\r\n')
 
     def test_setdbeatt_boardOutErr(self, out_dbe='NOTHING', err_board=3):
         self._disable_board(err_board)
         message = f"DBE SETDBEATT {out_dbe} 1.0\x0D\x0A"
         response = self._send(message)
         print(response)
-        self.assertRegex(response, f'ERR DBE Output not existing\r\n')
+        self.assertEqual(response, 'ERR DBE Output not existing\r\n')
 
     def test_setdbeatt_boardValErr(self, out_dbe='SARDA_14', err_board=3):
         self._disable_board(err_board)
@@ -946,23 +946,21 @@ class TestDBESM(unittest.TestCase):
         ' value out of range\r\n')
 
     def test_nak_setdbeatt(self, out_dbe='1_DBBC2'):
-        message = "DBE SETDBEATT {out_dbe}\x0D\x0A"
+        message = f"DBE SETDBEATT {out_dbe}\x0D\x0A"
         response = self._send(message)
         print(response)
         self.assertEqual(response, 'NAK unknown command\x0D\x0A')
 
-
 #       GETDBEATT, FIRM
 
-
-    def test_getdbeatt_single(self,out_dbe='1_DBBC2'):
+    def test_getdbeatt_single(self, out_dbe='1_DBBC2'):
         message = f"DBE GETDBEATT {out_dbe}\x0D\x0A"
         response = self._send(message)
         print(response)
         self.assertRegex(response, f'ACK {out_dbe} BOARD [0-9]+ '
         'ATT [0-9]+ VALUE [0-9]+.[0-9]+\r\n')
 
-    def test_getdbeatt_mult(self,out_dbe='prova'):
+    def test_getdbeatt_mult(self, out_dbe='prova'):
         message = f"DBE GETDBEATT {out_dbe}\x0D\x0A"
         response = self._send(message)
         print(response)
@@ -983,20 +981,21 @@ class TestDBESM(unittest.TestCase):
         message = f"DBE GETDBEATT {out_dbe}\x0D\x0A"
         response = self._send(message)
         print(response)
-        self.assertRegex(response, f'ERR DBE Output not existing\r\n')
+        self.assertEqual(response, 'ERR DBE Output not existing\r\n')
 
     def test_getdbeatt_boardOutErr(self, out_dbe='NOTHING', err_board=3):
         self._disable_board(err_board)
         message = f"DBE GETDBEATT {out_dbe}\x0D\x0A"
         response = self._send(message)
         print(response)
-        self.assertRegex(response, f'ERR DBE Output not existing\r\n')
+        self.assertEqual(response, 'ERR DBE Output not existing\r\n')
 
-    def test_nak_getdbeatt(self, out_dbe='1_DBBC2'):
+    def test_nak_getdbeatt(self):
         message = "DBE GETDBEATT\x0D\x0A"
         response = self._send(message)
         print(response)
-        self.assertEqual(response, 'NAK unknown command\x0D\x0A')   
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')
+
 
 if __name__ == '__main__':
     unittest.main()
