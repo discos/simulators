@@ -1,6 +1,7 @@
 import time
 import re
 import random
+import os
 try:
     from numpy import sign
 except ImportError as ex:  # pragma: no cover
@@ -11,8 +12,8 @@ try:
 except ImportError as ex:  # pragma: no cover
     raise ImportError('The `scipy` package, required for the simulator'
         + ' to run, is missing!') from ex
-from ctypes import c_bool
-from threading import Lock, Thread
+from ctypes import c_bool, c_int
+from threading import Lock, Thread, Timer
 from multiprocessing import Value
 from bisect import bisect_left
 from socketserver import ThreadingTCPServer
@@ -27,6 +28,11 @@ from simulators.common import ListeningSystem
 # subscribe and unsibscribe methods, while kwargs is a dict of optional
 # extra arguments.
 servers = [(('0.0.0.0', 12800), (), ThreadingTCPServer, {})]
+TIMER_VALUE = 1 if os.environ.get('CI') == 'true' else 5
+
+
+def _change_atomic_value(variable, value):
+    variable.value = value
 
 
 class System(ListeningSystem):
@@ -56,14 +62,14 @@ class System(ListeningSystem):
 
     configurations = {
         'Primario': {'ID': 1},
-        'Gregoriano1': {'ID': 11},
-        'Gregoriano2': {'ID': 12},
-        'Gregoriano3': {'ID': 13},
-        'Gregoriano4': {'ID': 14},
-        'Gregoriano5': {'ID': 15},
-        'Gregoriano6': {'ID': 16},
-        'Gregoriano7': {'ID': 17},
-        'Gregoriano8': {'ID': 18},
+        'Gregoriano 1': {'ID': 11},
+        'Gregoriano 2': {'ID': 12},
+        'Gregoriano 3': {'ID': 13},
+        'Gregoriano 4': {'ID': 14},
+        'Gregoriano 5': {'ID': 15},
+        'Gregoriano 6': {'ID': 16},
+        'Gregoriano 7': {'ID': 17},
+        'Gregoriano 8': {'ID': 18},
         'BWG1': {'ID': 21},
         'BWG2': {'ID': 22},
         'BWG3': {'ID': 23},
@@ -78,7 +84,7 @@ class System(ListeningSystem):
         self.control = 1
         self.power = 1
         self.emergency = 2
-        self.enabled = 1
+        self.gregorian_cap = Value(c_int, 0)
         self.last_executed_command = 0
         self.servos = {
             'PFP': PFP(),
@@ -97,6 +103,7 @@ class System(ListeningSystem):
         )
         self.update_thread.daemon = True
         self.update_thread.start()
+        self.cover_timer = Timer(1, lambda: None)
 
     def __del__(self):
         self.system_stop()
@@ -104,6 +111,13 @@ class System(ListeningSystem):
     def system_stop(self):
         self.stop.value = True
         self.update_thread.join()
+        if self.cover_timer:
+            if self.cover_timer.is_alive():
+                self.cover_timer.cancel()
+            try:
+                self.cover_timer.join()
+            except RuntimeError:
+                pass
         return '$server_shutdown%%%%%'
 
     @staticmethod
@@ -160,7 +174,7 @@ class System(ListeningSystem):
             answer += f'CONTROL={self.control}|'
             answer += f'POWER={self.power}|'
             answer += f'EMERGENCY={self.emergency}|'
-            answer += f'ENABLED={self.enabled}|'
+            answer += f'GREGORIAN_CAP={self.gregorian_cap.value}|'
             answer += f'LAST_EXECUTED_COMMAND={self.last_executed_command}'
             return answer
 
@@ -172,7 +186,25 @@ class System(ListeningSystem):
             return self.bad
         self.configuration = self.configurations.get(configuration)['ID']
         for _, servo in self.servos.items():
-            servo.operative_mode = 10  # SETUP
+            servo.operative_mode_timer.cancel()
+            _change_atomic_value(servo.operative_mode, 0)
+            servo.operative_mode_timer = Timer(
+                TIMER_VALUE,
+                _change_atomic_value,
+                args=(servo.operative_mode, 10)  # SETUP
+            )
+            servo.operative_mode_timer.daemon = True
+            servo.operative_mode_timer.start()
+        gregorian_cap_position = 1 if self.configuration != 1 else 2
+        if self.gregorian_cap.value != gregorian_cap_position:
+            _change_atomic_value(self.gregorian_cap, 0)
+            self.cover_timer = Timer(
+                TIMER_VALUE,
+                _change_atomic_value,
+                args=(self.gregorian_cap, gregorian_cap_position)
+            )
+            self.cover_timer.daemon = True
+            self.cover_timer.start()
         self.last_executed_command = self.plc_time()
         return self.good()
 
@@ -180,14 +212,35 @@ class System(ListeningSystem):
         if len(args) != 2:
             return self.bad
         servo_id = args[0]
-        if servo_id not in self.servos:
+        if servo_id not in list(self.servos) + ['GREGORIAN_CAP']:
             return self.bad
         try:
-            _ = int(args[1])  # STOW POSITION
+            stow_pos = int(args[1])  # STOW POSITION
         except ValueError:
             return self.bad
-        servo = self.servos.get(servo_id)
-        servo.operative_mode = 20  # STOW
+        if servo_id == 'GREGORIAN_CAP':
+            if stow_pos not in [1, 2]:
+                return self.bad
+            if self.gregorian_cap.value != stow_pos:
+                _change_atomic_value(self.gregorian_cap, 0)
+                self.cover_timer = Timer(
+                    TIMER_VALUE,
+                    _change_atomic_value,
+                    args=(self.gregorian_cap, stow_pos)
+                )
+                self.cover_timer.daemon = True
+                self.cover_timer.start()
+        else:
+            servo = self.servos.get(servo_id)
+            servo.operative_mode_timer.cancel()
+            _change_atomic_value(servo.operative_mode, 0)
+            servo.operative_mode_timer = Timer(
+                TIMER_VALUE,
+                _change_atomic_value,
+                args=(servo.operative_mode, 20)  # STOW
+            )
+            servo.operative_mode_timer.daemon = True
+            servo.operative_mode_timer.start()
         self.last_executed_command = self.plc_time()
         return self.good()
 
@@ -198,7 +251,15 @@ class System(ListeningSystem):
         if servo_id not in self.servos:
             return self.bad
         servo = self.servos.get(servo_id)
-        servo.operative_mode = 30  # STOP
+        servo.operative_mode_timer.cancel()
+        _change_atomic_value(servo.operative_mode, 0)
+        servo.operative_mode_timer = Timer(
+            TIMER_VALUE,
+            _change_atomic_value,
+            args=(servo.operative_mode, 30)  # STOP
+        )
+        servo.operative_mode_timer.daemon = True
+        servo.operative_mode_timer.start()
         self.last_executed_command = self.plc_time()
         return self.good()
 
@@ -217,7 +278,15 @@ class System(ListeningSystem):
                 coords[index] = float(coord)
         except ValueError:
             return self.bad
-        servo.operative_mode = 40  # PRESET
+        servo.operative_mode_timer.cancel()
+        _change_atomic_value(servo.operative_mode, 0)
+        servo.operative_mode_timer = Timer(
+            TIMER_VALUE,
+            _change_atomic_value,
+            args=(servo.operative_mode, 40)  # PRESET
+        )
+        servo.operative_mode_timer.daemon = True
+        servo.operative_mode_timer.start()
         servo.set_coords(coords)
         self.last_executed_command = self.plc_time()
         return self.good()
@@ -321,7 +390,7 @@ class System(ListeningSystem):
                     ))
                 servo.pt_table = pt_table
             self.last_executed_command = self.plc_time()
-            servo.operative_mode = 50  # PROGRAMTRACK
+            _change_atomic_value(servo.operative_mode, 50)  # PROGRAMTRACK
             return self.good()
 
     def _offset(self, args):
@@ -360,11 +429,12 @@ class Servo:
         self.enabled = 1
         self.status = 1
         self.block = 2
-        self.operative_mode = 0
+        self.operative_mode = Value(c_int, 0)
         self.DOF = dof
         self.coords = [random.uniform(-1, 1) for _ in range(self.DOF)]
         self.offsets = [0] * self.DOF
         self.last_status_read = 0
+        self.operative_mode_timer = Timer(1, lambda: None)
         if self.program_track_capable:
             self.trajectory_lock = Lock()
             self.trajectory_id = None
@@ -373,14 +443,23 @@ class Servo:
             self.trajectory = [[] for _ in range(self.DOF + 1)]
             self.pt_table = []
 
+    def __del__(self):
+        if self.operative_mode_timer:
+            if self.operative_mode_timer.is_alive():
+                self.operative_mode_timer.cancel()
+            try:
+                self.operative_mode_timer.join()
+            except RuntimeError:
+                pass
+
     def get_status(self, now):
         elapsed = now - self.last_status_read
         self.last_status_read = now
         answer = f',{self.name}_ENABLED={self.enabled}|'
         answer += f'{self.name}_STATUS={self.status}|'
         answer += f'{self.name}_BLOCK={self.block}|'
-        answer += f'{self.name}_OPERATIVE_MODE={self.operative_mode}|'
-        if self.operative_mode == 50:
+        answer += f'{self.name}_OPERATIVE_MODE={self.operative_mode.value}|'
+        if self.operative_mode.value == 50:
             pt_table = []
             with self.trajectory_lock:
                 pt_table = self.pt_table
