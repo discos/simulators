@@ -1,7 +1,7 @@
 import unittest
 import random
 import time
-from simulators.minor_servos import System
+from simulators.minor_servos import System, TIMER_VALUE
 
 
 tail = '\r\n'
@@ -33,7 +33,7 @@ class TestMinorServos(unittest.TestCase):
         regex += r'CONTROL=1\|'
         regex += r'POWER=1\|'
         regex += r'EMERGENCY=2\|'
-        regex += r'ENABLED=1\|'
+        regex += r'GREGORIAN_CAP=0\|'
         regex += r'LAST_EXECUTED_COMMAND=0'
         regex += fr'{tail}$'
         for byte in cmd[:-1]:
@@ -176,8 +176,16 @@ class TestMinorServos(unittest.TestCase):
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
             self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
+            time.sleep(TIMER_VALUE + 0.1)
             for _, servo in self.system.servos.items():
-                self.assertEqual(servo.operative_mode, 10)  # SETUP mode
+                self.assertEqual(servo.operative_mode.value, 10)  # SETUP mode
+
+    def test_setup_no_wait(self):
+        cmd = f'SETUP=Primario{tail}'
+        for byte in cmd[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
+        # By closing here we test that the timers get canceled
 
     def test_setup_no_configuration(self):
         cmd = f'SETUP{tail}'
@@ -197,10 +205,23 @@ class TestMinorServos(unittest.TestCase):
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
             self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
-            self.assertEqual(
-                servo.operative_mode,
-                20  # STOW mode
-            )
+            time.sleep(TIMER_VALUE + 0.1)
+            self.assertEqual(servo.operative_mode.value, 20)  # STOW mode
+
+    def test_stow_gregorian_cap(self):
+        for stow_pos in [1, 2]:
+            cmd = f'STOW=GREGORIAN_CAP,{stow_pos}{tail}'
+            for byte in cmd[:-1]:
+                self.assertTrue(self.system.parse(byte))
+            self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
+            time.sleep(TIMER_VALUE + 0.1)
+            self.assertEqual(self.system.gregorian_cap.value, stow_pos)
+
+    def test_stow_gregorian_cap_wrong_pos(self):
+        cmd = f'STOW=GREGORIAN_CAP,3{tail}'
+        for byte in cmd[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertRegex(self.system.parse(cmd[-1]), bad)
 
     def test_stow_no_arguments(self):
         cmd = f'STOW{tail}'
@@ -234,10 +255,8 @@ class TestMinorServos(unittest.TestCase):
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
             self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
-            self.assertEqual(
-                servo.operative_mode,
-                30  # STOP mode
-            )
+            time.sleep(TIMER_VALUE + 0.1)
+            self.assertEqual(servo.operative_mode.value, 30)  # STOP mode
 
     def test_stop_no_arguments(self):
         cmd = f'STOP{tail}'
@@ -259,8 +278,9 @@ class TestMinorServos(unittest.TestCase):
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
             self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
+            time.sleep(TIMER_VALUE + 0.1)
             self.assertEqual(coords, servo.coords)
-            self.assertEqual(servo.operative_mode, 40)  # PRESET mode
+            self.assertEqual(servo.operative_mode.value, 40)  # PRESET mode
 
     def test_preset_no_arguments(self):
         cmd = f'PRESET{tail}'
@@ -302,7 +322,8 @@ class TestMinorServos(unittest.TestCase):
                 self.assertTrue(self.system.parse(byte))
             if servo.program_track_capable:
                 self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
-                self.assertEqual(servo.operative_mode, 50)  # PROGRAMTRACK mode
+                self.assertEqual(servo.operative_mode.value, 50)
+                # PROGRAMTRACK mode
             else:
                 self.assertRegex(self.system.parse(cmd[-1]), bad)
 
@@ -334,7 +355,8 @@ class TestMinorServos(unittest.TestCase):
                         self.system.parse(cmd[-1]),
                         f'{good}{tail}$'
                     )
-                    self.assertEqual(servo.operative_mode, 50)  # PROGRAMTRACK
+                    self.assertEqual(servo.operative_mode.value, 50)
+                    # PROGRAMTRACK mode
                 else:
                     self.assertRegex(self.system.parse(cmd[-1]), bad)
         # Check if the trajectory is being tracked
@@ -383,7 +405,8 @@ class TestMinorServos(unittest.TestCase):
                 self.assertTrue(self.system.parse(byte))
             if servo.program_track_capable:
                 self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
-                self.assertEqual(servo.operative_mode, 50)  # PROGRAMTRACK mode
+                self.assertEqual(servo.operative_mode.value, 50)
+                # PROGRAMTRACK mode
             else:
                 self.assertRegex(self.system.parse(cmd[-1]), bad)
 
