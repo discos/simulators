@@ -342,7 +342,7 @@ class System(ListeningSystem):
         status += '111'
         status = binary_to_string(status)
         if not ascii_format:
-            return status.encode('raw_unicode_escape')
+            return status.encode('latin-1')
         else:
             return ''.join([hex(ord(c))[-2:] for c in status[::-1]])
 

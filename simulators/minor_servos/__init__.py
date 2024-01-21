@@ -4,12 +4,12 @@ import random
 import os
 try:
     from numpy import sign
-except ImportError as ex:  # pragma: no cover
+except ImportError as ex:  # skip coverage
     raise ImportError('The `numpy` package, required for the simulator'
         + ' to run, is missing!') from ex
 try:
     from scipy.interpolate import splrep, splev
-except ImportError as ex:  # pragma: no cover
+except ImportError as ex:  # skip coverage
     raise ImportError('The `scipy` package, required for the simulator'
         + ' to run, is missing!') from ex
 from ctypes import c_bool, c_int
@@ -84,7 +84,7 @@ class System(ListeningSystem):
         self.control = 1
         self.power = 1
         self.emergency = 2
-        self.gregorian_cap = Value(c_int, 0)
+        self.gregorian_cap = Value(c_int, 1)
         self.last_executed_command = 0
         self.servos = {
             'PFP': PFP(),
@@ -118,7 +118,7 @@ class System(ListeningSystem):
                 self.cover_timer.join()
             except RuntimeError:
                 pass
-        return '$server_shutdown%%%%%'
+        return super().system_stop()
 
     @staticmethod
     def _update(stop, servos):

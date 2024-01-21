@@ -2215,8 +2215,8 @@ class TestACUSimulator(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.start_flag = '\x1A\xCF\xFC\x1D'
-        cls.end_flag = '\xD1\xCF\xFC\xA1'
+        cls.start_flag = b'\x1A\xCF\xFC\x1D'
+        cls.end_flag = b'\xD1\xCF\xFC\xA1'
         cls.simulator = Simulator('acu')
         cls.simulator.start(daemon=True)
 
@@ -2230,7 +2230,6 @@ class TestACUSimulator(unittest.TestCase):
         prev = ''
         for _ in range(5):
             status = s.recv(1024)
-            status = status.decode('raw_unicode_escape')
             self.assertEqual(len(status), 813)
             self.assertEqual(status[0:4], self.start_flag)
             self.assertEqual(status[-4:], self.end_flag)

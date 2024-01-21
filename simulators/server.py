@@ -57,11 +57,10 @@ class BaseHandler(BaseRequestHandler):
         else:
             params = ()
         try:
-            method = getattr(self.system, name)
-            response = method(*params)
+            response = getattr(self.system, name)(*params)
             if isinstance(response, str):
                 self.socket.sendto(
-                    response.encode('raw_unicode_escape'),
+                    response.encode('latin-1'),
                     self.client_address
                 )
                 if response == '$server_shutdown%%%%%':
@@ -83,7 +82,7 @@ class ListenHandler(BaseHandler):
             greet_msg = self.system.system_greet()
             if greet_msg:
                 self.socket.sendto(
-                    greet_msg.encode('raw_unicode_escape'),
+                    greet_msg.encode('latin-1'),
                     self.client_address
                 )
         else:  # UDP client
@@ -101,16 +100,14 @@ class ListenHandler(BaseHandler):
         scenario (i.e. some error condition)."""
         if not self.connection_oriented:  # UDP client
             msg, self.socket = self.socket
-            msg = msg.decode('raw_unicode_escape')
-            msg += '\n'
+            msg += b'\n'
             self._handle(msg)
         else:  # TCP client
             while True:
                 try:
-                    msg = self.socket.recv(1)
+                    msg = self.socket.recv(1024)
                     if not msg:
                         break
-                    msg = msg.decode('raw_unicode_escape')
                     self._handle(msg)
                 except IOError:
                     break
@@ -126,6 +123,7 @@ class ListenHandler(BaseHandler):
         """
         response = None
         for byte in msg:
+            byte = chr(byte)
             try:
                 response = self.system.parse(byte)
             except ValueError as ex:
@@ -136,9 +134,9 @@ class ListenHandler(BaseHandler):
                 pass
             elif response and isinstance(response, str):
                 try:
-                    response = response.encode('raw_unicode_escape')
+                    response = response.encode('latin-1')
                     self.socket.sendto(response, self.client_address)
-                except IOError:  # pragma: no cover
+                except IOError:  # skip coverage
                     # Something went wrong while sending the response,
                     # probably the client was stopped without closing
                     # the connection
@@ -178,14 +176,14 @@ class SendHandler(BaseHandler):
         while True:
             try:
                 if msg:
-                    custom_msg = msg.decode('raw_unicode_escape')
+                    custom_msg = msg
                     msg = None
                 else:
                     custom_msg = self.socket.recv(1024)
-                    custom_msg = custom_msg.decode('raw_unicode_escape')
                 # Check if the client is sending a custom command
                 if not custom_msg:
                     break
+                custom_msg = custom_msg.decode('latin-1')
                 if (
                     custom_msg.startswith(self.custom_header)
                     and custom_msg.endswith(self.custom_tail)
@@ -387,15 +385,14 @@ class Simulator:
                         pass
                     sockobj.sendto(b'$system_stop%%%%%', address)
                     response = sockobj.recv(1024)
-                    response = response.decode('raw_unicode_escape')
-                    if response != '$server_shutdown%%%%%':  # pragma: no cover
+                    if response != b'$server_shutdown%%%%%':  # skip coverage
                         logging.warning(
                             '%s %s %s',
                             'The server did not answer with the',
                             '$server_shutdown%%%%% string!',
                             'The simulator might still be running!'
                         )
-                except Exception as ex:  # pragma: no cover
+                except Exception as ex:  # skip coverage
                     logging.debug(ex)
                 finally:
                     sockobj.close()

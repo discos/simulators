@@ -6,12 +6,12 @@ from ctypes import c_char
 from datetime import datetime, timedelta
 try:
     import numpy as np
-except ImportError as ex:  # pragma: no cover
+except ImportError as ex:  # skip coverage
     raise ImportError('The `numpy` package, required for the simulator'
         + ' to run, is missing!') from ex
 try:
     from scipy import interpolate
-except ImportError as ex:  # pragma: no cover
+except ImportError as ex:  # skip coverage
     raise ImportError('The `scipy` package, required for the simulator'
         + ' to run, is missing!') from ex
 from simulators import utils
