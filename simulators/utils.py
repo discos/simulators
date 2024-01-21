@@ -198,7 +198,7 @@ def binary_to_string(binary_string, little_endian=True):
     return binary_to_bytes(
         binary_string,
         little_endian
-    ).decode('raw_unicode_escape')
+    ).decode('latin-1')
 
 
 def bytes_to_int(byte_string, little_endian=True):
@@ -235,7 +235,7 @@ def string_to_int(string, little_endian=True):
     >>> string_to_int('hello', False)
     448378203247
     """
-    return bytes_to_int(string.encode('raw_unicode_escape'), little_endian)
+    return bytes_to_int(string.encode('latin-1'), little_endian)
 
 
 def bytes_to_binary(byte_string, little_endian=True):
@@ -277,7 +277,7 @@ def string_to_binary(string, little_endian=True):
     >>> string_to_binary('hi', little_endian=False)
     '0110100001101001'
     """
-    return bytes_to_binary(string.encode('raw_unicode_escape'), little_endian)
+    return bytes_to_binary(string.encode('latin-1'), little_endian)
 
 
 def bytes_to_uint(byte_string, little_endian=True):
@@ -311,7 +311,7 @@ def string_to_uint(string, little_endian=True):
     >>> string_to_uint('hi', little_endian=False)
     26729
     """
-    return bytes_to_uint(string.encode('raw_unicode_escape'), little_endian)
+    return bytes_to_uint(string.encode('latin-1'), little_endian)
 
 
 def real_to_binary(num, precision=1):
@@ -403,7 +403,7 @@ def real_to_string(num, precision=1, little_endian=True):
 
     binary_number = real_to_binary(num, precision)
     binary_number = binary_to_bytes(binary_number, little_endian=little_endian)
-    return binary_number.decode('raw_unicode_escape')
+    return binary_number.decode('latin-1')
 
 
 def bytes_to_real(bytes_real, precision=1, little_endian=True):
@@ -459,7 +459,7 @@ def string_to_real(string_real, precision=1, little_endian=True):
     >>> round(string_to_real('\x40\x7A\x25\x7D\x2E\x68\x51\x5D', 2, False), 2)
     418.34
     """
-    bytes_real = bytes(string_real, 'raw_unicode_escape')
+    bytes_real = bytes(string_real, 'latin-1')
     return bytes_to_real(bytes_real, precision, little_endian)
 
 
@@ -505,7 +505,7 @@ def int_to_string(val, n_bytes=4, little_endian=True):
         val,
         n_bytes,
         little_endian
-    ).decode('raw_unicode_escape')
+    ).decode('latin-1')
 
 
 def uint_to_bytes(val, n_bytes=4, little_endian=True):
@@ -558,7 +558,7 @@ def uint_to_string(val, n_bytes=4, little_endian=True):
         val,
         n_bytes,
         little_endian
-    ).decode('raw_unicode_escape')
+    ).decode('latin-1')
 
 
 def sign(number):

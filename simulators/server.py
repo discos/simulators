@@ -60,7 +60,7 @@ class BaseHandler(BaseRequestHandler):
             response = getattr(self.system, name)(*params)
             if isinstance(response, str):
                 self.socket.sendto(
-                    response.encode('raw_unicode_escape'),
+                    response.encode('latin-1'),
                     self.client_address
                 )
                 if response == '$server_shutdown%%%%%':
@@ -82,7 +82,7 @@ class ListenHandler(BaseHandler):
             greet_msg = self.system.system_greet()
             if greet_msg:
                 self.socket.sendto(
-                    greet_msg.encode('raw_unicode_escape'),
+                    greet_msg.encode('latin-1'),
                     self.client_address
                 )
         else:  # UDP client
@@ -134,7 +134,7 @@ class ListenHandler(BaseHandler):
                 pass
             elif response and isinstance(response, str):
                 try:
-                    response = response.encode('raw_unicode_escape')
+                    response = response.encode('latin-1')
                     self.socket.sendto(response, self.client_address)
                 except IOError:  # skip coverage
                     # Something went wrong while sending the response,
@@ -183,7 +183,7 @@ class SendHandler(BaseHandler):
                 # Check if the client is sending a custom command
                 if not custom_msg:
                     break
-                custom_msg = custom_msg.decode('raw_unicode_escape')
+                custom_msg = custom_msg.decode('latin-1')
                 if (
                     custom_msg.startswith(self.custom_header)
                     and custom_msg.endswith(self.custom_tail)
