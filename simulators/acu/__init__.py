@@ -76,9 +76,9 @@ class System(ListeningSystem, SendingSystem):
         self.command_threads = Queue()
 
         self.status = Array(c_char, 813)
-        self.status[0:4] = bytes(start_flag, 'raw_unicode_escape')
+        self.status[0:4] = bytes(start_flag, 'latin-1')
         self.status[4:8] = utils.uint_to_bytes(813)
-        self.status[-4:] = bytes(end_flag, 'raw_unicode_escape')
+        self.status[-4:] = bytes(end_flag, 'latin-1')
 
         subsystems = []
         subsystems.append(self.PS.update_status)

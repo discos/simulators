@@ -170,10 +170,7 @@ class System(ListeningSystem):
 
     def _error(self, error_code):
         error_string = self.errors.get(error_code)
-        hex_string = codecs.encode(
-            error_string.encode('raw_unicode_escape'),
-            'hex'
-        )
+        hex_string = codecs.encode(error_string.encode('latin-1'), 'hex')
         retval = f'{self.header}ERROR({error_code})[{error_string}]'
         retval += f'({hex_string}) {self.cmd_id}{self.tail}'
         return retval
