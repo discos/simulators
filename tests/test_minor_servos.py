@@ -33,7 +33,7 @@ class TestMinorServos(unittest.TestCase):
         regex += r'CONTROL=1\|'
         regex += r'POWER=1\|'
         regex += r'EMERGENCY=2\|'
-        regex += r'GREGORIAN_CAP=0\|'
+        regex += r'GREGORIAN_CAP=1\|'
         regex += r'LAST_EXECUTED_COMMAND=0'
         regex += fr'{tail}$'
         for byte in cmd[:-1]:

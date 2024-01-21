@@ -25,7 +25,7 @@ class System(ListeningSystem):
     def system_stop(self):
         for servo in self.servos.values():
             servo.stop()
-        return '$server_shutdown%%%%%'
+        return super().system_stop()
 
     def system_setpos_NAK(self):
         self.setpos_NAK[1].value = True  # The SRP address

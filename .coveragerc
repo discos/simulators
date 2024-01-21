@@ -8,7 +8,7 @@ exclude_lines =
     self.fail\(.*\)
     except KeyboardInterrupt:
     except ImportError:
-    pragma: no cover
+    skip coverage
 include =
     ./*
 omit =

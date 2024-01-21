@@ -1550,7 +1550,7 @@ class MasterAxisStatus(SimpleAxisStatus):
         elif mode_id in [3, 4, 5, 7, 8, 52] and axis_state != 3:
             received_command_answer = 4
         elif mode_id == 15 and axis_state not in [0, 1]:
-            received_command_answer = 4  # pragma: no cover
+            received_command_answer = 4  # skip coverage
         elif mode_id == 50:
             if not self.stowPosOk:
                 received_command_answer = 4

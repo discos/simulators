@@ -63,32 +63,32 @@ class TestListeningServer(unittest.TestCase):
         with self.assertRaises(ValueError):
             get_response(
                 self.address,
-                greet_msg='Wrong greet message!',
+                greet_msg=b'Wrong greet message!',
             )
 
     def test_proper_request(self):
         response = get_response(
             self.address,
-            greet_msg='This is a greeting message!',
-            msg='#command:a,b,c%%%%%'
+            greet_msg=b'This is a greeting message!',
+            msg=b'#command:a,b,c%%%%%'
         )
-        self.assertEqual(response, 'aabbcc')
+        self.assertEqual(response, b'aabbcc')
 
     def test_wrong_request(self):
         """Wrong request but expected by the protocol"""
         response = get_response(
             self.address,
-            greet_msg='This is a greeting message!',
-            msg='#wrong_command:foo%%%%%'
+            greet_msg=b'This is a greeting message!',
+            msg=b'#wrong_command:foo%%%%%'
         )
-        self.assertRegex(response, 'you sent a wrong command')
+        self.assertRegex(response, b'you sent a wrong command')
 
     def test_value_error(self):
         """The message of ValueError in the logfile"""
         get_response(
             self.address,
-            greet_msg='This is a greeting message!',
-            msg='#valueerror:%%%%%',
+            greet_msg=b'This is a greeting message!',
+            msg=b'#valueerror:%%%%%',
             response=False
         )
         self.assertIn('unexpected value', get_logs())
@@ -96,8 +96,8 @@ class TestListeningServer(unittest.TestCase):
     def test_unexpected_error(self):
         get_response(
             self.address,
-            greet_msg='This is a greeting message!',
-            msg='#unexpected:%%%%%',
+            greet_msg=b'This is a greeting message!',
+            msg=b'#unexpected:%%%%%',
             response=False
         )
         self.assertIn('unexpected exception', get_logs())
@@ -105,8 +105,8 @@ class TestListeningServer(unittest.TestCase):
     def test_unexpected_response(self):
         get_response(
             self.address,
-            greet_msg='This is a greeting message!',
-            msg='#unexpected_response:%%%%%',
+            greet_msg=b'This is a greeting message!',
+            msg=b'#unexpected_response:%%%%%',
             response=False
         )
         self.assertIn('unexpected response: 0.0', get_logs())
@@ -114,18 +114,18 @@ class TestListeningServer(unittest.TestCase):
     def test_custom_command_with_parameters(self):
         response = get_response(
             self.address,
-            greet_msg='This is a greeting message!',
-            msg='$custom_command:a,b,c%%%%%'
+            greet_msg=b'This is a greeting message!',
+            msg=b'$custom_command:a,b,c%%%%%'
         )
-        self.assertRegex(response, 'ok_abc')
+        self.assertRegex(response, b'ok_abc')
 
     def test_custom_command_without_parameters(self):
         response = get_response(
             self.address,
-            greet_msg='This is a greeting message!',
-            msg='$custom_command%%%%%'
+            greet_msg=b'This is a greeting message!',
+            msg=b'$custom_command%%%%%'
         )
-        self.assertRegex(response, 'no_params')
+        self.assertRegex(response, b'no_params')
 
 
 class TestListeningUDPServer(unittest.TestCase):
@@ -151,44 +151,44 @@ class TestListeningUDPServer(unittest.TestCase):
     def test_proper_request(self):
         response = get_response(
             self.address,
-            msg='#command:a,b,c%%%%%',
+            msg=b'#command:a,b,c%%%%%',
             udp=True
         )
-        self.assertEqual(response, 'aabbcc')
+        self.assertEqual(response, b'aabbcc')
 
     def test_wrong_request(self):
         """Wrong request but expected by the protocol"""
         response = get_response(
-            self.address, msg='#wrong_command:foo%%%%%', udp=True
+            self.address, msg=b'#wrong_command:foo%%%%%', udp=True
         )
-        self.assertRegex(response, 'you sent a wrong command')
+        self.assertRegex(response, b'you sent a wrong command')
 
     def test_value_error(self):
         """The message of ValueError in the logfile"""
         get_response(
-            self.address, msg='#valueerror:%%%%%', response=False, udp=True
+            self.address, msg=b'#valueerror:%%%%%', response=False, udp=True
         )
         self.assertIn('unexpected value', get_logs())
 
     def test_unexpected_error(self):
         get_response(
-            self.address, msg='#unexpected:%%%%%', response=False, udp=True
+            self.address, msg=b'#unexpected:%%%%%', response=False, udp=True
         )
         self.assertIn('unexpected exception', get_logs())
 
     def test_custom_command_with_parameters(self):
         response = get_response(
-            self.address, msg='$custom_command:a,b,c%%%%%', udp=True
+            self.address, msg=b'$custom_command:a,b,c%%%%%', udp=True
         )
-        self.assertRegex(response, 'ok_abc')
+        self.assertRegex(response, b'ok_abc')
 
     def test_custom_command_without_parameters(self):
         response = get_response(
             self.address,
-            msg='$custom_command%%%%%',
+            msg=b'$custom_command%%%%%',
             udp=True
         )
-        self.assertRegex(response, 'no_params')
+        self.assertRegex(response, b'no_params')
 
 
 class TestSendingServer(unittest.TestCase):
@@ -213,14 +213,18 @@ class TestSendingServer(unittest.TestCase):
 
     def test_get_message(self):
         response = get_response(self.address)
-        self.assertEqual(response, 'message')
+        self.assertEqual(response, b'message')
 
     def test_unknown_command(self):
-        get_response(self.address, msg='$unknown%%%%%', response=False)
+        get_response(self.address, msg=b'$unknown%%%%%', response=False)
         self.assertIn('command unknown not supported', get_logs())
 
     def test_raise_exception(self):
-        get_response(self.address, msg='$raise_exception%%%%%', response=False)
+        get_response(
+            self.address,
+            msg=b'$raise_exception%%%%%',
+            response=False
+        )
         self.assertIn(
             'unexpected exception raised by sendingtestsystem', get_logs()
         )
@@ -248,12 +252,12 @@ class TestSendingUDPServer(unittest.TestCase):
 
     def test_get_message(self):
         response = get_response(self.address, udp=True)
-        self.assertEqual(response, 'message')
+        self.assertEqual(response, b'message')
 
     def test_unknown_command(self):
         get_response(
             self.address,
-            msg='$unknown%%%%%',
+            msg=b'$unknown%%%%%',
             response=False,
             udp=True
         )
@@ -261,7 +265,10 @@ class TestSendingUDPServer(unittest.TestCase):
 
     def test_raise_exception(self):
         get_response(
-            self.address, msg='$raise_exception%%%%%', response=False, udp=True
+            self.address,
+            msg=b'$raise_exception%%%%%',
+            response=False,
+            udp=True
         )
         self.assertIn(
             'unexpected exception raised by sendingtestsystem', get_logs()
@@ -293,50 +300,50 @@ class TestDuplexServer(unittest.TestCase):
     def test_proper_request(self):
         response = get_response(
             self.l_address,
-            greet_msg='This is a greeting message!',
-            msg='#command:a,b,c%%%%%'
+            greet_msg=b'This is a greeting message!',
+            msg=b'#command:a,b,c%%%%%'
         )
-        self.assertEqual(response, 'aabbcc')
+        self.assertEqual(response, b'aabbcc')
 
     def test_wrong_request(self):
         """Wrong request but expected by the protocol"""
         response = get_response(
             self.l_address,
-            greet_msg='This is a greeting message!',
-            msg='#wrong_command:foo%%%%%'
+            greet_msg=b'This is a greeting message!',
+            msg=b'#wrong_command:foo%%%%%'
         )
-        self.assertRegex(response, 'you sent a wrong command')
+        self.assertRegex(response, b'you sent a wrong command')
 
     def test_custom_command_with_parameters(self):
         response = get_response(
             self.l_address,
-            greet_msg='This is a greeting message!',
-            msg='$custom_command:a,b,c%%%%%'
+            greet_msg=b'This is a greeting message!',
+            msg=b'$custom_command:a,b,c%%%%%'
         )
-        self.assertRegex(response, 'ok_abc')
+        self.assertRegex(response, b'ok_abc')
 
     def test_custom_command_without_parameters(self):
         response = get_response(
             self.l_address,
-            greet_msg='This is a greeting message!',
-            msg='$custom_command%%%%%'
+            greet_msg=b'This is a greeting message!',
+            msg=b'$custom_command%%%%%'
         )
-        self.assertRegex(response, 'no_params')
+        self.assertRegex(response, b'no_params')
 
     def test_get_message(self):
         response = get_response(self.s_address)
-        self.assertEqual(response, 'message')
+        self.assertEqual(response, b'message')
 
     def test_last_cmd(self):
-        message = '#test:1,2,3%%%%%'
+        message = b'#test:1,2,3%%%%%'
         l_response = get_response(
             self.l_address,
-            greet_msg='This is a greeting message!',
+            greet_msg=b'This is a greeting message!',
             msg=message
         )
-        self.assertEqual(l_response, '112233')
+        self.assertEqual(l_response, b'112233')
         s_response = get_response(self.s_address)
-        self.assertEqual(s_response, message[1:].strip('%'))
+        self.assertEqual(s_response, message[1:].strip(b'%'))
 
 
 class TestDuplexUDPServer(unittest.TestCase):
@@ -363,41 +370,41 @@ class TestDuplexUDPServer(unittest.TestCase):
 
     def test_proper_request(self):
         response = get_response(
-            self.l_address, msg='#command:a,b,c%%%%%', udp=True
+            self.l_address, msg=b'#command:a,b,c%%%%%', udp=True
         )
-        self.assertEqual(response, 'aabbcc')
+        self.assertEqual(response, b'aabbcc')
 
     def test_wrong_request(self):
         """Wrong request but expected by the protocol"""
         response = get_response(
-            self.l_address, msg='#wrong_command:foo%%%%%', udp=True
+            self.l_address, msg=b'#wrong_command:foo%%%%%', udp=True
         )
-        self.assertRegex(response, 'you sent a wrong command')
+        self.assertRegex(response, b'you sent a wrong command')
 
     def test_custom_command_with_parameters(self):
         response = get_response(
             self.l_address,
-            msg='$custom_command:a,b,c%%%%%',
+            msg=b'$custom_command:a,b,c%%%%%',
             udp=True
         )
-        self.assertRegex(response, 'ok_abc')
+        self.assertRegex(response, b'ok_abc')
 
     def test_custom_command_without_parameters(self):
         response = get_response(
-            self.l_address, msg='$custom_command%%%%%', udp=True
+            self.l_address, msg=b'$custom_command%%%%%', udp=True
         )
-        self.assertRegex(response, 'no_params')
+        self.assertRegex(response, b'no_params')
 
     def test_get_message(self):
         response = get_response(self.s_address, udp=True)
-        self.assertEqual(response, 'message')
+        self.assertEqual(response, b'message')
 
     def test_last_cmd(self):
-        message = '#test:1,2,3%%%%%'
+        message = b'#test:1,2,3%%%%%'
         l_response = get_response(self.l_address, msg=message, udp=True)
-        self.assertEqual(l_response, '112233')
+        self.assertEqual(l_response, b'112233')
         s_response = get_response(self.s_address, udp=True)
-        self.assertEqual(s_response, message[1:].strip('%'))
+        self.assertEqual(s_response, message[1:].strip(b'%'))
 
 
 class TestServerVarious(unittest.TestCase):
@@ -415,10 +422,10 @@ class TestServerVarious(unittest.TestCase):
         def shutdown(self):
             response = get_response(
                 address,
-                greet_msg='This is a greeting message!',
-                msg='$system_stop%%%%%'
+                greet_msg=b'This is a greeting message!',
+                msg=b'$system_stop%%%%%'
             )
-            self.assertEqual(response, '$server_shutdown%%%%%')
+            self.assertEqual(response, b'$server_shutdown%%%%%')
 
         t = Timer(0.01, shutdown, args=(self,))
         t.start()
@@ -509,10 +516,10 @@ class TestSimulator(unittest.TestCase):
 
         response = get_response(
             address,
-            greet_msg='This is a greeting message!',
-            msg='#command:a,b,c%%%%%'
+            greet_msg=b'This is a greeting message!',
+            msg=b'#command:a,b,c%%%%%'
         )
-        self.assertEqual(response, 'aabbcc')
+        self.assertEqual(response, b'aabbcc')
 
         simulator.stop()
 
@@ -525,7 +532,7 @@ class TestSimulator(unittest.TestCase):
         simulator.start(daemon=True)
 
         response = get_response(address)
-        self.assertEqual(response, 'message')
+        self.assertEqual(response, b'message')
 
         simulator.stop()
 
@@ -540,12 +547,12 @@ class TestSimulator(unittest.TestCase):
 
         l_response = get_response(
             l_addr,
-            greet_msg='This is a greeting message!',
-            msg='#command:a,b,c%%%%%'
+            greet_msg=b'This is a greeting message!',
+            msg=b'#command:a,b,c%%%%%'
         )
-        self.assertEqual(l_response, 'aabbcc')
+        self.assertEqual(l_response, b'aabbcc')
         s_response = get_response(s_addr)
-        self.assertEqual(s_response, 'command:a,b,c')
+        self.assertEqual(s_response, b'command:a,b,c')
 
         simulator.stop()
 
@@ -567,12 +574,12 @@ class TestSimulator(unittest.TestCase):
         def shutdown(self):
             response = get_response(
                 l_addr,
-                greet_msg='This is a greeting message!',
-                msg='$system_stop%%%%%'
+                greet_msg=b'This is a greeting message!',
+                msg=b'$system_stop%%%%%'
             )
-            self.assertEqual(response, '$server_shutdown%%%%%')
-            response = get_response(s_addr, msg='$system_stop%%%%%')
-            self.assertEqual(response, '$server_shutdown%%%%%')
+            self.assertEqual(response, b'$server_shutdown%%%%%')
+            response = get_response(s_addr, msg=b'$system_stop%%%%%')
+            self.assertEqual(response, b'$server_shutdown%%%%%')
 
         t = Timer(0.01, shutdown, args=(self,))
         t.start()
@@ -587,11 +594,11 @@ def get_response(
         timeout=2.0,
         response=True,
         udp=False):
-    retval = ''
+    retval = b''
     if udp:
         socket_type = socket.SOCK_DGRAM
         if not msg:
-            msg = ''
+            msg = b''
     else:
         socket_type = socket.SOCK_STREAM
     with socket_context(socket.AF_INET, socket_type) as sock:
@@ -599,14 +606,15 @@ def get_response(
         sock.connect(server_address)
         if greet_msg:
             greeting = sock.recv(len(greet_msg))
-            greeting = greeting.decode('raw_unicode_escape')
             if greeting != greet_msg:
                 raise ValueError
-        if isinstance(msg, str):
-            msg = msg.encode('raw_unicode_escape')
-            sock.sendto(msg, server_address)
+        if isinstance(msg, bytes):
+            sock.sendall(msg)
         if response:
-            retval = sock.recv(1024).decode('raw_unicode_escape')
+            try:
+                retval = sock.recv(1024)
+            except socket.timeout:
+                pass
     return retval
 
 
@@ -615,22 +623,20 @@ def get_logs():
     filename = os.path.join(os.getenv('ACSDATA', ''), 'sim-server.log')
     logs = []
     with open(filename, mode='rb') as f:
-        f.seek(0, os.SEEK_END)
-        # read last 3 lines with current process ID
         buffer_string = ''
-        while len(logs) <= 3:
+        f.seek(0, os.SEEK_END)
+        while len(logs) < 3:
             try:
                 f.seek(-2, os.SEEK_CUR)
                 buffer_string += f.read(1).decode('utf-8')
             except OSError:
-                if buffer_string:
-                    buffer_string += '\n'
-                else:
-                    break
+                break
             if buffer_string.endswith('\n'):
-                buffer_string = buffer_string.strip()[::-1].split()
-                if str(os.getpid()) in buffer_string[2]:
-                    logs.append(' '.join(buffer_string[3:]))
+                log = buffer_string[:-1][::-1]
+                pid = str(os.getpid())
+                index = log.find(pid)
+                if index != -1:
+                    logs.append(log[index + len(pid) + 1:])
                     buffer_string = ''
     return logs
 
@@ -657,7 +663,7 @@ class ListeningTestSystem(ListeningSystem):
             if self.msg.endswith(self.tail):
                 self.msg = self.msg.lstrip(self.header)
                 self.msg = self.msg.rstrip(self.tail)
-                self.last_cmd.value = bytes(self.msg, 'raw_unicode_escape')
+                self.last_cmd.value = self.msg.encode('utf-8')
                 name, params_str = self.msg.split(':')
                 self.msg = ''
                 if name == 'wrong_command':
@@ -695,7 +701,7 @@ class SendingTestSystem(SendingSystem):
             getattr(self, 'last_cmd')
         except AttributeError:
             self.last_cmd = Array(c_char, b'\x00' * 50)
-        self.last_cmd.value = 'message'.encode('raw_unicode_escape')
+        self.last_cmd.value = b'message'
         self.t = None
 
     def subscribe(self, q):
