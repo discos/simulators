@@ -144,7 +144,7 @@ class System(ListeningSystem):
         return att
 
     def parse(self, byte):
-        print(byte)
+        # print(byte)
         if byte == self.tail:
             msg = self.msg[:-1]
             self.msg = ''
@@ -159,7 +159,7 @@ class System(ListeningSystem):
 
         :param msg: the received command, comprehensive of its header and tail.
         """
-        print(msg)
+        # print(msg)
         args = [x.strip() for x in msg.split(' ')]
         try:
             device_code = list(self.devices.keys())[
@@ -470,12 +470,12 @@ class System(ListeningSystem):
             brd, a = zip(*self.atts_in_boards)
             for board in selected_boards:
                 b_idx = selected_boards.index(board)
-                print(brd)
-                print(board["ATT"])
-                print(board["ATT"][a[out_idx[b_idx]]])
+                # print(brd)
+                # print(board["ATT"])
+                # print(board["ATT"][a[out_idx[b_idx]]])
                 if ((params[2] == '+3' or params[2] == '-3') and
-                        not (0 <= (float(board["ATT"][a[out_idx[b_idx]]]) +
-                        float(params[2])) <= 31.5)):
+                        not (0 <= (float(board["ATT"][a[out_idx[b_idx]]])
+                        + float(params[2])) <= 31.5)):
                     retval += (f'ERR DBE {params[1]} BOARD '
                     f'{board["Address"]} value out of range\n')
                 elif (params[2] != '+3' and params[2] != '-3'
@@ -483,7 +483,7 @@ class System(ListeningSystem):
                         list(numpy.arange(0, 32, 0.5))):
                     retval += (f'ERR DBE {params[1]} BOARD '
                     f'{board["Address"]} value out of range\n')
-                elif board["Status"] != 0:
+                elif ((board["Status"] != 0) or (board["Address"] not in brd)):
                     retval += (f'ERR DBE {params[1]} BOARD '
                     f'{board["Address"]} unreachable\n')
                 else:
@@ -514,11 +514,11 @@ class System(ListeningSystem):
             brd, a = zip(*self.atts_in_boards)
             for board in selected_boards:
                 b_idx = selected_boards.index(board)
-                print(brd)
-                print(board["ATT"])
-                print(board["ATT"][a[out_idx[b_idx]]])
+                # print(brd)
+                # print(board["ATT"])
+                # print(board["ATT"][a[out_idx[b_idx]]])
 
-                if board["Status"] != 0:
+                if ((board["Status"] != 0) or (board["Address"] not in brd)):
                     retval += (f'ERR DBE {params[1]} BOARD '
                     f'{board["Address"]} unreachable\n')
                 else:
