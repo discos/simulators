@@ -17,6 +17,10 @@ class TestDBESM(unittest.TestCase):
         disable_msg = f'DBE SETSTATUS BOARD {err_board} VALUE 1\x0D\x0A'
         self._send(disable_msg)
 
+    def _noTemp_board(self, err_board=3):
+        noTemp_msg = f'DBE SETSTATUS BOARD {err_board} VALUE 2\x0D\x0A'
+        self._send(noTemp_msg)
+
     def _test_all_boards(self, response, err_board=999, diag=False):
         for board in range(0, 4):
             if diag:
@@ -150,6 +154,19 @@ class TestDBESM(unittest.TestCase):
         response = self._send(message)
         print(response)
         self._test_all_boards(response, err_board, True)
+
+    def test_all_diag_noTemp(self, err_board=3):
+        message = "DBE ReadALLDIAG\x0D\x0A"
+        self._noTemp_board(err_board)
+        response = self._send(message)
+        print(response)
+        for board in range(0, 4):
+            if board != err_board:
+                self.assertRegex(response, f'BOARD {board} ACK\n5V '
+                '[0-9][.][0-9]+ 3V3 [0-9][.][0-9]+\nT0 [0-9]+[.][0-9]+')
+            else:
+                self.assertRegex(response, f'BOARD {board} ACK\n5V '
+                '[0-9][.][0-9]+ 3V3 [0-9][.][0-9]+\ntemp sensor not present')
 
     def test_nak_alldiag(self):
         message = "DBE ReadALLDIAG ?????\x0D\x0A"
@@ -359,6 +376,14 @@ class TestDBESM(unittest.TestCase):
         print(response)
         self.assertEqual(response, f'ERR DBE BOARD {board} '
         'not existing\x0D\x0A')
+
+    def test_diag_noTemp(self, board=0):
+        message = f"DBE ReadDIAG BOARD {board}\x0D\x0A"
+        self._noTemp_board(board)
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ACK\nBOARD {board}\n\n5V [0-9][.][0-9]+ '
+        '3V3 [0-9][.][0-9]+\ntemp sensor not present\r\n')
 
     def test_nak_diag_missing(self):
         message = "DBE ReadDIAG BOARD\x0D\x0A"
