@@ -78,7 +78,7 @@ class System(ListeningSystem):
         # Status > 1 -> temp sensor not present (timeout)
         self.boards = [
             {
-                'Address': '3',
+                'Address': '0',
                 "Status": 0,
                 "Configuration": "default",
                 "REG": self._init_reg(),
@@ -92,7 +92,7 @@ class System(ListeningSystem):
                 "FIRM": "0.116_NEW_win"
             },
             {
-                'Address': '2',
+                'Address': '1',
                 "Status": 0,
                 "Configuration": "default",
                 "REG": self._init_reg(),
@@ -106,7 +106,7 @@ class System(ListeningSystem):
                 "FIRM": "0.116_NEW_win"
             },
             {
-                'Address': '1',
+                'Address': '2',
                 "Status": 0,
                 "Configuration": "default",
                 "REG": self._init_reg(),
@@ -120,7 +120,7 @@ class System(ListeningSystem):
                 "FIRM": "0.116_NEW_win"
             },
             {
-                'Address': '0',
+                'Address': '3',
                 "Status": 0,
                 "Configuration": "default",
                 "REG": self._init_reg(),
@@ -192,12 +192,13 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
         elif params[1] not in self.obs_mode:
             return self._error(params[0], 1003)
-        for key in self.boards:
-            if key['Status'] == 1:
-                retval += f'BOARD {key["Address"]} ERR DBE BOARD unreachable\n'
+        for board in self.boards:
+            if board['Status'] == 1:
+                retval += (f'BOARD {self.boards.index(board)+1} '
+                f'ERR DBE BOARD unreachable\n')
             else:
-                key["Configuration"] = params[1]
-                retval += f'BOARD {key["Address"]} ACK\n'
+                board["Configuration"] = params[1]
+                retval += f'BOARD {self.boards.index(board)+1} ACK\n'
         return retval[:-1] + '\x0D\x0A'
 
     def _set_mode(self, params):
@@ -205,7 +206,7 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
         try:
             selected_board = next((sub for sub in self.boards
-                               if int(sub['Address']) == int(params[2])), None)
+                   if (self.boards.index(sub) + 1) == int(params[2])), None)
         except ValueError:
             return self._error(params[0], 1001)
 
@@ -225,9 +226,9 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
         elif params[1] in self.obs_mode:
             return self._error(params[0], 1008)
-        for key in self.boards:
-            if key['Status'] == 1:
-                err.append(key['Address'])
+        for board in self.boards:
+            if board['Status'] == 1:
+                err.append(str(self.boards.index(board) + 1))
         if len(err) > 0:
             if len(err) == 1:
                 return self._error(params[0], 1005, err[0])
@@ -251,7 +252,7 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
         try:
             selected_board = next((sub for sub in self.boards
-                               if int(sub['Address']) == int(params[2])), None)
+                if (self.boards.index(sub) + 1) == int(params[2])), None)
         except ValueError:
             return self._error(params[0], 1001)
 
@@ -260,7 +261,7 @@ class System(ListeningSystem):
         elif selected_board["Status"] == 1:
             return self._error(params[0], 1005, params[2])
         retval = self.ack + '\n'
-        retval += f'BOARD {selected_board["Address"]}\n\n'
+        retval += f'BOARD {self.boards.index(selected_board)+1}\n\n'
         retval += f'REG=[ {" ".join(map(str,selected_board["REG"]))} ]\n\n'
         retval += f'ATT=[ {"  ".join(map(str,selected_board["ATT"])) } ]'
         return retval + '\x0D\x0A'
@@ -270,13 +271,13 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
         try:
             selected_board = next((sub for sub in self.boards
-                               if int(sub['Address']) == int(params[3])), None)
+                if (self.boards.index(sub) + 1) == int(params[3])), None)
             if selected_board is None:
                 return self._error(params[0], 1007, params[3])
             elif int(params[1]) not in list(range(0, 17)):
                 return self._error(params[0], 1010, params[1])
             elif float(params[5]) not in list(numpy.arange(0, 32, 0.5)):
-                return self._error(params[0], 1011, selected_board["Address"])
+                return self._error(params[0], 1011, params[3])
             elif selected_board["Status"] == 1:
                 return self._error(params[0], 1005, params[3])
             else:
@@ -290,13 +291,13 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
         try:
             selected_board = next((sub for sub in self.boards
-                               if int(sub['Address']) == int(params[3])), None)
+                if (self.boards.index(sub) + 1) == int(params[3])), None)
             if selected_board is None:
                 return self._error(params[0], 1007, params[3])
             elif int(params[1]) not in list(range(1, 11)):
                 return self._error(params[0], 1012, params[1])
             elif float(params[5]) not in [0, 1]:
-                return self._error(params[0], 1011, selected_board["Address"])
+                return self._error(params[0], 1011, params[3])
             elif selected_board["Status"] == 1:
                 return self._error(params[0], 1005, params[3])
             else:
@@ -310,13 +311,13 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
         try:
             selected_board = next((sub for sub in self.boards
-                               if int(sub['Address']) == int(params[3])), None)
+                    if (self.boards.index(sub) + 1) == int(params[3])), None)
             if selected_board is None:
                 return self._error(params[0], 1007, params[3])
             elif int(params[1]) not in list(range(1, 11)):
                 return self._error(params[0], 1013, params[1])
             elif float(params[5]) not in [0, 1]:
-                return self._error(params[0], 1011, selected_board["Address"])
+                return self._error(params[0], 1011, params[3])
             elif selected_board["Status"] == 1:
                 return self._error(params[0], 1005, params[3])
             else:
@@ -331,7 +332,7 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
         try:
             selected_board = next((sub for sub in self.boards
-                               if int(sub['Address']) == int(params[3])), None)
+                    if (self.boards.index(sub) + 1) == int(params[3])), None)
             if selected_board is None:
                 return self._error(params[0], 1007, params[3])
             elif params[1] not in channels:  # accept 1, 1a NOT a1, 1aa, a, 1a2
@@ -349,7 +350,7 @@ class System(ListeningSystem):
                 else:
                     return self._error(params[0], 1014, params[1])
             elif float(params[5]) not in [0, 1]:
-                return self._error(params[0], 1011, selected_board["Address"])
+                return self._error(params[0], 1011, params[3])
             elif selected_board["Status"] == 1:
                 return self._error(params[0], 1005, params[3])
             else:
@@ -371,7 +372,7 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
         else:
             for board in self.boards:
-                retval += f'BOARD {board["Address"]} '
+                retval += f'BOARD {self.boards.index(board)+1} '
                 if board["Status"] == 0:
                     retval += self.ack + '\n'
                     retval += f'5V {board["5V"]} 3V3 {board["3V3"]}\n'
@@ -389,23 +390,22 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
         try:
             selected_board = next((sub for sub in self.boards
-                               if int(sub['Address']) == int(params[2])), None)
+                    if (self.boards.index(sub) + 1) == int(params[2])), None)
         except ValueError:
             return self._error(params[0], 1001)
-
         if selected_board is None:
             return self._error(params[0], 1007, params[2])
         elif selected_board["Status"] == 1:
             return self._error(params[0], 1005, params[2])
         elif selected_board['Status'] == 0:
             retval = self.ack + '\n'
-            retval += f'BOARD {selected_board["Address"]}\n\n'
+            retval += f'BOARD {self.boards.index(selected_board)+1}\n\n'
             retval += f'5V {selected_board["5V"]}'
             retval += f' 3V3 {selected_board["3V3"]}\n'
             retval += f'T0 {selected_board["T0"]}'
         elif selected_board['Status'] > 1:
             retval = self.ack + '\n'
-            retval += f'BOARD {selected_board["Address"]}\n\n'
+            retval += f'BOARD {self.boards.index(selected_board)+1}\n\n'
             retval += f'5V {selected_board["5V"]}'
             retval += f' 3V3 {selected_board["3V3"]}\n'
             retval += 'temp sensor not present'
@@ -416,7 +416,7 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
         try:
             selected_board = next((sub for sub in self.boards
-                              if int(sub['Address']) == int(params[2])), None)
+                    if (self.boards.index(sub) + 1) == int(params[2])), None)
 
             if selected_board is None:
                 return self._error(params[0], 1007, params[2])
@@ -431,7 +431,7 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
         try:
             selected_board = next((sub for sub in self.boards
-                              if int(sub['Address']) == int(params[2])), None)
+                    if (self.boards.index(sub) + 1) == int(params[2])), None)
         except ValueError:
             return self._error(params[0], 1001)
 
@@ -441,7 +441,7 @@ class System(ListeningSystem):
             return self._error(params[0], 1005, params[2])
         else:
             retval = 'ACK\n'
-            retval += f'BOARD {params[2]}\n\n'
+            retval += f'BOARD {self.boards.index(selected_board)+1}\n\n'
             retval += f'AMP=[ {" ".join(map(str,selected_board["AMP"]))} ]\n'
             retval += f'EQ=[ {" ".join(map(str,selected_board["EQ"]))} ]\n'
             retval += f'BPF=[ {" ".join(map(str,selected_board["BPF"])) } ]'
@@ -454,7 +454,7 @@ class System(ListeningSystem):
         else:
             retval += self.ack + '\n'
             for board in self.boards:
-                retval += f'BOARD {board["Address"]} '
+                retval += f'BOARD {self.boards.index(board)+1} '
                 if ((board['Status'] == 0) or (board['Status'] > 1)):
                     retval += f'{board["Configuration"]}\n\n'
                 else:
@@ -488,21 +488,22 @@ class System(ListeningSystem):
                         not (0 <= (float(board["ATT"][a[out_idx[b_idx]]])
                         + float(params[2])) <= 31.5)):
                     retval += (f'ERR DBE {params[1]} BOARD '
-                    f'{board["Address"]} value out of range\n')
+                    f'{self.boards.index(board)+1} value out of range\n')
                 elif (params[2] != '+3' and params[2] != '-3'
                         and float(params[2]) not in
                         list(numpy.arange(0, 32, 0.5))):
                     retval += (f'ERR DBE {params[1]} BOARD '
-                    f'{board["Address"]} value out of range\n')
+                    f'{self.boards.index(board)+1} value out of range\n')
                 elif ((board["Status"] == 1) or (board["Address"] not in brd)):
                     retval += (f'ERR DBE {params[1]} BOARD '
-                    f'{board["Address"]} unreachable\n')
+                    f'{self.boards.index(board)+1} unreachable\n')
                 else:
                     if params[2] == '+3' or params[2] == '-3':
                         board["ATT"][a[out_idx[b_idx]]] += float(params[2])
                     else:
                         board["ATT"][a[out_idx[b_idx]]] = float(params[2])
-                    retval += f'DBE {params[1]} BOARD {board["Address"]} ACK\n'
+                    retval += (f'DBE {params[1]} BOARD '
+                    f'{self.boards.index(board)+1} ACK\n')
         return retval[:-1] + '\x0D\x0A'
 
     def _get_dbeatt(self, params):
@@ -531,11 +532,11 @@ class System(ListeningSystem):
 
                 if ((board["Status"] == 1) or (board["Address"] not in brd)):
                     retval += (f'ERR DBE {params[1]} BOARD '
-                    f'{board["Address"]} unreachable\n')
+                    f'{self.boards.index(board)+1} unreachable\n')
                 else:
-                    retval += (f'ACK {params[1]} BOARD {board["Address"]} '
-                    f'ATT {a[out_idx[b_idx]]} VALUE '
-                    f'{board["ATT"][a[out_idx[b_idx]]]}\n')
+                    retval += (f'ACK {params[1]} BOARD '
+                    f'{self.boards.index(board)+1} ATT {a[out_idx[b_idx]]} '
+                    f'VALUE {board["ATT"][a[out_idx[b_idx]]]}\n')
         return retval[:-1] + '\x0D\x0A'
 
     def _get_firm(self, params):
@@ -543,7 +544,7 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
         try:
             selected_board = next((sub for sub in self.boards
-                               if int(sub['Address']) == int(params[2])), None)
+                    if (self.boards.index(sub) + 1) == int(params[2])), None)
         except ValueError:
             return self._error(params[0], 1001)
 
@@ -553,7 +554,7 @@ class System(ListeningSystem):
             return self._error(params[0], 1005, params[2])
         else:
             retval = self.ack + '\n'
-            retval += f'BOARD {selected_board["Address"]} '
+            retval += f'BOARD {self.boards.index(selected_board)} '
             retval += f'Prog=DBESM, Rev=rev {selected_board["FIRM"]}'
         return retval + '\x0D\x0A'
 
