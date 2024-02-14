@@ -195,7 +195,7 @@ class System(ListeningSystem):
             )
             servo.operative_mode_timer.daemon = True
             servo.operative_mode_timer.start()
-        gregorian_cap_position = 1 if self.configuration != 1 else 2
+        gregorian_cap_position = 1 if self.configuration == 1 else 2
         if self.gregorian_cap.value != gregorian_cap_position:
             _change_atomic_value(self.gregorian_cap, 0)
             self.cover_timer = Timer(
