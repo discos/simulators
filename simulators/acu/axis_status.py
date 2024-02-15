@@ -10,6 +10,9 @@ class SimpleAxisStatus:
     :param n_motors: The number of motors that move the axis.
     """
     def __init__(self, n_motors=1):
+        self.min_pos = -2**31 - 1
+        self.max_pos = 2**31 - 2
+
         self.motor_status = []
 
         for __ in range(n_motors):
@@ -900,6 +903,8 @@ class SimpleAxisStatus:
         # INT32, Desired position [microdeg]
         if not isinstance(value, int):
             raise ValueError('Provide an integer number!')
+        value = min(value, int(round(self.max_pos * 1000000)) + 1)
+        value = max(value, int(round(self.min_pos * 1000000)) - 1)
         self.status[18:22] = utils.int_to_bytes(value, n_bytes=4)
 
     @property
@@ -911,6 +916,8 @@ class SimpleAxisStatus:
         # INT32, Output position of the trajectory generator [microdeg]
         if not isinstance(value, int):
             raise ValueError('Provide an integer number!')
+        value = min(value, int(round(self.max_pos * 1000000)) + 1)
+        value = max(value, int(round(self.min_pos * 1000000)) - 1)
         self.status[22:26] = utils.int_to_bytes(value, n_bytes=4)
 
     @property
@@ -922,6 +929,8 @@ class SimpleAxisStatus:
         # INT32, Actual position [microdeg]
         if not isinstance(value, int):
             raise ValueError('Provide an integer number!')
+        value = min(value, int(round(self.max_pos * 1000000)) + 1)
+        value = max(value, int(round(self.min_pos * 1000000)) - 1)
         self.status[26:30] = utils.int_to_bytes(value, n_bytes=4)
 
     @property
@@ -933,6 +942,8 @@ class SimpleAxisStatus:
         # INT32, Filtered position deviation [microdeg]
         if not isinstance(value, int):
             raise ValueError('Provide an integer number!')
+        value = min(value, int(round(self.max_pos * 1000000)) + 1)
+        value = max(value, int(round(self.min_pos * 1000000)) - 1)
         self.status[30:34] = utils.int_to_bytes(value, n_bytes=4)
 
     @property
@@ -1955,6 +1966,8 @@ class SlaveAxisStatus(SimpleAxisStatus):
     def __init__(self, n_motors, master):
         SimpleAxisStatus.__init__(self, n_motors)
         self.master = master
+        self.min_pos = master.min_pos
+        self.max_pos = master.max_pos
 
     def update_status(self):
         if self.master.axis_state == 3:
