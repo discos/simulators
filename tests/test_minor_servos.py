@@ -210,7 +210,7 @@ class TestMinorServos(unittest.TestCase):
 
     def test_stow_gregorian_cap(self):
         for stow_pos in [1, 2]:
-            cmd = f'STOW=GREGORIAN_CAP,{stow_pos}{tail}'
+            cmd = f'STOW=Gregoriano,{stow_pos}{tail}'
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
             self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
@@ -218,7 +218,7 @@ class TestMinorServos(unittest.TestCase):
             self.assertEqual(self.system.gregorian_cap.value, stow_pos)
 
     def test_stow_gregorian_cap_wrong_pos(self):
-        cmd = f'STOW=GREGORIAN_CAP,3{tail}'
+        cmd = f'STOW=Gregoriano,3{tail}'
         for byte in cmd[:-1]:
             self.assertTrue(self.system.parse(byte))
         self.assertRegex(self.system.parse(cmd[-1]), bad)

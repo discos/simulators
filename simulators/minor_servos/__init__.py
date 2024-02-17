@@ -212,13 +212,13 @@ class System(ListeningSystem):
         if len(args) != 2:
             return self.bad
         servo_id = args[0]
-        if servo_id not in list(self.servos) + ['GREGORIAN_CAP']:
+        if servo_id not in list(self.servos) + ['Gregoriano']:
             return self.bad
         try:
             stow_pos = int(args[1])  # STOW POSITION
         except ValueError:
             return self.bad
-        if servo_id == 'GREGORIAN_CAP':
+        if servo_id == 'Gregoriano':
             if stow_pos not in [1, 2]:
                 return self.bad
             if self.gregorian_cap.value != stow_pos:
