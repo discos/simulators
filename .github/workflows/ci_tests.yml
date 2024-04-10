@@ -29,8 +29,11 @@ jobs:
         coverage run -p -m unittest discover -b tests
         coverage combine
         coverage xml
-    - name: Upload test coverage to codecov
-      uses: codecov/codecov-action@v4
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v4.0.1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        slug: discos/simulators
     - name: Run the Python linter
       run: |
         prospector
