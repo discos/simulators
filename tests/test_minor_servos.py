@@ -181,7 +181,7 @@ class TestMinorServos(unittest.TestCase):
                 self.assertEqual(servo.operative_mode.value, 10)  # SETUP mode
 
     def test_setup_no_wait(self):
-        cmd = f'SETUP=Gregoriano 1{tail}'
+        cmd = f'SETUP=Gregoriano1{tail}'
         for byte in cmd[:-1]:
             self.assertTrue(self.system.parse(byte))
         self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
