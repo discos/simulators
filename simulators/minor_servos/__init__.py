@@ -1,7 +1,6 @@
 import time
 import re
 import random
-import os
 try:
     from numpy import sign
 except ImportError as ex:  # skip coverage
@@ -28,7 +27,7 @@ from simulators.common import ListeningSystem
 # subscribe and unsibscribe methods, while kwargs is a dict of optional
 # extra arguments.
 servers = [(('0.0.0.0', 12800), (), ThreadingTCPServer, {})]
-TIMER_VALUE = 1 if os.environ.get('CI') == 'true' else 5
+DEFAULT_TIMER_VALUE = 5
 
 
 def _change_atomic_value(variable, value):
@@ -76,7 +75,7 @@ class System(ListeningSystem):
         'BWG4': {'ID': 24},
     }
 
-    def __init__(self):
+    def __init__(self, timer_value=DEFAULT_TIMER_VALUE):
         self.msg = ''
         self.configuration = 0
         self.simulation = 1
@@ -86,6 +85,7 @@ class System(ListeningSystem):
         self.emergency = 2
         self.gregorian_cap = Value(c_int, 1)
         self.last_executed_command = 0
+        self.timer_value = timer_value
         self.servos = {
             'PFP': PFP(),
             'SRP': SRP(),
@@ -189,7 +189,7 @@ class System(ListeningSystem):
             servo.operative_mode_timer.cancel()
             _change_atomic_value(servo.operative_mode, 0)
             servo.operative_mode_timer = Timer(
-                TIMER_VALUE,
+                self.timer_value,
                 _change_atomic_value,
                 args=(servo.operative_mode, 10)  # SETUP
             )
@@ -199,7 +199,7 @@ class System(ListeningSystem):
         if self.gregorian_cap.value != gregorian_cap_position:
             _change_atomic_value(self.gregorian_cap, 0)
             self.cover_timer = Timer(
-                TIMER_VALUE,
+                self.timer_value,
                 _change_atomic_value,
                 args=(self.gregorian_cap, gregorian_cap_position)
             )
@@ -224,7 +224,7 @@ class System(ListeningSystem):
             if self.gregorian_cap.value != stow_pos:
                 _change_atomic_value(self.gregorian_cap, 0)
                 self.cover_timer = Timer(
-                    TIMER_VALUE,
+                    self.timer_value,
                     _change_atomic_value,
                     args=(self.gregorian_cap, stow_pos)
                 )
@@ -235,7 +235,7 @@ class System(ListeningSystem):
             servo.operative_mode_timer.cancel()
             _change_atomic_value(servo.operative_mode, 0)
             servo.operative_mode_timer = Timer(
-                TIMER_VALUE,
+                self.timer_value,
                 _change_atomic_value,
                 args=(servo.operative_mode, 20)  # STOW
             )
@@ -254,7 +254,7 @@ class System(ListeningSystem):
         servo.operative_mode_timer.cancel()
         _change_atomic_value(servo.operative_mode, 0)
         servo.operative_mode_timer = Timer(
-            TIMER_VALUE,
+            self.timer_value,
             _change_atomic_value,
             args=(servo.operative_mode, 30)  # STOP
         )
@@ -281,7 +281,7 @@ class System(ListeningSystem):
         servo.operative_mode_timer.cancel()
         _change_atomic_value(servo.operative_mode, 0)
         servo.operative_mode_timer = Timer(
-            TIMER_VALUE,
+            self.timer_value,
             _change_atomic_value,
             args=(servo.operative_mode, 40)  # PRESET
         )

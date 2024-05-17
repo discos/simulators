@@ -1,9 +1,9 @@
 import unittest
 import random
 import time
-from simulators.minor_servos import System, TIMER_VALUE
+from simulators.minor_servos import System
 
-
+TIMER_VALUE = 0.01
 tail = '\r\n'
 good = r'^OUTPUT:GOOD,[0-9]+\.[0-9]{6}'
 bad = f'^OUTPUT:BAD{tail}$'
@@ -12,7 +12,7 @@ bad = f'^OUTPUT:BAD{tail}$'
 class TestMinorServos(unittest.TestCase):
 
     def setUp(self):
-        self.system = System()
+        self.system = System(timer_value=TIMER_VALUE)
 
     def tearDown(self):
         del self.system
