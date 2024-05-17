@@ -149,15 +149,15 @@ class TestMinorServos(unittest.TestCase):
     def test_status_derotators(self):
         derotators = ['GFR1', 'GFR2', 'GFR3', 'PFP']
         for derotator in derotators:
-            cmd = fr'STATUS=Derotatore{derotator}{tail}'
+            cmd = fr'STATUS=DR_{derotator}{tail}'
             regex = good
-            regex += fr',{derotator}_ENABLED=1\|'
-            regex += fr'{derotator}_STATUS=1\|'
-            regex += fr'{derotator}_BLOCK=2\|'
-            regex += fr'{derotator}_OPERATIVE_MODE=0\|'
-            regex += fr'{derotator}_ROTARY_AXIS_ENABLED=1\|'
-            regex += fr'{derotator}_ROTATION=[\-]?[0-9]+\.[0-9]+\|'
-            regex += fr'{derotator}_OFFSET=[0-9]+\.[0-9]+'
+            regex += fr',DR_{derotator}_ENABLED=1\|'
+            regex += fr'DR_{derotator}_STATUS=1\|'
+            regex += fr'DR_{derotator}_BLOCK=2\|'
+            regex += fr'DR_{derotator}_OPERATIVE_MODE=0\|'
+            regex += fr'DR_{derotator}_ROTARY_AXIS_ENABLED=1\|'
+            regex += fr'DR_{derotator}_ROTATION=[\-]?[0-9]+\.[0-9]+\|'
+            regex += fr'DR_{derotator}_OFFSET=[0-9]+\.[0-9]+'
             regex += fr'{tail}$'
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
@@ -210,7 +210,7 @@ class TestMinorServos(unittest.TestCase):
 
     def test_stow_gregorian_cap(self):
         for stow_pos in [1, 2]:
-            cmd = f'STOW=Gregoriano,{stow_pos}{tail}'
+            cmd = f'STOW=GREGORIAN_CAP,{stow_pos}{tail}'
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
             self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
@@ -218,7 +218,7 @@ class TestMinorServos(unittest.TestCase):
             self.assertEqual(self.system.gregorian_cap.value, stow_pos)
 
     def test_stow_gregorian_cap_wrong_pos(self):
-        cmd = f'STOW=Gregoriano,3{tail}'
+        cmd = f'STOW=GREGORIAN_CAP,5{tail}'
         for byte in cmd[:-1]:
             self.assertTrue(self.system.parse(byte))
         self.assertRegex(self.system.parse(cmd[-1]), bad)

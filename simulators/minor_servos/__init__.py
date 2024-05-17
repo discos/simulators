@@ -91,10 +91,10 @@ class System(ListeningSystem):
             'SRP': SRP(),
             'M3R': M3R(),
             'GFR': GFR(),
-            'DerotatoreGFR1': Derotator('GFR1'),
-            'DerotatoreGFR2': Derotator('GFR2'),
-            'DerotatoreGFR3': Derotator('GFR3'),
-            'DerotatorePFP': Derotator('PFP'),
+            'DR_GFR1': Derotator('GFR1'),
+            'DR_GFR2': Derotator('GFR2'),
+            'DR_GFR3': Derotator('GFR3'),
+            'DR_PFP': Derotator('PFP'),
         }
         self.stop = Value(c_bool, False)
         self.update_thread = Thread(
@@ -212,14 +212,14 @@ class System(ListeningSystem):
         if len(args) != 2:
             return self.bad
         servo_id = args[0]
-        if servo_id not in list(self.servos) + ['Gregoriano']:
+        if servo_id not in list(self.servos) + ['GREGORIAN_CAP']:
             return self.bad
         try:
             stow_pos = int(args[1])  # STOW POSITION
         except ValueError:
             return self.bad
-        if servo_id == 'Gregoriano':
-            if stow_pos not in [1, 2]:
+        if servo_id == 'GREGORIAN_CAP':
+            if stow_pos not in range(5):
                 return self.bad
             if self.gregorian_cap.value != stow_pos:
                 _change_atomic_value(self.gregorian_cap, 0)
@@ -618,7 +618,7 @@ class Derotator(Servo):
         self.max_coord = [220.0]
         self.min_coord = [-220.0]
         self.max_delta = [3.3]
-        super().__init__(name)
+        super().__init__(f'DR_{name}')
 
     def get_status(self, now):
         answer = super().get_status(now)
