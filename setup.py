@@ -13,4 +13,8 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3.10.7',
     ],
+    include_package_data=True,
+    package_data={
+        'simulators': ['minor_servos/setup.csv']
+    }
 )

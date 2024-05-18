@@ -17,6 +17,7 @@ from multiprocessing import Value
 from bisect import bisect_left
 from socketserver import ThreadingTCPServer
 from simulators.common import ListeningSystem
+from simulators.minor_servos.helpers import setup_import
 
 
 # Each system module (like active_surface.py, acu.py, etc.) has to
@@ -96,6 +97,10 @@ class System(ListeningSystem):
             'DR_GFR3': Derotator('GFR3'),
             'DR_PFP': Derotator('PFP'),
         }
+        setup_import(
+            list(self.servos.keys()) + ['GREGORIAN_CAP'],
+            self.configurations
+        )
         self.stop = Value(c_bool, False)
         self.update_thread = Thread(
             target=self._update,
@@ -184,8 +189,10 @@ class System(ListeningSystem):
         configuration = args[0]
         if configuration not in self.configurations:
             return self.bad
-        self.configuration = self.configurations.get(configuration)['ID']
-        for _, servo in self.servos.items():
+        configuration = self.configurations.get(configuration)
+        self.configuration = configuration['ID']
+        for servo_name, servo in self.servos.items():
+            coordinates = configuration[servo_name]
             servo.operative_mode_timer.cancel()
             _change_atomic_value(servo.operative_mode, 0)
             servo.operative_mode_timer = Timer(
@@ -195,8 +202,10 @@ class System(ListeningSystem):
             )
             servo.operative_mode_timer.daemon = True
             servo.operative_mode_timer.start()
-        gregorian_cap_position = 1 if self.configuration == 1 else 2
-        if self.gregorian_cap.value != gregorian_cap_position:
+            servo.set_coords(coordinates)
+        gregorian_cap_position = configuration['GREGORIAN_CAP'][0]
+        if (gregorian_cap_position
+                and self.gregorian_cap.value != gregorian_cap_position):
             _change_atomic_value(self.gregorian_cap, 0)
             self.cover_timer = Timer(
                 self.timer_value,
@@ -488,7 +497,9 @@ class Servo:
 
     def set_coords(self, coords):
         for index, value in enumerate(coords):
-            self.coords[index] = value
+            if not value:
+                continue
+            self.coords[index] = value + self.offsets[index]
 
     def set_offsets(self, coords):
         for index, value in enumerate(coords):
