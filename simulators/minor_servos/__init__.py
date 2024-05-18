@@ -206,6 +206,7 @@ class System(ListeningSystem):
         gregorian_cap_position = configuration['GREGORIAN_CAP'][0]
         if (gregorian_cap_position
                 and self.gregorian_cap.value != gregorian_cap_position):
+            self.cover_timer.cancel()
             _change_atomic_value(self.gregorian_cap, 0)
             self.cover_timer = Timer(
                 self.timer_value,
@@ -231,14 +232,21 @@ class System(ListeningSystem):
             if stow_pos not in range(5):
                 return self.bad
             if self.gregorian_cap.value != stow_pos:
-                _change_atomic_value(self.gregorian_cap, 0)
-                self.cover_timer = Timer(
-                    self.timer_value,
-                    _change_atomic_value,
-                    args=(self.gregorian_cap, stow_pos)
-                )
-                self.cover_timer.daemon = True
-                self.cover_timer.start()
+                self.cover_timer.cancel()
+                if self.gregorian_cap.value <= 1 or stow_pos == 1:
+                    _change_atomic_value(self.gregorian_cap, 0)
+                    self.cover_timer = Timer(
+                        self.timer_value,
+                        _change_atomic_value,
+                        args=(self.gregorian_cap, stow_pos)
+                    )
+                    self.cover_timer.daemon = True
+                    self.cover_timer.start()
+                else:
+                    _change_atomic_value(
+                        self.gregorian_cap,
+                        stow_pos
+                    )
         else:
             servo = self.servos.get(servo_id)
             servo.operative_mode_timer.cancel()
@@ -497,7 +505,7 @@ class Servo:
 
     def set_coords(self, coords):
         for index, value in enumerate(coords):
-            if not value:
+            if value is None:
                 continue
             self.coords[index] = value + self.offsets[index]
 

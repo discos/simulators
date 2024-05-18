@@ -217,6 +217,19 @@ class TestMinorServos(unittest.TestCase):
             time.sleep(TIMER_VALUE + 0.1)
             self.assertEqual(self.system.gregorian_cap.value, stow_pos)
 
+    def test_stow_gregorian_air_blade(self):
+        cmd = f'STOW=GREGORIAN_CAP,2{tail}'
+        for byte in cmd[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
+        time.sleep(TIMER_VALUE + 0.1)
+        self.assertEqual(self.system.gregorian_cap.value, 2)
+        cmd = f'STOW=GREGORIAN_CAP,3{tail}'
+        for byte in cmd[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
+        self.assertEqual(self.system.gregorian_cap.value, 3)
+
     def test_stow_gregorian_cap_wrong_pos(self):
         cmd = f'STOW=GREGORIAN_CAP,5{tail}'
         for byte in cmd[:-1]:
