@@ -19,7 +19,7 @@ def setup_import(servos, configurations):
             'minor_servos/setup.csv'
         )
     with open(filename, 'r', encoding='utf-8') as csvfile:
-        reader = csv.reader(csvfile)
+        reader = csv.reader(csvfile, delimiter=';')
         indexes = {}
         for line in reader:
             if not indexes:
@@ -30,7 +30,7 @@ def setup_import(servos, configurations):
             for servo, servo_indexes in indexes.items():
                 coordinates = []
                 for index in servo_indexes:
-                    coord = line[index].replace(';', '')
+                    coord = line[index]
                     try:
                         if servo == 'GREGORIAN_CAP':
                             coord = int(coord)
