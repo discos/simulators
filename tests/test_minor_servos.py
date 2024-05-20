@@ -1,7 +1,9 @@
 import unittest
 import random
 import time
-from simulators.minor_servos import System
+import requests
+from simulators.minor_servos import System, httpserver_address
+from simulators.minor_servos.helpers import VBrainRequestHandler
 
 TIMER_VALUE = 0.01
 tail = '\r\n'
@@ -12,7 +14,10 @@ bad = f'^OUTPUT:BAD{tail}$'
 class TestMinorServos(unittest.TestCase):
 
     def setUp(self):
-        self.system = System(timer_value=TIMER_VALUE)
+        self.system = System(
+            timer_value=TIMER_VALUE,
+            rest_api=False
+        )
 
     def tearDown(self):
         del self.system
@@ -552,6 +557,37 @@ class TestMinorServos(unittest.TestCase):
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
             self.assertRegex(self.system.parse(cmd[-1]), bad)
+
+
+class TestRESTApi(unittest.TestCase):
+
+    def setUp(self):
+        self.system = System(
+            rest_api=True
+        )
+
+    def tearDown(self):
+        del self.system
+
+    def test_rest_GET(self):
+        for url in VBrainRequestHandler.urls:
+            baseurl = f'http://{httpserver_address[0]}:{httpserver_address[1]}'
+            url = baseurl + url
+            try:
+                response = requests.get(url, timeout=TIMER_VALUE)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json(), VBrainRequestHandler.answer)
+            except requests.exceptions.ReadTimeout:
+                self.fail('Request is taking too long to be answered')
+
+    def test_rest_GET_wrong_address(self):
+        baseurl = f'http://{httpserver_address[0]}:{httpserver_address[1]}'
+        url = baseurl + '/wrong'
+        try:
+            response = requests.get(url, timeout=TIMER_VALUE)
+            self.assertEqual(response.status_code, 404)
+        except requests.exceptions.ReadTimeout:
+            self.fail('Request is taking too long to be answered')
 
 
 if __name__ == '__main__':

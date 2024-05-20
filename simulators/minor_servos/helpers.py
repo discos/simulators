@@ -1,5 +1,7 @@
 import os
 import csv
+import json
+from http.server import BaseHTTPRequestHandler
 import pkg_resources
 
 
@@ -40,3 +42,31 @@ def setup_import(servos, configurations):
                         coord = None
                     coordinates.append(coord)
                 configurations[line[0]][servo] = coordinates
+
+
+class VBrainRequestHandler(BaseHTTPRequestHandler):
+
+    emergency = 'INAF_SRT_OR7_EMG_RESET_CMD'
+    alarm = 'INAF_SRT_OR7_RESET_CMD'
+    baseurl = '/Exporting/json/ExecuteCommand?name'
+    urls = [
+        f'{baseurl}={emergency}',
+        f'{baseurl}={alarm}'
+    ]
+    answer = {'Message': 'OUTPUT:GOOD', 'Status': 'Good'}
+
+    def do_GET(self):
+        try:
+            if self.path in self.urls:
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps(self.answer).encode())
+            else:
+                self.send_response(404)
+                self.end_headers()
+        except BrokenPipeError:  # skip coverage
+            pass
+
+    def log_message(self, *_):
+        pass

@@ -16,8 +16,9 @@ from threading import Lock, Thread, Timer
 from multiprocessing import Value
 from bisect import bisect_left
 from socketserver import ThreadingTCPServer
+from http.server import HTTPServer
 from simulators.common import ListeningSystem
-from simulators.minor_servos.helpers import setup_import
+from simulators.minor_servos.helpers import setup_import, VBrainRequestHandler
 
 
 # Each system module (like active_surface.py, acu.py, etc.) has to
@@ -28,6 +29,7 @@ from simulators.minor_servos.helpers import setup_import
 # subscribe and unsibscribe methods, while kwargs is a dict of optional
 # extra arguments.
 servers = [(('0.0.0.0', 12800), (), ThreadingTCPServer, {})]
+httpserver_address = ('0.0.0.0', 12799)
 DEFAULT_TIMER_VALUE = 5
 
 
@@ -76,7 +78,7 @@ class System(ListeningSystem):
         'BWG4': {'ID': 24},
     }
 
-    def __init__(self, timer_value=DEFAULT_TIMER_VALUE):
+    def __init__(self, timer_value=DEFAULT_TIMER_VALUE, rest_api=True):
         self.msg = ''
         self.configuration = 0
         self.simulation = 1
@@ -108,6 +110,16 @@ class System(ListeningSystem):
         )
         self.update_thread.daemon = True
         self.update_thread.start()
+        self.rest_api = rest_api
+        if self.rest_api:
+            self.httpserver = HTTPServer(
+                httpserver_address,
+                VBrainRequestHandler
+            )
+            self.server_thread = Thread(
+                target=self.httpserver.serve_forever
+            )
+            self.server_thread.start()
         self.cover_timer = Timer(1, lambda: None)
 
     def __del__(self):
@@ -123,6 +135,9 @@ class System(ListeningSystem):
                 self.cover_timer.join()
             except RuntimeError:
                 pass
+        if self.rest_api:
+            self.httpserver.shutdown()
+            self.server_thread.join()
         return super().system_stop()
 
     @staticmethod
