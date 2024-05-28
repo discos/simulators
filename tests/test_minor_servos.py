@@ -1,9 +1,11 @@
 import unittest
 import random
 import time
-from simulators.minor_servos import System, TIMER_VALUE
+import requests
+from simulators.minor_servos import System, httpserver_address
+from simulators.minor_servos.helpers import VBrainRequestHandler
 
-
+TIMER_VALUE = 0.01
 tail = '\r\n'
 good = r'^OUTPUT:GOOD,[0-9]+\.[0-9]{6}'
 bad = f'^OUTPUT:BAD{tail}$'
@@ -12,7 +14,10 @@ bad = f'^OUTPUT:BAD{tail}$'
 class TestMinorServos(unittest.TestCase):
 
     def setUp(self):
-        self.system = System()
+        self.system = System(
+            timer_value=TIMER_VALUE,
+            rest_api=False
+        )
 
     def tearDown(self):
         del self.system
@@ -149,15 +154,15 @@ class TestMinorServos(unittest.TestCase):
     def test_status_derotators(self):
         derotators = ['GFR1', 'GFR2', 'GFR3', 'PFP']
         for derotator in derotators:
-            cmd = fr'STATUS=Derotatore{derotator}{tail}'
+            cmd = fr'STATUS=DR_{derotator}{tail}'
             regex = good
-            regex += fr',{derotator}_ENABLED=1\|'
-            regex += fr'{derotator}_STATUS=1\|'
-            regex += fr'{derotator}_BLOCK=2\|'
-            regex += fr'{derotator}_OPERATIVE_MODE=0\|'
-            regex += fr'{derotator}_ROTARY_AXIS_ENABLED=1\|'
-            regex += fr'{derotator}_ROTATION=[\-]?[0-9]+\.[0-9]+\|'
-            regex += fr'{derotator}_OFFSET=[0-9]+\.[0-9]+'
+            regex += fr',DR_{derotator}_ENABLED=1\|'
+            regex += fr'DR_{derotator}_STATUS=1\|'
+            regex += fr'DR_{derotator}_BLOCK=2\|'
+            regex += fr'DR_{derotator}_OPERATIVE_MODE=0\|'
+            regex += fr'DR_{derotator}_ROTARY_AXIS_ENABLED=1\|'
+            regex += fr'DR_{derotator}_ROTATION=[\-]?[0-9]+\.[0-9]+\|'
+            regex += fr'DR_{derotator}_OFFSET=[0-9]+\.[0-9]+'
             regex += fr'{tail}$'
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
@@ -210,15 +215,28 @@ class TestMinorServos(unittest.TestCase):
 
     def test_stow_gregorian_cap(self):
         for stow_pos in [1, 2]:
-            cmd = f'STOW=Gregoriano,{stow_pos}{tail}'
+            cmd = f'STOW=GREGORIAN_CAP,{stow_pos}{tail}'
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
             self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
             time.sleep(TIMER_VALUE + 0.1)
             self.assertEqual(self.system.gregorian_cap.value, stow_pos)
 
+    def test_stow_gregorian_air_blade(self):
+        cmd = f'STOW=GREGORIAN_CAP,2{tail}'
+        for byte in cmd[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
+        time.sleep(TIMER_VALUE + 0.1)
+        self.assertEqual(self.system.gregorian_cap.value, 2)
+        cmd = f'STOW=GREGORIAN_CAP,3{tail}'
+        for byte in cmd[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
+        self.assertEqual(self.system.gregorian_cap.value, 3)
+
     def test_stow_gregorian_cap_wrong_pos(self):
-        cmd = f'STOW=Gregoriano,3{tail}'
+        cmd = f'STOW=GREGORIAN_CAP,5{tail}'
         for byte in cmd[:-1]:
             self.assertTrue(self.system.parse(byte))
         self.assertRegex(self.system.parse(cmd[-1]), bad)
@@ -539,6 +557,37 @@ class TestMinorServos(unittest.TestCase):
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
             self.assertRegex(self.system.parse(cmd[-1]), bad)
+
+
+class TestRESTApi(unittest.TestCase):
+
+    def setUp(self):
+        self.system = System(
+            rest_api=True
+        )
+
+    def tearDown(self):
+        del self.system
+
+    def test_rest_GET(self):
+        for url in VBrainRequestHandler.urls:
+            baseurl = f'http://{httpserver_address[0]}:{httpserver_address[1]}'
+            url = baseurl + url
+            try:
+                response = requests.get(url, timeout=TIMER_VALUE)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json(), VBrainRequestHandler.answer)
+            except requests.exceptions.ReadTimeout:
+                self.fail('Request is taking too long to be answered')
+
+    def test_rest_GET_wrong_address(self):
+        baseurl = f'http://{httpserver_address[0]}:{httpserver_address[1]}'
+        url = baseurl + '/wrong'
+        try:
+            response = requests.get(url, timeout=TIMER_VALUE)
+            self.assertEqual(response.status_code, 404)
+        except requests.exceptions.ReadTimeout:
+            self.fail('Request is taking too long to be answered')
 
 
 if __name__ == '__main__':

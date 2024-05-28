@@ -1,7 +1,6 @@
 import time
 import re
 import random
-import os
 try:
     from numpy import sign
 except ImportError as ex:  # skip coverage
@@ -17,7 +16,9 @@ from threading import Lock, Thread, Timer
 from multiprocessing import Value
 from bisect import bisect_left
 from socketserver import ThreadingTCPServer
+from http.server import HTTPServer
 from simulators.common import ListeningSystem
+from simulators.minor_servos.helpers import setup_import, VBrainRequestHandler
 
 
 # Each system module (like active_surface.py, acu.py, etc.) has to
@@ -28,7 +29,8 @@ from simulators.common import ListeningSystem
 # subscribe and unsibscribe methods, while kwargs is a dict of optional
 # extra arguments.
 servers = [(('0.0.0.0', 12800), (), ThreadingTCPServer, {})]
-TIMER_VALUE = 1 if os.environ.get('CI') == 'true' else 5
+httpserver_address = ('0.0.0.0', 12799)
+DEFAULT_TIMER_VALUE = 5
 
 
 def _change_atomic_value(variable, value):
@@ -76,7 +78,7 @@ class System(ListeningSystem):
         'BWG4': {'ID': 24},
     }
 
-    def __init__(self):
+    def __init__(self, timer_value=DEFAULT_TIMER_VALUE, rest_api=True):
         self.msg = ''
         self.configuration = 0
         self.simulation = 1
@@ -86,16 +88,21 @@ class System(ListeningSystem):
         self.emergency = 2
         self.gregorian_cap = Value(c_int, 1)
         self.last_executed_command = 0
+        self.timer_value = timer_value
         self.servos = {
             'PFP': PFP(),
             'SRP': SRP(),
             'M3R': M3R(),
             'GFR': GFR(),
-            'DerotatoreGFR1': Derotator('GFR1'),
-            'DerotatoreGFR2': Derotator('GFR2'),
-            'DerotatoreGFR3': Derotator('GFR3'),
-            'DerotatorePFP': Derotator('PFP'),
+            'DR_GFR1': Derotator('GFR1'),
+            'DR_GFR2': Derotator('GFR2'),
+            'DR_GFR3': Derotator('GFR3'),
+            'DR_PFP': Derotator('PFP'),
         }
+        setup_import(
+            list(self.servos.keys()) + ['GREGORIAN_CAP'],
+            self.configurations
+        )
         self.stop = Value(c_bool, False)
         self.update_thread = Thread(
             target=self._update,
@@ -103,6 +110,16 @@ class System(ListeningSystem):
         )
         self.update_thread.daemon = True
         self.update_thread.start()
+        self.rest_api = rest_api
+        if self.rest_api:
+            self.httpserver = HTTPServer(
+                httpserver_address,
+                VBrainRequestHandler
+            )
+            self.server_thread = Thread(
+                target=self.httpserver.serve_forever
+            )
+            self.server_thread.start()
         self.cover_timer = Timer(1, lambda: None)
 
     def __del__(self):
@@ -118,6 +135,9 @@ class System(ListeningSystem):
                 self.cover_timer.join()
             except RuntimeError:
                 pass
+        if self.rest_api:
+            self.httpserver.shutdown()
+            self.server_thread.join()
         return super().system_stop()
 
     @staticmethod
@@ -184,22 +204,27 @@ class System(ListeningSystem):
         configuration = args[0]
         if configuration not in self.configurations:
             return self.bad
-        self.configuration = self.configurations.get(configuration)['ID']
-        for _, servo in self.servos.items():
+        configuration = self.configurations.get(configuration)
+        self.configuration = configuration['ID']
+        for servo_name, servo in self.servos.items():
+            coordinates = configuration[servo_name]
             servo.operative_mode_timer.cancel()
             _change_atomic_value(servo.operative_mode, 0)
             servo.operative_mode_timer = Timer(
-                TIMER_VALUE,
+                self.timer_value,
                 _change_atomic_value,
                 args=(servo.operative_mode, 10)  # SETUP
             )
             servo.operative_mode_timer.daemon = True
             servo.operative_mode_timer.start()
-        gregorian_cap_position = 1 if self.configuration == 1 else 2
-        if self.gregorian_cap.value != gregorian_cap_position:
+            servo.set_coords(coordinates)
+        gregorian_cap_position = configuration['GREGORIAN_CAP'][0]
+        if (gregorian_cap_position
+                and self.gregorian_cap.value != gregorian_cap_position):
+            self.cover_timer.cancel()
             _change_atomic_value(self.gregorian_cap, 0)
             self.cover_timer = Timer(
-                TIMER_VALUE,
+                self.timer_value,
                 _change_atomic_value,
                 args=(self.gregorian_cap, gregorian_cap_position)
             )
@@ -212,30 +237,37 @@ class System(ListeningSystem):
         if len(args) != 2:
             return self.bad
         servo_id = args[0]
-        if servo_id not in list(self.servos) + ['Gregoriano']:
+        if servo_id not in list(self.servos) + ['GREGORIAN_CAP']:
             return self.bad
         try:
             stow_pos = int(args[1])  # STOW POSITION
         except ValueError:
             return self.bad
-        if servo_id == 'Gregoriano':
-            if stow_pos not in [1, 2]:
+        if servo_id == 'GREGORIAN_CAP':
+            if stow_pos not in range(5):
                 return self.bad
             if self.gregorian_cap.value != stow_pos:
-                _change_atomic_value(self.gregorian_cap, 0)
-                self.cover_timer = Timer(
-                    TIMER_VALUE,
-                    _change_atomic_value,
-                    args=(self.gregorian_cap, stow_pos)
-                )
-                self.cover_timer.daemon = True
-                self.cover_timer.start()
+                self.cover_timer.cancel()
+                if self.gregorian_cap.value <= 1 or stow_pos == 1:
+                    _change_atomic_value(self.gregorian_cap, 0)
+                    self.cover_timer = Timer(
+                        self.timer_value,
+                        _change_atomic_value,
+                        args=(self.gregorian_cap, stow_pos)
+                    )
+                    self.cover_timer.daemon = True
+                    self.cover_timer.start()
+                else:
+                    _change_atomic_value(
+                        self.gregorian_cap,
+                        stow_pos
+                    )
         else:
             servo = self.servos.get(servo_id)
             servo.operative_mode_timer.cancel()
             _change_atomic_value(servo.operative_mode, 0)
             servo.operative_mode_timer = Timer(
-                TIMER_VALUE,
+                self.timer_value,
                 _change_atomic_value,
                 args=(servo.operative_mode, 20)  # STOW
             )
@@ -254,7 +286,7 @@ class System(ListeningSystem):
         servo.operative_mode_timer.cancel()
         _change_atomic_value(servo.operative_mode, 0)
         servo.operative_mode_timer = Timer(
-            TIMER_VALUE,
+            self.timer_value,
             _change_atomic_value,
             args=(servo.operative_mode, 30)  # STOP
         )
@@ -281,7 +313,7 @@ class System(ListeningSystem):
         servo.operative_mode_timer.cancel()
         _change_atomic_value(servo.operative_mode, 0)
         servo.operative_mode_timer = Timer(
-            TIMER_VALUE,
+            self.timer_value,
             _change_atomic_value,
             args=(servo.operative_mode, 40)  # PRESET
         )
@@ -488,7 +520,9 @@ class Servo:
 
     def set_coords(self, coords):
         for index, value in enumerate(coords):
-            self.coords[index] = value
+            if value is None:
+                continue
+            self.coords[index] = value + self.offsets[index]
 
     def set_offsets(self, coords):
         for index, value in enumerate(coords):
@@ -618,7 +652,7 @@ class Derotator(Servo):
         self.max_coord = [220.0]
         self.min_coord = [-220.0]
         self.max_delta = [3.3]
-        super().__init__(name)
+        super().__init__(f'DR_{name}')
 
     def get_status(self, now):
         answer = super().get_status(now)
