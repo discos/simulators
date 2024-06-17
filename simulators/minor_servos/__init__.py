@@ -217,7 +217,7 @@ class System(ListeningSystem):
             )
             servo.operative_mode_timer.daemon = True
             servo.operative_mode_timer.start()
-            servo.set_coords(coordinates)
+            servo.set_coords(coordinates, apply_offsets=False)
         gregorian_cap_position = configuration['GREGORIAN_CAP'][0]
         if (gregorian_cap_position
                 and self.gregorian_cap.value != gregorian_cap_position):
@@ -345,7 +345,7 @@ class System(ListeningSystem):
             start_time = args[3]
             coords = args[4:]
             for index, coord in enumerate(coords):
-                coords[index] = float(coord)
+                coords[index] = float(coord) + servo.offsets[index]
         except ValueError:
             return self.bad
 
@@ -518,11 +518,13 @@ class Servo:
                         self.pt_table = []
         return answer
 
-    def set_coords(self, coords):
+    def set_coords(self, coords, apply_offsets=True):
         for index, value in enumerate(coords):
             if value is None:
                 continue
-            self.coords[index] = value + self.offsets[index]
+            if apply_offsets:
+                value += self.offsets[index]
+            self.coords[index] = value
 
     def set_offsets(self, coords):
         for index, value in enumerate(coords):
@@ -649,9 +651,10 @@ class Derotator(Servo):
     def __init__(self, name):
         self.rotary_axis_enabled = 1
         self.program_track_capable = True
-        self.max_coord = [220.0]
-        self.min_coord = [-220.0]
-        self.max_delta = [3.3]
+        # Actual limits are lower than this but who cares?
+        self.max_coord = [150.0]
+        self.min_coord = [-150.0]
+        self.max_delta = [3.276]
         super().__init__(f'DR_{name}')
 
     def get_status(self, now):
