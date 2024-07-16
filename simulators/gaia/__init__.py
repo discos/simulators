@@ -11,7 +11,7 @@ from simulators.common import ListeningSystem
 # is the tuple that defines the optional sending node that exposes the
 # subscribe and unsubscribe methods, while kwargs is a dict of optional
 # extra arguments.
-servers = [(('0.0.0.0', 12600), (), ThreadingUDPServer, {})]
+servers = [(('0.0.0.0', 12400), (), ThreadingUDPServer, {})]
 
 
 class System(ListeningSystem):
