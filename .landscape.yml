@@ -27,6 +27,8 @@ pylint:
     - too-many-arguments
     - too-many-lines
     - simplifiable-if-statement
+    - too-many-positional-arguments
+    - possibly-used-before-assignment
 
 pycodestyle:
   disable:
