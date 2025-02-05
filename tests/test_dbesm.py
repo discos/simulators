@@ -18,8 +18,8 @@ class TestDBESM(unittest.TestCase):
         self._send(disable_msg)
 
     def _noTemp_board(self, err_board=3):
-    	  noTemp_msg = f'DBE SETSTATUS BOARD {err_board} VALUE 2\x0D\x0A'
-    	  self._send(noTemp_msg)
+        noTemp_msg = f'DBE SETSTATUS BOARD {err_board} VALUE 2\x0D\x0A'
+        self._send(noTemp_msg)
 
     def _test_all_boards(self, response, err_board=999, diag=False):
         for board in range(1, 5):
@@ -1021,9 +1021,7 @@ class TestDBESM(unittest.TestCase):
         print(response)
         self.assertEqual(response, 'NAK unknown command\x0D\x0A')
 
-
 #       SETDBEAMP
-
 
     def test_setdbeamp_single_on(self, out_dbe='1_DBBC2'):
         message = f"DBE SETDBEAMP {out_dbe} 1\x0D\x0A"
@@ -1064,7 +1062,7 @@ class TestDBESM(unittest.TestCase):
         print(response)
         self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
         '[0-9]+ value out of range\r\n')
- 
+
     def test_setdbeamp_mult_IntValErr(self, out_dbe='prova'):
         message = f"DBE SETDBEAMP {out_dbe} 2\x0D\x0A"
         response = self._send(message)
@@ -1163,9 +1161,7 @@ class TestDBESM(unittest.TestCase):
         print(response)
         self.assertEqual(response, 'NAK unknown command\x0D\x0A')
 
-
 #       SETDBEEQ
-
 
     def test_setdbeeq_single_on(self, out_dbe='1_DBBC2'):
         message = f"DBE SETDBEEQ {out_dbe} 1\x0D\x0A"
@@ -1206,7 +1202,7 @@ class TestDBESM(unittest.TestCase):
         print(response)
         self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
         '[0-9]+ value out of range\r\n')
- 
+
     def test_setdbeeq_mult_IntValErr(self, out_dbe='prova'):
         message = f"DBE SETDBEEQ {out_dbe} 2\x0D\x0A"
         response = self._send(message)
@@ -1305,9 +1301,7 @@ class TestDBESM(unittest.TestCase):
         print(response)
         self.assertEqual(response, 'NAK unknown command\x0D\x0A')
 
-
 #       SETDBEBPF
-
 
     def test_setdbebpf_single_on(self, out_dbe='1_DBBC2'):
         message = f"DBE SETDBEBPF {out_dbe} 1\x0D\x0A"
@@ -1348,7 +1342,7 @@ class TestDBESM(unittest.TestCase):
         print(response)
         self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
         '[0-9]+ value out of range\r\n')
- 
+
     def test_setdbebpf_mult_IntValErr(self, out_dbe='prova'):
         message = f"DBE SETDBEBPF {out_dbe} 2\x0D\x0A"
         response = self._send(message)
@@ -1446,8 +1440,6 @@ class TestDBESM(unittest.TestCase):
         response = self._send(message)
         print(response)
         self.assertEqual(response, 'NAK unknown command\x0D\x0A')
-
-
 
 if __name__ == '__main__':
     unittest.main()
