@@ -303,14 +303,14 @@ class TestDBESM(unittest.TestCase):
         self.assertEqual(response, 'NAK unknown command\x0D\x0A')
 
     def test_firm_ok(self, board=0):
-        message = f"DBE FIRM BOARD {board}\x0D\x0A"
+        message = f"DBE GETFIRM BOARD {board}\x0D\x0A"
         response = self._send(message)
         print(response)
         self.assertRegex(response, 'ACK\nBOARD [0-9]+ '
         'Prog=DBESM, Rev=rev [0-9]+.[0-9]+_[A-Za-z]+_[A-Za-z]+\r\n')
 
     def test_firm_boardErr(self, board=0):
-        message = f"DBE FIRM BOARD {board}\x0D\x0A"
+        message = f"DBE GETFIRM BOARD {board}\x0D\x0A"
         self._disable_board(board)
         response = self._send(message)
         print(response)
@@ -318,20 +318,20 @@ class TestDBESM(unittest.TestCase):
         'unreachable\x0D\x0A')
 
     def test_firm_noBoard(self, board=999):
-        message = f"DBE FIRM BOARD {board}\x0D\x0A"
+        message = f"DBE GETFIRM BOARD {board}\x0D\x0A"
         response = self._send(message)
         print(response)
         self.assertEqual(response, f'ERR DBE BOARD {board} '
         'not existing\x0D\x0A')
 
     def test_nak_firm_missing(self):
-        message = "DBE FIRM BOARD\x0D\x0A"
+        message = "DBE GETFIRM BOARD\x0D\x0A"
         response = self._send(message)
         print(response)
         self.assertEqual(response, 'NAK unknown command\x0D\x0A')
 
     def test_nak_firm_NotInt(self):
-        message = "DBE FIRM BOARD BOARD\x0D\x0A"
+        message = "DBE GETFIRM BOARD BOARD\x0D\x0A"
         response = self._send(message)
         print(response)
         self.assertEqual(response, 'NAK unknown command\x0D\x0A')
@@ -995,6 +995,433 @@ class TestDBESM(unittest.TestCase):
         response = self._send(message)
         print(response)
         self.assertEqual(response, 'NAK unknown command\x0D\x0A')
+
+
+#       SETDBEAMP
+
+
+    def test_setdbeamp_single_on(self, out_dbe='1_DBBC2'):
+        message = f"DBE SETDBEAMP {out_dbe} 1\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
+
+    def test_setdbeamp_single_off(self, out_dbe='1_DBBC2'):
+        message = f"DBE SETDBEAMP {out_dbe} 0\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
+
+    def test_setdbeamp_mult_on(self, out_dbe='prova'):
+        message = f"DBE SETDBEAMP {out_dbe} 1\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
+        self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
+
+    def test_setdbeamp_mult_off(self, out_dbe='prova'):
+        message = f"DBE SETDBEAMP {out_dbe} 0\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
+        self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
+
+    def test_setdbeamp_single_IntValErr(self, out_dbe='1_DBBC2'):
+        message = f"DBE SETDBEAMP {out_dbe} 2\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
+        '[0-9]+ value out of range\r\n')
+
+    def test_setdbeamp_single_FloatValErr(self, out_dbe='1_DBBC2'):
+        message = f"DBE SETDBEAMP {out_dbe} 1.5\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
+        '[0-9]+ value out of range\r\n')
+ 
+    def test_setdbeamp_mult_IntValErr(self, out_dbe='prova'):
+        message = f"DBE SETDBEAMP {out_dbe} 2\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
+        '[0-9]+ value out of range\r\n')
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
+        '[0-9]+ value out of range\r\n')
+
+    def test_setdbeamp_mult_FloatValErr(self, out_dbe='prova'):
+        message = f"DBE SETDBEAMP {out_dbe} 1.5\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
+        '[0-9]+ value out of range\r\n')
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
+        '[0-9]+ value out of range\r\n')
+
+    def test_setdbeamp_boardErr(self, out_dbe='SARDA_14', err_board=3):
+        self._disable_board(err_board)
+        message = f"DBE SETDBEAMP {out_dbe} 1\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD {err_board}'
+        ' unreachable\r\n')
+
+    def test_setdbeamp_outErr(self, out_dbe='NOTHING'):
+        message = f"DBE SETDBEAMP {out_dbe} 1\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'ERR DBE Output not existing\r\n')
+
+    def test_setdbeamp_boardOutErr(self, out_dbe='NOTHING', err_board=3):
+        self._disable_board(err_board)
+        message = f"DBE SETDBEAMP {out_dbe} 1\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'ERR DBE Output not existing\r\n')
+
+    def test_setdbeamp_boardValErr(self, out_dbe='SARDA_14', err_board=3):
+        self._disable_board(err_board)
+        message = f"DBE SETDBEAMP {out_dbe} 2\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD {err_board}'
+        ' value out of range\r\n')
+
+    def test_nak_setdbeamp(self, out_dbe='1_DBBC2'):
+        message = f"DBE SETDBEAMP {out_dbe}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')
+
+#       GETDBEAMP
+
+    def test_getdbeamp_single(self, out_dbe='1_DBBC2'):
+        message = f"DBE GETDBEAMP {out_dbe}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ACK {out_dbe} BOARD [0-9]+ '
+        'AMP [0-9]+ VALUE [0-9]+.[0-9]+\r\n')
+
+    def test_getdbeamp_mult(self, out_dbe='prova'):
+        message = f"DBE GETDBEAMP {out_dbe}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ACK {out_dbe} BOARD [0-9]+ '
+        'AMP [0-9]+ VALUE [0-9]+.[0-9]+\r\n')
+        self.assertRegex(response, f'ACK {out_dbe} BOARD [0-9]+ '
+        'AMP [0-9]+ VALUE [0-9]+.[0-9]+\r\n')
+
+    def test_getdbeamp_boardErr(self, out_dbe='SARDA_14', err_board=3):
+        self._disable_board(err_board)
+        message = f"DBE GETDBEAMP {out_dbe}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD {err_board}'
+        ' unreachable\r\n')
+
+    def test_getdbeamp_outErr(self, out_dbe='NOTHING'):
+        message = f"DBE GETDBEAMP {out_dbe}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'ERR DBE Output not existing\r\n')
+
+    def test_getdbeamp_boardOutErr(self, out_dbe='NOTHING', err_board=3):
+        self._disable_board(err_board)
+        message = f"DBE GETDBEAMP {out_dbe}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'ERR DBE Output not existing\r\n')
+
+    def test_nak_getdbeamp(self):
+        message = "DBE GETDBEAMP\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')
+
+
+#       SETDBEEQ
+
+
+    def test_setdbeeq_single_on(self, out_dbe='1_DBBC2'):
+        message = f"DBE SETDBEEQ {out_dbe} 1\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
+
+    def test_setdbeeq_single_off(self, out_dbe='1_DBBC2'):
+        message = f"DBE SETDBEEQ {out_dbe} 0\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
+
+    def test_setdbeeq_mult_on(self, out_dbe='prova'):
+        message = f"DBE SETDBEEQ {out_dbe} 1\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
+        self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
+
+    def test_setdbeeq_mult_off(self, out_dbe='prova'):
+        message = f"DBE SETDBEEQ {out_dbe} 0\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
+        self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
+
+    def test_setdbeeq_single_IntValErr(self, out_dbe='1_DBBC2'):
+        message = f"DBE SETDBEEQ {out_dbe} 2\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
+        '[0-9]+ value out of range\r\n')
+
+    def test_setdbeeq_single_FloatValErr(self, out_dbe='1_DBBC2'):
+        message = f"DBE SETDBEEQ {out_dbe} 1.5\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
+        '[0-9]+ value out of range\r\n')
+ 
+    def test_setdbeeq_mult_IntValErr(self, out_dbe='prova'):
+        message = f"DBE SETDBEEQ {out_dbe} 2\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
+        '[0-9]+ value out of range\r\n')
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
+        '[0-9]+ value out of range\r\n')
+
+    def test_setdbeeq_mult_FloatValErr(self, out_dbe='prova'):
+        message = f"DBE SETDBEEQ {out_dbe} 1.5\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
+        '[0-9]+ value out of range\r\n')
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
+        '[0-9]+ value out of range\r\n')
+
+    def test_setdbeeq_boardErr(self, out_dbe='SARDA_14', err_board=3):
+        self._disable_board(err_board)
+        message = f"DBE SETDBEEQ {out_dbe} 1\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD {err_board}'
+        ' unreachable\r\n')
+
+    def test_setdbeeq_outErr(self, out_dbe='NOTHING'):
+        message = f"DBE SETDBEEQ {out_dbe} 1\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'ERR DBE Output not existing\r\n')
+
+    def test_setdbeeq_boardOutErr(self, out_dbe='NOTHING', err_board=3):
+        self._disable_board(err_board)
+        message = f"DBE SETDBEEQ {out_dbe} 1\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'ERR DBE Output not existing\r\n')
+
+    def test_setdbeeq_boardValErr(self, out_dbe='SARDA_14', err_board=3):
+        self._disable_board(err_board)
+        message = f"DBE SETDBEEQ {out_dbe} 2\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD {err_board}'
+        ' value out of range\r\n')
+
+    def test_nak_setdbeeq(self, out_dbe='1_DBBC2'):
+        message = f"DBE SETDBEEQ {out_dbe}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')
+
+#       GETDBEEQ
+
+    def test_getdbeeq_single(self, out_dbe='1_DBBC2'):
+        message = f"DBE GETDBEEQ {out_dbe}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ACK {out_dbe} BOARD [0-9]+ '
+        'EQ [0-9]+ VALUE [0-9]+.[0-9]+\r\n')
+
+    def test_getdbeeq_mult(self, out_dbe='prova'):
+        message = f"DBE GETDBEEQ {out_dbe}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ACK {out_dbe} BOARD [0-9]+ '
+        'EQ [0-9]+ VALUE [0-9]+.[0-9]+\r\n')
+        self.assertRegex(response, f'ACK {out_dbe} BOARD [0-9]+ '
+        'EQ [0-9]+ VALUE [0-9]+.[0-9]+\r\n')
+
+    def test_getdbeeq_boardErr(self, out_dbe='SARDA_14', err_board=3):
+        self._disable_board(err_board)
+        message = f"DBE GETDBEEQ {out_dbe}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD {err_board}'
+        ' unreachable\r\n')
+
+    def test_getdbeeq_outErr(self, out_dbe='NOTHING'):
+        message = f"DBE GETDBEEQ {out_dbe}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'ERR DBE Output not existing\r\n')
+
+    def test_getdbeeq_boardOutErr(self, out_dbe='NOTHING', err_board=3):
+        self._disable_board(err_board)
+        message = f"DBE GETDBEEQ {out_dbe}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'ERR DBE Output not existing\r\n')
+
+    def test_nak_getdbeeq(self):
+        message = "DBE GETDBEEQ\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')
+
+
+#       SETDBEBPF
+
+
+    def test_setdbebpf_single_on(self, out_dbe='1_DBBC2'):
+        message = f"DBE SETDBEBPF {out_dbe} 1\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
+
+    def test_setdbebpf_single_off(self, out_dbe='1_DBBC2'):
+        message = f"DBE SETDBEBPF {out_dbe} 0\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
+
+    def test_setdbebpf_mult_on(self, out_dbe='prova'):
+        message = f"DBE SETDBEBPF {out_dbe} 1\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
+        self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
+
+    def test_setdbebpf_mult_off(self, out_dbe='prova'):
+        message = f"DBE SETDBEBPF {out_dbe} 0\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
+        self.assertRegex(response, f'DBE {out_dbe} BOARD [0-9]+ ACK\r\n')
+
+    def test_setdbebpf_single_IntValErr(self, out_dbe='1_DBBC2'):
+        message = f"DBE SETDBEBPF {out_dbe} 2\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
+        '[0-9]+ value out of range\r\n')
+
+    def test_setdbebpf_single_FloatValErr(self, out_dbe='1_DBBC2'):
+        message = f"DBE SETDBEBPF {out_dbe} 1.5\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
+        '[0-9]+ value out of range\r\n')
+ 
+    def test_setdbebpf_mult_IntValErr(self, out_dbe='prova'):
+        message = f"DBE SETDBEBPF {out_dbe} 2\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
+        '[0-9]+ value out of range\r\n')
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
+        '[0-9]+ value out of range\r\n')
+
+    def test_setdbebpf_mult_FloatValErr(self, out_dbe='prova'):
+        message = f"DBE SETDBEBPF {out_dbe} 1.5\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
+        '[0-9]+ value out of range\r\n')
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD '
+        '[0-9]+ value out of range\r\n')
+
+    def test_setdbebpf_boardErr(self, out_dbe='SARDA_14', err_board=3):
+        self._disable_board(err_board)
+        message = f"DBE SETDBEBPF {out_dbe} 1\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD {err_board}'
+        ' unreachable\r\n')
+
+    def test_setdbebpf_outErr(self, out_dbe='NOTHING'):
+        message = f"DBE SETDBEBPF {out_dbe} 1\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'ERR DBE Output not existing\r\n')
+
+    def test_setdbebpf_boardOutErr(self, out_dbe='NOTHING', err_board=3):
+        self._disable_board(err_board)
+        message = f"DBE SETDBEBPF {out_dbe} 1\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'ERR DBE Output not existing\r\n')
+
+    def test_setdbebpf_boardValErr(self, out_dbe='SARDA_14', err_board=3):
+        self._disable_board(err_board)
+        message = f"DBE SETDBEBPF {out_dbe} 2\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD {err_board}'
+        ' value out of range\r\n')
+
+    def test_nak_setdbebpf(self, out_dbe='1_DBBC2'):
+        message = f"DBE SETDBEBPF {out_dbe}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')
+
+#       GETDBEBPF
+
+    def test_getdbebpf_single(self, out_dbe='1_DBBC2'):
+        message = f"DBE GETDBEBPF {out_dbe}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ACK {out_dbe} BOARD [0-9]+ '
+        'BPF [0-9]+ VALUE [0-9]+.[0-9]+\r\n')
+
+    def test_getdbebpf_mult(self, out_dbe='prova'):
+        message = f"DBE GETDBEBPF {out_dbe}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ACK {out_dbe} BOARD [0-9]+ '
+        'BPF [0-9]+ VALUE [0-9]+.[0-9]+\r\n')
+        self.assertRegex(response, f'ACK {out_dbe} BOARD [0-9]+ '
+        'BPF [0-9]+ VALUE [0-9]+.[0-9]+\r\n')
+
+    def test_getdbebpf_boardErr(self, out_dbe='SARDA_14', err_board=3):
+        self._disable_board(err_board)
+        message = f"DBE GETDBEBPF {out_dbe}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertRegex(response, f'ERR DBE {out_dbe} BOARD {err_board}'
+        ' unreachable\r\n')
+
+    def test_getdbebpf_outErr(self, out_dbe='NOTHING'):
+        message = f"DBE GETDBEBPF {out_dbe}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'ERR DBE Output not existing\r\n')
+
+    def test_getdbebpf_boardOutErr(self, out_dbe='NOTHING', err_board=3):
+        self._disable_board(err_board)
+        message = f"DBE GETDBEBPF {out_dbe}\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'ERR DBE Output not existing\r\n')
+
+    def test_nak_getdbebpf(self):
+        message = "DBE GETDBEBPF\x0D\x0A"
+        response = self._send(message)
+        print(response)
+        self.assertEqual(response, 'NAK unknown command\x0D\x0A')
+
 
 
 if __name__ == '__main__':
