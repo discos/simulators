@@ -2,7 +2,7 @@ import os
 import csv
 import json
 from http.server import BaseHTTPRequestHandler
-import pkg_resources
+from importlib.resources import files
 
 
 def setup_import(servos, configurations):
@@ -16,10 +16,7 @@ def setup_import(servos, configurations):
         'Tabella Setup.csv'
     )
     if not os.path.exists(filename):
-        filename = pkg_resources.resource_filename(
-            'simulators',
-            'minor_servos/setup.csv'
-        )
+        filename = str(files('simulators') / 'minor_servos/setup.csv')
     with open(filename, 'r', encoding='utf-8') as csvfile:
         reader = csv.reader(csvfile, delimiter=';')
         indexes = {}
