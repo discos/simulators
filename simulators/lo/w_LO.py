@@ -108,8 +108,9 @@ class System(ListeningSystem):
 
     def get_w_LO_HKP_Temp(self):
         return (f'+{self.w_LO_HKP_Temp[0]}C,'
-        f'+{self.w_LO_HKP_Temp[1]}C' f'+{self.w_LO_HKP_Temp[2]}C'
-        f'+{self.w_LO_HKP_Temp[3]}C' + self.tail)
+                f'+{self.w_LO_HKP_Temp[1]}C'
+                f'+{self.w_LO_HKP_Temp[2]}C'
+                f'+{self.w_LO_HKP_Temp[3]}C' + self.tail)
 
     def set_W_LO_RefH(self, params):
         self.w_LO_refH = params
