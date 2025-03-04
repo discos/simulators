@@ -4,6 +4,7 @@ import time
 import requests
 from simulators.minor_servos import System, httpserver_address
 from simulators.minor_servos.helpers import VBrainRequestHandler
+from simulators.utils import FastTimeMock
 
 TIMER_VALUE = 0.01
 tail = '\r\n'
@@ -174,16 +175,30 @@ class TestMinorServos(unittest.TestCase):
             self.assertTrue(self.system.parse(byte))
         self.assertRegex(self.system.parse(cmd[-1]), bad)
 
-    def test_setup(self):
-        configurations = self.system.configurations
-        for configuration in configurations:
-            cmd = f'SETUP={configuration}{tail}'
+    def test_teardown_before_timer_execution(self):
+        for servo_id, _ in self.system.servos.items():
+            cmd = f'STOW={servo_id},1{tail}'
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
             self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
-            time.sleep(TIMER_VALUE + 0.1)
+        # By closing here we test that the timers get canceled
+
+    def test_setup(self):
+        fast_time = FastTimeMock(100)
+        fast_time.start()
+        configurations = self.system.configurations
+        for conf_name, configuration in configurations.items():
+            cmd = f'SETUP={conf_name}{tail}'
+            for byte in cmd[:-1]:
+                self.assertTrue(self.system.parse(byte))
+            self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
+            time.sleep(120)
             for _, servo in self.system.servos.items():
-                self.assertEqual(servo.operative_mode.value, 10)  # SETUP mode
+                expected_coords = configuration[servo.name]
+                if any(coord is not None for coord in expected_coords):
+                    # Should be in SETUP mode
+                    self.assertEqual(servo.operative_mode.value, 10)
+        fast_time.stop()
 
     def test_setup_no_wait(self):
         cmd = f'SETUP=Gregoriano1{tail}'
@@ -289,16 +304,28 @@ class TestMinorServos(unittest.TestCase):
         self.assertRegex(self.system.parse(cmd[-1]), bad)
 
     def test_preset(self):
+        mapping = {}
         for servo_id, servo in self.system.servos.items():
             DOF = servo.DOF
-            coords = [random.uniform(0, 100) for _ in range(DOF)]
+            coords = [random.uniform(0, 0.25) for _ in range(DOF)]
+            mapping[servo_id] = coords
             cmd = f'PRESET={servo_id},{",".join(map(str, coords))}{tail}'
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
             self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
-            time.sleep(TIMER_VALUE + 0.1)
-            self.assertEqual(coords, servo.coords)
+            self.assertEqual(servo.operative_mode.value, 0)  # moving axes
+        time.sleep(1)
+        for servo_id, servo in self.system.servos.items():
+            self.assertEqual(mapping[servo_id], servo.coords)
             self.assertEqual(servo.operative_mode.value, 40)  # PRESET mode
+
+    def test_preset_oor(self):
+        for servo_id, servo in self.system.servos.items():
+            coords = [x + 1 for x in servo.max_coord]
+            cmd = f'PRESET={servo_id},{",".join(map(str, coords))}{tail}'
+            for byte in cmd[:-1]:
+                self.assertTrue(self.system.parse(byte))
+            self.assertRegex(self.system.parse(cmd[-1]), bad)
 
     def test_preset_no_arguments(self):
         cmd = f'PRESET{tail}'
