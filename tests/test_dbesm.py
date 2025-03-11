@@ -1441,5 +1441,6 @@ class TestDBESM(unittest.TestCase):
         print(response)
         self.assertEqual(response, 'NAK unknown command\x0D\x0A')
 
+
 if __name__ == '__main__':
     unittest.main()

@@ -157,7 +157,7 @@ class System(ListeningSystem):
         return att
 
     def parse(self, byte):
-#        print(byte)
+        #  print(byte)
         if byte == self.tail:
             msg = self.msg[:-1]
             self.msg = ''
@@ -557,7 +557,7 @@ class System(ListeningSystem):
             return self._error(params[0], 1001)
         try:
             selected_board = next((sub for sub in self.boards
-                  if (self.boards.index(sub) +1 ) == int(params[2])), None)
+                  if (self.boards.index(sub) + 1) == int(params[2])), None)
         except ValueError:
             return self._error(params[0], 1001)
 
@@ -591,9 +591,9 @@ class System(ListeningSystem):
             brd, a = zip(*self.amps_in_boards)
             for board in selected_boards:
                 b_idx = selected_boards.index(board)
-#                print(brd)
-#                print(board["AMP"])
-#                print(board["AMP"][a[out_idx[b_idx]]])
+                #  print(brd)
+                #  print(board["AMP"])
+                #  print(board["AMP"][a[out_idx[b_idx]]])
                 if (float(params[2]) not in [0, 1]):
                     retval += (f'ERR DBE {params[1]} BOARD '
                     f'{self.boards.index(board)+1} value out of range\n')
@@ -626,9 +626,9 @@ class System(ListeningSystem):
             brd, a = zip(*self.amps_in_boards)
             for board in selected_boards:
                 b_idx = selected_boards.index(board)
-                #print(brd)
-                #print(board["AMP"])
-                #print(board["AMP"][a[out_idx[b_idx]]])
+                #  print(brd)
+                #  print(board["AMP"])
+                #  print(board["AMP"][a[out_idx[b_idx]]])
 
                 if ((board["Status"] == 1) or (board["Address"] not in brd)):
                     retval += (f'ERR DBE {params[1]} BOARD '
@@ -638,7 +638,6 @@ class System(ListeningSystem):
                     f'{self.boards.index(board)+1} AMP {a[out_idx[b_idx]]} '
                     f'VALUE {board["AMP"][a[out_idx[b_idx]]]}\n')
         return retval[:-1] + '\x0D\x0A'
-
 
     def _set_dbeeq(self, params):
         retval = ''
@@ -660,9 +659,9 @@ class System(ListeningSystem):
             brd, a = zip(*self.eqs_in_boards)
             for board in selected_boards:
                 b_idx = selected_boards.index(board)
-#                print(brd)
-#                print(board["EQ"])
-#                print(board["EQ"][a[out_idx[b_idx]]])
+                #  print(brd)
+                #  print(board["EQ"])
+                #  print(board["EQ"][a[out_idx[b_idx]]])
                 if (float(params[2]) not in [0, 1]):
                     retval += (f'ERR DBE {params[1]} BOARD '
                     f'{self.boards.index(board)+1} value out of range\n')
@@ -694,9 +693,9 @@ class System(ListeningSystem):
             brd, a = zip(*self.eqs_in_boards)
             for board in selected_boards:
                 b_idx = selected_boards.index(board)
-                #print(brd)
-                #print(board["EQ"])
-                #print(board["EQ"][a[out_idx[b_idx]]])
+                #  print(brd)
+                #  print(board["EQ"])
+                #  print(board["EQ"][a[out_idx[b_idx]]])
 
                 if ((board["Status"] == 1) or (board["Address"] not in brd)):
                     retval += (f'ERR DBE {params[1]} BOARD '
@@ -706,7 +705,6 @@ class System(ListeningSystem):
                     f'EQ {a[out_idx[b_idx]]} VALUE '
                     f'{board["EQ"][a[out_idx[b_idx]]]}\n')
         return retval[:-1] + '\x0D\x0A'
-
 
     def _set_dbebpf(self, params):
         retval = ''
@@ -728,9 +726,9 @@ class System(ListeningSystem):
             brd, a = zip(*self.bpfs_in_boards)
             for board in selected_boards:
                 b_idx = selected_boards.index(board)
-                #print(brd)
-                #print(board["BPF"])
-                #print(board["BPF"][a[out_idx[b_idx]]])
+                #  print(brd)
+                #  print(board["BPF"])
+                #  print(board["BPF"][a[out_idx[b_idx]]])
                 if (float(params[2]) not in [0, 1]):
                     retval += (f'ERR DBE {params[1]} BOARD '
                     f'{self.boards.index(board)+1} value out of range\n')
