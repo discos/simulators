@@ -7,7 +7,10 @@ import struct
 import importlib
 import inspect
 import os
+import time
+import threading
 from datetime import datetime, timedelta
+from unittest.mock import patch
 from simulators.common import BaseSystem
 
 
@@ -845,6 +848,49 @@ def list_simulators(path=os.path.dirname(os.path.abspath(__file__))):
     systems = scan_dir(path)
     systems.sort()
     return systems
+
+
+class FastTimeMock:
+    def __init__(self, speed_factor):
+        self._real_time = time.time
+        self._real_sleep = time.sleep
+        self._real_timer = threading.Timer
+        self.speed_factor = speed_factor
+
+        self.start_time = self._real_time()
+        self.fake_start = self.start_time
+
+        self._patch_time = patch("time.time", side_effect=self._mock_time)
+        self._patch_sleep = patch("time.sleep", side_effect=self._mock_sleep)
+        self._patch_timer = patch(
+            "threading.Timer",
+            side_effect=self._mock_timer
+        )
+
+    def _mock_time(self):
+        real_elapsed = self._real_time() - self.start_time
+        return self.fake_start + real_elapsed * self.speed_factor
+
+    def _mock_sleep(self, seconds):
+        self._real_sleep(seconds / self.speed_factor)
+
+    def _mock_timer(self, interval, function, args=None, kwargs=None):
+        return self._real_timer(
+            interval / self.speed_factor,
+            function,
+            args or [],
+            kwargs or {}
+        )
+
+    def start(self):
+        self._patch_time.start()
+        self._patch_sleep.start()
+        self._patch_timer.start()
+
+    def stop(self):
+        self._patch_time.stop()
+        self._patch_sleep.stop()
+        self._patch_timer.stop()
 
 
 if __name__ == '__main__':

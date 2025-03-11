@@ -11,7 +11,7 @@ setup(
     platforms='all',
     classifiers=[
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 3.10.7',
+        'Programming Language :: Python :: 3.13.2',
     ],
     include_package_data=True,
     package_data={

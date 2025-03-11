@@ -210,14 +210,9 @@ class System(ListeningSystem):
             coordinates = configuration[servo_name]
             servo.operative_mode_timer.cancel()
             _change_atomic_value(servo.operative_mode, 0)
-            servo.operative_mode_timer = Timer(
-                self.timer_value,
-                _change_atomic_value,
-                args=(servo.operative_mode, 10)  # SETUP
-            )
-            servo.operative_mode_timer.daemon = True
-            servo.operative_mode_timer.start()
-            servo.set_coords(coordinates, apply_offsets=False)
+            # We should check the result of the next call but we ignore it and
+            # assume setup positions are never out of range
+            servo.set_coords(coordinates, 10, apply_offsets=False)
         gregorian_cap_position = configuration['GREGORIAN_CAP'][0]
         if (gregorian_cap_position
                 and self.gregorian_cap.value != gregorian_cap_position):
@@ -284,14 +279,7 @@ class System(ListeningSystem):
             return self.bad
         servo = self.servos.get(servo_id)
         servo.operative_mode_timer.cancel()
-        _change_atomic_value(servo.operative_mode, 0)
-        servo.operative_mode_timer = Timer(
-            self.timer_value,
-            _change_atomic_value,
-            args=(servo.operative_mode, 30)  # STOP
-        )
-        servo.operative_mode_timer.daemon = True
-        servo.operative_mode_timer.start()
+        _change_atomic_value(servo.operative_mode, 30)  # STOP
         self.last_executed_command = self.plc_time()
         return self.good()
 
@@ -312,16 +300,11 @@ class System(ListeningSystem):
             return self.bad
         servo.operative_mode_timer.cancel()
         _change_atomic_value(servo.operative_mode, 0)
-        servo.operative_mode_timer = Timer(
-            self.timer_value,
-            _change_atomic_value,
-            args=(servo.operative_mode, 40)  # PRESET
-        )
-        servo.operative_mode_timer.daemon = True
-        servo.operative_mode_timer.start()
-        servo.set_coords(coords)
-        self.last_executed_command = self.plc_time()
-        return self.good()
+        retval = servo.set_coords(coords, 40)
+        if retval:
+            self.last_executed_command = self.plc_time()
+            return self.good()
+        return self.bad
 
     def _programTrack(self, args):
         try:
@@ -462,8 +445,10 @@ class Servo:
         self.status = 1
         self.block = 2
         self.operative_mode = Value(c_int, 0)
+        self.future_oper_mode = 0
         self.DOF = dof
-        self.coords = [random.uniform(-1, 1) for _ in range(self.DOF)]
+        self.coords = [0] * self.DOF
+        self.cmd_coords = self.coords.copy()
         self.offsets = [0] * self.DOF
         self.last_status_read = 0
         self.operative_mode_timer = Timer(1, lambda: None)
@@ -516,15 +501,42 @@ class Servo:
                         self.trajectory_point_id = None
                         self.trajectory = [[] for _ in range(self.DOF)]
                         self.pt_table = []
+        elif self.operative_mode.value in [20, 30]:  # STOW or STOP
+            self.cmd_coords = self.coords
+        elif self.coords != self.cmd_coords or self.future_oper_mode != 0:
+            # We commanded a preset and changed the commanded coords, move
+            delta = [a - b for a, b in zip(self.cmd_coords, self.coords)]
+            direction = sign(delta).tolist()
+            delta = [abs(d) for d in delta]
+            delta = [
+                min(self.max_delta[i] * elapsed, delta[i])
+                for i in range(self.DOF)
+            ]
+            coords = [
+                a + b * c for a, b, c in zip(self.coords, direction, delta)
+            ]
+            self.coords = coords
+            if self.coords == self.cmd_coords:
+                _change_atomic_value(
+                    self.operative_mode,
+                    self.future_oper_mode
+                )
+                self.future_oper_mode = 0
         return answer
 
-    def set_coords(self, coords, apply_offsets=True):
+    def set_coords(self, coords, future_oper_mode, apply_offsets=True):
         for index, value in enumerate(coords):
             if value is None:
+                coords[index] = self.cmd_coords[index]
                 continue
             if apply_offsets:
                 value += self.offsets[index]
-            self.coords[index] = value
+            if value < self.min_coord[index] or value > self.max_coord[index]:
+                return False
+            coords[index] = value
+        self.cmd_coords = coords
+        self.future_oper_mode = future_oper_mode
+        return True
 
     def set_offsets(self, coords):
         for index, value in enumerate(coords):
@@ -576,8 +588,8 @@ class SRP(Servo):
         self.y5_enabled = 1
         self.x6_enabled = 1
         self.program_track_capable = True
-        self.max_coord = [50.0, 110.0, 50.0, 0.25, 0.25, 0.25]
-        self.min_coord = [-50.0, -110.0, -50.0, -0.25, -0.25, -0.25]
+        self.max_coord = [120.0, 120.0, 120.0, 0.25, 0.25, 0.25]
+        self.min_coord = [-120.0, -120.0, -120.0, -0.25, -0.25, -0.25]
         self.max_delta = [4.0, 4.0, 4.0, 0.38, 0.38, 0.38]
         super().__init__('SRP', 6)
 
@@ -615,6 +627,9 @@ class M3R(Servo):
     def __init__(self):
         self.cw_enabled = 1
         self.ccw_enabled = 1
+        self.min_coord = [-165.0]
+        self.max_coord = [165.0]
+        self.max_delta = [3.14]
         super().__init__('M3R')
 
     def get_status(self, now):
@@ -633,6 +648,9 @@ class GFR(Servo):
     def __init__(self):
         self.cw_enabled = 1
         self.ccw_enabled = 1
+        self.min_coord = [-166.0]
+        self.max_coord = [168.5]
+        self.max_delta = [3.5]
         super().__init__('GFR')
 
     def get_status(self, now):
