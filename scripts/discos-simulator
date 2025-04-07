@@ -22,35 +22,36 @@ AVAILABLE_SIMULATORS = list_simulators()
 
 def system_from_arg(system_name):
     try:
-        return importlib.import_module('simulators.%s' % system_name)
+        return importlib.import_module(f"simulators.{system_name}")
     except ImportError as e:
         error = e.args[0]
-        if 'No module named' in error:
-            error = 'System "%s" unavailable.' % system_name
+        if "No module named" in error:
+            error = f"System '{system_name}' unavailable."
         else:
             error = error % system_name
-        raise ArgumentTypeError(error)
+        raise ArgumentTypeError(error) from e
+
 
 parser = ArgumentParser()
 parser.add_argument(
-    'action',
-    choices=['start', 'stop', 'list']
+    "action",
+    choices=["start", "stop", "list"]
 )
 parser.add_argument(
-    '-s', '--system',
+    "-s", "--system",
     type=system_from_arg,
     required=False,
-    help='System name: active_surface, acu, ...',
+    help="System name: active_surface, acu, ...",
 )
 parser.add_argument(
-    '-t', '--type',
+    "-t", "--type",
     type=str,
     required=False,
-    help='System configuration type: IFD_14_channels for if_distributor, ...',
+    help="System configuration type: IFD_14_channels for if_distributor, ...",
 )
 args = parser.parse_args()
 
-if args.action == 'list':
+if args.action == "list":
     print(
         "Available simulators: '"
         + "', '".join(AVAILABLE_SIMULATORS)
@@ -60,55 +61,50 @@ if args.action == 'list':
 kwargs = {}
 
 if args.type:
+    name = args.system.__name__.rsplit(".", 1)[1]
     if not args.system:
         parser.error(
             "The '--type' argument only has to be used "
             + "in conjunction with the '--system' argument."
         )
     try:
-        systems = getattr(args.system, 'systems')
+        systems = getattr(args.system, "systems")
     except AttributeError:
         parser.error(
-            ('System %s has no configurations other than the default one. '
-            % args.system.__name__.rsplit('.', 1)[1])
-            + "Omit the '--type' argument to start the simulator properly."
+            f"System '{name}' has no configurations other than the default one"
+            + ". Omit the '--type' argument to start the simulator properly."
         )
     if args.type not in systems:
         err_string = (
-            'Configuration %s for system %s not found.\n' %
-            (args.type, args.system.__name__.rsplit('.', 1)[1])
+            f"Configuration '{args.type}' for system '{name}' not found.\n"
         )
-        err_string += 'Available configurations for chosen simulator:\n'
+        err_string += "Available configurations for desired simulator:\n"
         err_string += "'" + "', ".join(systems) + "'."
         parser.error(err_string)
-    kwargs['system_type'] = args.type
+    kwargs["system_type"] = args.type
 
-if args.action == 'start':
+if args.action == "start":
     if args.system:
         try:
             simulator = Simulator(args.system, **kwargs)
             simulator.start()
         except socket.error:
+            name = args.system.__name__.rsplit(".", 1)[1]
             print(
-                "Cannot start simulator '%s', address already in use." %
-                args.system.__name__.rsplit('.', 1)[1]
+                f"Cannot start simulator '{name}', address already in use."
             )
             sys.exit(1)
     else:
         for sim in AVAILABLE_SIMULATORS:
-            subprocess.Popen([
-                sys.argv[0],
-                'start',
-                '-s',
-                sim
-            ])
+            with subprocess.Popen([sys.argv[0], "start", "-s", sim]) as _:
+                pass
         time.sleep(3)
-elif args.action == 'stop':
+elif args.action == "stop":
     if args.system:
         simulator = Simulator(args.system, **kwargs)
         simulator.stop()
     else:
         for sim in AVAILABLE_SIMULATORS:
-            sim = importlib.import_module('simulators.%s' % sim)
+            sim = importlib.import_module(f"simulators.{sim}")
             simulator = Simulator(sim, **kwargs)
             simulator.stop()

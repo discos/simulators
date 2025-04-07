@@ -1,18 +1,18 @@
 import time
 import re
 import random
+import threading
 try:
     from numpy import sign
-except ImportError as ex:  # skip coverage
+except ImportError as ex:
     raise ImportError('The `numpy` package, required for the simulator'
         + ' to run, is missing!') from ex
 try:
     from scipy.interpolate import splrep, splev
-except ImportError as ex:  # skip coverage
+except ImportError as ex:
     raise ImportError('The `scipy` package, required for the simulator'
         + ' to run, is missing!') from ex
 from ctypes import c_bool, c_int
-from threading import Lock, Thread, Timer
 from multiprocessing import Value
 from bisect import bisect_left
 from socketserver import ThreadingTCPServer
@@ -104,7 +104,7 @@ class System(ListeningSystem):
             self.configurations
         )
         self.stop = Value(c_bool, False)
-        self.update_thread = Thread(
+        self.update_thread = threading.Thread(
             target=self._update,
             args=(self.stop, self.servos)
         )
@@ -116,11 +116,11 @@ class System(ListeningSystem):
                 httpserver_address,
                 VBrainRequestHandler
             )
-            self.server_thread = Thread(
+            self.server_thread = threading.Thread(
                 target=self.httpserver.serve_forever
             )
             self.server_thread.start()
-        self.cover_timer = Timer(1, lambda: None)
+        self.cover_timer = threading.Timer(1, lambda: None)
 
     def __del__(self):
         self.system_stop()
@@ -218,7 +218,7 @@ class System(ListeningSystem):
                 and self.gregorian_cap.value != gregorian_cap_position):
             self.cover_timer.cancel()
             _change_atomic_value(self.gregorian_cap, 0)
-            self.cover_timer = Timer(
+            self.cover_timer = threading.Timer(
                 self.timer_value,
                 _change_atomic_value,
                 args=(self.gregorian_cap, gregorian_cap_position)
@@ -245,7 +245,7 @@ class System(ListeningSystem):
                 self.cover_timer.cancel()
                 if self.gregorian_cap.value <= 1 or stow_pos == 1:
                     _change_atomic_value(self.gregorian_cap, 0)
-                    self.cover_timer = Timer(
+                    self.cover_timer = threading.Timer(
                         self.timer_value,
                         _change_atomic_value,
                         args=(self.gregorian_cap, stow_pos)
@@ -261,7 +261,7 @@ class System(ListeningSystem):
             servo = self.servos.get(servo_id)
             servo.operative_mode_timer.cancel()
             _change_atomic_value(servo.operative_mode, 0)
-            servo.operative_mode_timer = Timer(
+            servo.operative_mode_timer = threading.Timer(
                 self.timer_value,
                 _change_atomic_value,
                 args=(servo.operative_mode, 20)  # STOW
@@ -451,9 +451,9 @@ class Servo:
         self.cmd_coords = self.coords.copy()
         self.offsets = [0] * self.DOF
         self.last_status_read = 0
-        self.operative_mode_timer = Timer(1, lambda: None)
+        self.operative_mode_timer = threading.Timer(1, lambda: None)
         if self.program_track_capable:
-            self.trajectory_lock = Lock()
+            self.trajectory_lock = threading.Lock()
             self.trajectory_id = None
             self.trajectory_start_time = None
             self.trajectory_point_id = None

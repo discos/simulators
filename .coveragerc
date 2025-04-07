@@ -7,7 +7,7 @@ exclude_lines =
     if __name__ == '__main__':
     self.fail\(.*\)
     except KeyboardInterrupt:
-    except ImportError:
+    except ImportError.*
     skip coverage
 include =
     ./*
