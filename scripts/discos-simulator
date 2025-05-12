@@ -96,8 +96,8 @@ if args.action == "start":
             sys.exit(1)
     else:
         for sim in AVAILABLE_SIMULATORS:
-            with subprocess.Popen([sys.argv[0], "start", "-s", sim]) as _:
-                pass
+            # pylint: disable=consider-using-with
+            subprocess.Popen([sys.argv[0], "start", "-s", sim])
         time.sleep(3)
 elif args.action == "stop":
     if args.system:
