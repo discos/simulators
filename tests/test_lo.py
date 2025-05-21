@@ -101,6 +101,33 @@ class TestGenericLocalOscillator(unittest.TestCase):
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
 
+    def test_rf_status(self, expected_value=None):
+        msg = 'OUTP:STAT?\n'
+        for byte in msg[:-1]:
+            self.assertTrue(self.system.parse(byte))
+        response = self.system.parse(msg[-1])
+        if expected_value:
+            self.assertEqual(response, f'{expected_value}\n')
+        else:
+            self.assertIn(response, ['0\n', '1\n'])
+
+    def test_set_rf(self):
+        for value in ['ON', 'OFF']:
+            msg = f'OUTP:STAT {value}\n'
+            for byte in msg:
+                self.assertTrue(self.system.parse(byte))
+            self.test_rf_status(int(value == 'ON'))
+
+    def test_set_rf_wrong_arg_count(self):
+        msg = 'OUTP:STAT ON OFF\n'
+        for byte in msg:
+            self.assertTrue(self.system.parse(byte))
+
+    def test_set_rf_wrong_arg_value(self):
+        msg = 'OUTP:STAT ONN\n'
+        for byte in msg:
+            self.assertTrue(self.system.parse(byte))
+
 
 class TestWLocalOscillator(unittest.TestCase):
 
