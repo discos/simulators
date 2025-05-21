@@ -8,6 +8,8 @@ class System(ListeningSystem):
         'POWER?': 'getPower',
         'FREQ': 'setFrequency',
         'FREQ?': 'getFrequency',
+        'OUTP:STAT': 'setRf',
+        'OUTP:STAT?': 'getRf',
         'SYST:ERR?': 'readStatus'
     }
 
@@ -16,6 +18,7 @@ class System(ListeningSystem):
     def __init__(self):
         self.power = 0
         self.frequency = 0.0
+        self.rf_status = False  # Start as off
         self._set_default()
 
     def _set_default(self):
@@ -82,6 +85,20 @@ class System(ListeningSystem):
     def getFrequency(self, _):
         # 'FREQ?\n'
         return str(int(self.frequency) * 1000000)
+
+    def setRf(self, params):
+        # 'OUTP:STAT ON\n'
+        # 'OUTP:STAT OFF\n'
+        if len(params) != 1:
+            return False
+        elif params[0] != 'ON' and params[0] != 'OFF':
+            return False
+        self.rf_status = params[0] == 'ON'
+        return True
+
+    def getRf(self, _):
+        # 'OUTP:STAT?\n'
+        return str(int(self.rf_status))
 
     def readStatus(self, _):
         # 'SYST:ERR?\n'
