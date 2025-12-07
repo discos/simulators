@@ -1,6 +1,6 @@
 import time
 from queue import Queue
-from simulators import utils
+from simulators.utils import sign
 
 
 class USD:
@@ -61,7 +61,7 @@ class USD:
         self.standby_mode = self.standby_modes.get(0)
         self.current_percentage = 1.0
         self.version = [1, 3]  # Major, minor
-        self.driver_type = 0x20  # 0x20: USD50xxx, 0x21: USD60xxx
+        self.driver_type = 0x21  # 0x20: USD50xxx, 0x21: USD60xxx
         self.slope_delayer = 1
         self.min_frequency = 20
         self.max_frequency = 10000
@@ -381,12 +381,13 @@ class USD:
             self.cmd_position = cmd_position
         return True
 
-    def rotate(self, sign):
+    def rotate(self, rotation_sign):
         """Starts moving the USD indefinitely. The direction of the movement
         corresponds is given by the sign parameter. It accounts for
         acceleration, minimum and maximum frequency.
 
-        :param sign: the direction towards the USD will have to start moving
+        :param rotation_sign: the direction towards the USD will have to start
+                              moving
         :type sign: int
         :return: a boolean indicating whether the parser has to answer with an
             ACK or a NAK (True or False respectively)
@@ -396,7 +397,7 @@ class USD:
             # so the parser can return a byte_nak
             return False
         else:
-            self.cmd_position = sign * self.out_of_scale_position
+            self.cmd_position = rotation_sign * self.out_of_scale_position
             return True
 
     def set_velocity(self, velocity):
@@ -517,11 +518,12 @@ class USD:
         self.baud_rate = self.baud_rates.get(int(binary_string[7], 2))
         #  params[1] is currently unused
 
-    def calc_position(self, elapsed):
+    def calc_position(self, now, elapsed):
         """Calculates the current position of the USD considering its current
         status and previously set parameters, along with the elapsed time since
         last position calculation.
 
+        :param now: the current time in UNIX time
         :param elapsed: the elapsed time in seconds since last position
             calculation
         :type elapsed: float"""
@@ -540,34 +542,33 @@ class USD:
             self.current_percentage = 1.0
             self.full_current = True
             self.standby = False
-            self.last_movement = time.time()
+            self.last_movement = now
             if velocity:
                 frequency = abs(velocity)
-                sign0 = utils.sign(velocity)
+                sign0 = sign(velocity)
             elif cmd_position is not None:
                 # To be replaced with the slope frequency calculation
                 frequency = self.max_frequency
-                sign0 = utils.sign(cmd_position - self.current_position)
+                sign0 = sign(cmd_position - self.current_position)
 
-            steps_per_second = frequency * (128 / self.resolution)
-            delta = sign0 * int(round(steps_per_second * elapsed))
-            new_position = self.current_position + delta
-            new_position = max(new_position, self.min_position)
-            new_position = min(new_position, self.max_position)
-
-            if cmd_position is not None:
-                sign1 = utils.sign(cmd_position - new_position)
-                if sign1 != sign0:
-                    self.current_position = cmd_position
-                    self.cmd_position = None
-                    self.running = False
-                else:
-                    self.current_position = new_position
-            else:
+            new_position = None
+            if sign0:
+                steps_per_second = frequency * (128.0 / self.resolution)
+                delta = sign0 * int(round(steps_per_second * elapsed))
+                new_position = self.current_position + delta
+                new_position = max(new_position, self.min_position)
+                new_position = min(new_position, self.max_position)
+            if new_position is not None:
+                if cmd_position is not None:
+                    sign1 = sign(cmd_position - new_position)
+                    if sign1 != sign0:
+                        new_position = cmd_position
+                        self.cmd_position = None
+                        self.running = False
                 self.current_position = new_position
         if not self.running and not self.standby:
             if self.last_movement:
-                elapsed = time.time() - self.last_movement
+                elapsed = now - self.last_movement
                 standby_delay = (
                     self.standby_delay_multiplier * self.standby_delay_step
                 )

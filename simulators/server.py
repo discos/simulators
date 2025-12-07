@@ -34,11 +34,6 @@ class BaseHandler(BaseRequestHandler):
 
     custom_header, custom_tail = ('$', '%%%%%')
 
-    def setup(self):
-        """Method that gets called whenever a client connects to the server."""
-        logging.info('Got connection from %s', self.client_address)
-        self.custom_msg = ''
-
     def _execute_custom_command(self, msg_body):
         """This method accepts a custom command (without the custom header and
         tail) formatted as `command_name:par1,par2,...,parN`. It then parses
@@ -75,10 +70,11 @@ class BaseHandler(BaseRequestHandler):
 class ListenHandler(BaseHandler):
 
     def setup(self):
-        BaseHandler.setup(self)
+        self.custom_msg = ''
         self.socket = self.request
         self.connection_oriented = True
         if not isinstance(self.socket, tuple):  # TCP client
+            logging.info('Got connection from %s', self.client_address)
             greet_msg = self.system.system_greet()
             if greet_msg:
                 self.socket.sendto(
@@ -392,6 +388,9 @@ class Simulator:
                             '$server_shutdown%%%%% string!',
                             'The simulator might still be running!'
                         )
+                except TimeoutError:  # skip coverage
+                    # We don't want to log this
+                    pass
                 except Exception as ex:  # skip coverage
                     logging.debug(ex)
                 finally:

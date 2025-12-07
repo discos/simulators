@@ -763,14 +763,14 @@ class TestASParse(unittest.TestCase):
     def setUp(self):
         # Using only 5 random USDs per line instead of testing
         # the full line will speed up the testing process
-        self.min_usd_index = randrange(28)
+        self.min_usd_index = randrange(27)
         self.max_usd_index = self.min_usd_index + 4
         self.system = System(
             min_usd_index=self.min_usd_index,
             max_usd_index=self.max_usd_index
         )
         # Set the response delay to 0 to speed up the tests
-        for driver in self.system.drivers:
+        for driver in self.system.drivers.values():
             driver.delay_multiplier = 0
 
     def tearDown(self):
@@ -893,7 +893,7 @@ class TestASParse(unittest.TestCase):
         returns the byte_ack when the message is completed."""
         for i in range(self.min_usd_index, self.max_usd_index + 1):
             # Speed up the tests
-            self.system.drivers[i - self.min_usd_index].driver_reset_delay = 0
+            self.system.drivers[i].driver_reset_delay = 0
             for address_on_response in [True, False]:
                 msg = command_library.soft_reset(
                     usd_index=i,
@@ -910,7 +910,7 @@ class TestASParse(unittest.TestCase):
         the message is completed."""
         for i in range(self.min_usd_index, self.max_usd_index + 1):
             # Speed up the tests
-            self.system.drivers[i - self.min_usd_index].driver_reset_delay = 0
+            self.system.drivers[i].driver_reset_delay = 0
         for address_on_response in [True, False]:
             msg = command_library.soft_reset(
                 address_on_response=address_on_response
@@ -1087,7 +1087,7 @@ class TestASParse(unittest.TestCase):
         """The system returns True for every proper byte, and
         returns the byte_ack followed by the current driver type
         expressed as a byte when the message is completed."""
-        expected_type = '\x20'  # Default type is USD50XXX
+        expected_type = '\x21'  # Default type is USD60XXX
         binary_length = bin(len(expected_type))[2:].zfill(3)
         for i in range(self.min_usd_index, self.max_usd_index + 1):
             for address_on_response in [True, False]:
@@ -1437,7 +1437,7 @@ class TestASParse(unittest.TestCase):
             for i in range(self.min_usd_index, self.max_usd_index + 1):
                 self._enqueue_absolute_position(pos, i, address_on_response)
             time.sleep(0.05)
-            for driver in self.system.drivers:
+            for driver in self.system.drivers.values():
                 self.assertEqual(driver.current_position, pos)
 
     def test_wrong_set_absolute_position(self):
@@ -1465,9 +1465,8 @@ class TestASParse(unittest.TestCase):
         for address_on_response in [True, False]:
             pos = position if address_on_response else -position
             for i in range(self.min_usd_index, self.max_usd_index + 1):
-                usd_index = i - self.min_usd_index
                 current_positions[i] = \
-                    self.system.drivers[usd_index].current_position
+                    self.system.drivers[i].current_position
                 msg = command_library.set_relative_position(
                     position=pos,
                     usd_index=i,
@@ -1477,9 +1476,8 @@ class TestASParse(unittest.TestCase):
             time.sleep(0.05)
             for i in range(self.min_usd_index, self.max_usd_index + 1):
                 exp = current_positions[i] + pos
-                usd_index = i - self.min_usd_index
                 self.assertEqual(
-                    self.system.drivers[usd_index].current_position,
+                    self.system.drivers[i].current_position,
                     exp
                 )
                 current_positions[i] = exp
@@ -1543,7 +1541,7 @@ class TestASParse(unittest.TestCase):
 
         time.sleep(0.015)
 
-        for driver in self.system.drivers:
+        for driver in self.system.drivers.values():
             self.assertTrue(driver.running)
             self.assertEqual(driver.velocity, 100000)
 
@@ -1552,7 +1550,7 @@ class TestASParse(unittest.TestCase):
 
         time.sleep(0.015)
 
-        for driver in self.system.drivers:
+        for driver in self.system.drivers.values():
             self.assertFalse(driver.running)
             self.assertEqual(driver.velocity, None)
 
@@ -1700,20 +1698,20 @@ class TestASParse(unittest.TestCase):
             self._enqueue_absolute_position(2000, index, True)
             self._enqueue_relative_position(4000, index, True)
 
-        for driver in self.system.drivers:
+        for driver in self.system.drivers.values():
             self.assertEqual(driver.current_position, 0)
 
         self._send_soft_trigger(True)
 
         time.sleep(0.015)
-        for driver in self.system.drivers:
+        for driver in self.system.drivers.values():
             self.assertEqual(driver.current_position, 2000)
             self.assertFalse(driver.running)
 
         self._send_soft_trigger(True)
 
         time.sleep(0.015)
-        for driver in self.system.drivers:
+        for driver in self.system.drivers.values():
             self.assertEqual(driver.current_position, 6000)
             self.assertFalse(driver.running)
 
@@ -1773,7 +1771,7 @@ class TestASParse(unittest.TestCase):
                 self.assertEqual(self._send_cmd(msg), byte_ack)
         self.test_set_absolute_position()
 
-        for driver in self.system.drivers:
+        for driver in self.system.drivers.values():
             self.assertFalse(driver.full_current)
             self.assertEqual(driver.current_percentage, 0.5)
 

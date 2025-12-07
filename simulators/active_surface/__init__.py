@@ -85,9 +85,9 @@ class System(ListeningSystem):
         self._set_default()
         self.stop = Value(c_bool, False)
         self.min_usd_index = min_usd_index
-        self.drivers = []
-        for index in range(max_usd_index - min_usd_index + 1):
-            self.drivers.append(USD(min_usd_index + index))
+        self.drivers = {}
+        for index in range(min_usd_index, max_usd_index + 1):
+            self.drivers[index] = USD(index)
         self.positioning_thread = Thread(
             target=self._positioning,
             args=(self.drivers, self.stop)
@@ -174,7 +174,7 @@ class System(ListeningSystem):
         else:
             binary = bin(ord(msg[1]))[2:].zfill(8)
 
-            driver = int(binary[3:], 2) - self.min_usd_index
+            driver = int(binary[3:], 2)
 
             nparams = int(binary[:3], 2)
             cparams = msg[3:(3 + nparams - 1)]
@@ -222,7 +222,7 @@ class System(ListeningSystem):
                 return self.byte_nak
         else:
             if params[0] is None:
-                for driver in self.drivers:
+                for driver in self.drivers.values():
                     driver.soft_reset()
                 return None
             else:
@@ -248,7 +248,7 @@ class System(ListeningSystem):
                 return self.byte_nak
         else:
             if params[0] is None:
-                for driver in self.drivers:
+                for driver in self.drivers.values():
                     driver.soft_trigger()
                 return None
             else:
@@ -271,7 +271,7 @@ class System(ListeningSystem):
         if params[2]:
             return self.byte_nak
         else:
-            usd_index = params[0] + self.min_usd_index
+            usd_index = params[0]
             retval = self.byte_ack + chr(params[1])
             if params[1] == 0xFC:
                 byte_nbyte_address = (
@@ -304,7 +304,7 @@ class System(ListeningSystem):
                 return self.byte_nak
         else:
             if params[0] is None:
-                for driver in self.drivers:
+                for driver in self.drivers.values():
                     driver.soft_stop()
                 return None
             else:
@@ -328,7 +328,7 @@ class System(ListeningSystem):
         if params[2]:
             return self.byte_nak
         else:
-            usd_index = params[0] + self.min_usd_index
+            usd_index = params[0]
             retval = self.byte_ack + chr(params[1])
             if params[1] == 0xFC:
                 byte_nbyte_address = (
@@ -364,7 +364,7 @@ class System(ListeningSystem):
         if params[2]:
             return self.byte_nak
         else:
-            usd_index = params[0] + self.min_usd_index
+            usd_index = params[0]
             retval = self.byte_ack + chr(params[1])
             if params[1] == 0xFC:
                 byte_nbyte_address = (
@@ -395,7 +395,7 @@ class System(ListeningSystem):
         if params[2]:
             return self.byte_nak
         else:
-            usd_index = params[0] + self.min_usd_index
+            usd_index = params[0]
             retval = self.byte_ack + chr(params[1])
             if params[1] == 0xFC:
                 byte_nbyte_address = (
@@ -438,7 +438,7 @@ class System(ListeningSystem):
                 little_endian=False
             )
             if params[0] is None:
-                for driver in self.drivers:
+                for driver in self.drivers.values():
                     driver.set_min_frequency(frequency)
                 return None
             else:
@@ -471,7 +471,7 @@ class System(ListeningSystem):
                 little_endian=False
             )
             if params[0] is None:
-                for driver in self.drivers:
+                for driver in self.drivers.values():
                     driver.set_max_frequency(frequency)
                 return None
             else:
@@ -502,7 +502,7 @@ class System(ListeningSystem):
             delayer = params[2][0] + 1
 
             if params[0] is None:
-                for driver in self.drivers:
+                for driver in self.drivers.values():
                     driver.set_slope_delayer(delayer)
                     return None
             else:
@@ -534,7 +534,7 @@ class System(ListeningSystem):
             )
 
             if params[0] is None:
-                for driver in self.drivers:
+                for driver in self.drivers.values():
                     driver.set_reference_position(reference_pos)
                 return None
             else:
@@ -561,7 +561,7 @@ class System(ListeningSystem):
                 return self.byte_nak
         else:
             if params[0] is None:
-                for driver in self.drivers:
+                for driver in self.drivers.values():
                     driver.set_io_pins(params[2][0])
                 return None
             else:
@@ -594,7 +594,7 @@ class System(ListeningSystem):
                 resolution = int(resolution[-3:], 2)
 
             if params[0] is None:
-                for driver in self.drivers:
+                for driver in self.drivers.values():
                     driver.set_resolution(resolution)
                 return None
             else:
@@ -625,7 +625,7 @@ class System(ListeningSystem):
             standby_mode = int(binary_string[0:2], 2)
             standby_delay_multiplier = int(binary_string[2:], 2)
             if params[0] is None:
-                for driver in self.drivers:
+                for driver in self.drivers.values():
                     driver.set_current_reduction(
                         standby_mode,
                         standby_delay_multiplier
@@ -659,7 +659,7 @@ class System(ListeningSystem):
                 return self.byte_nak
         else:
             if params[0] is None:
-                for driver in self.drivers:
+                for driver in self.drivers.values():
                     driver.set_response_delay(params[2][0])
                 return None
             else:
@@ -687,7 +687,7 @@ class System(ListeningSystem):
                 return self.byte_nak
         else:
             if params[0] is None:
-                for driver in self.drivers:
+                for driver in self.drivers.values():
                     driver.set_delayed_execution(params[2][0])
                 return None
             else:
@@ -720,7 +720,7 @@ class System(ListeningSystem):
             )
 
             if params[0] is None:
-                for driver in self.drivers:
+                for driver in self.drivers.values():
                     driver.set_absolute_position(absolute_position)
                 return None
             else:
@@ -756,7 +756,7 @@ class System(ListeningSystem):
             )
 
             if params[0] is None:
-                for driver in self.drivers:
+                for driver in self.drivers.values():
                     driver.set_relative_position(relative_position)
                 return None
             else:
@@ -791,7 +791,7 @@ class System(ListeningSystem):
             )
             # Start an infinite rotation, sign = direction
             if params[0] is None:
-                for driver in self.drivers:
+                for driver in self.drivers.values():
                     driver.rotate(sign)
                 return None
             else:
@@ -832,7 +832,7 @@ class System(ListeningSystem):
                     return self.byte_nak
             else:
                 if params[0] is None:
-                    for driver in self.drivers:
+                    for driver in self.drivers.values():
                         driver.set_velocity(velocity)
                     return None
                 else:
@@ -861,7 +861,7 @@ class System(ListeningSystem):
                 return self.byte_nak
         else:
             if params[0] is None:
-                for driver in self.drivers:
+                for driver in self.drivers.values():
                     driver.set_stop_io(params[2][0])
                 return None
             else:
@@ -888,7 +888,7 @@ class System(ListeningSystem):
                 return self.byte_nak
         else:
             if params[0] is None:
-                for driver in self.drivers:
+                for driver in self.drivers.values():
                     driver.set_positioning_io(params[2][0])
                 return None
             else:
@@ -916,7 +916,7 @@ class System(ListeningSystem):
                 return self.byte_nak
         else:
             if params[0] is None:
-                for driver in self.drivers:
+                for driver in self.drivers.values():
                     driver.set_home_io(params[2][0])
                 return None
             else:
@@ -943,7 +943,7 @@ class System(ListeningSystem):
                 return self.byte_nak
         else:
             if params[0] is None:
-                for driver in self.drivers:
+                for driver in self.drivers.values():
                     driver.set_working_mode(params[2])
                 return None
             else:
@@ -968,8 +968,8 @@ class System(ListeningSystem):
             elapsed = t1 - t0
             t0 = t1
 
-            for driver in drivers:
-                driver.calc_position(elapsed)
+            for driver in drivers.values():
+                driver.calc_position(t1, elapsed)
 
             t2 = time.time()
             elapsed = t2 - t1
