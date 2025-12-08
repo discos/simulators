@@ -1741,15 +1741,17 @@ class MasterAxisStatus(SimpleAxisStatus):
 
             next_pos = self.next_pos
 
-            if next_pos:
+            if next_pos is not None:
                 final_pos = next_pos
-            elif self.ptState == 4 and self.p_Ist != final_pos and final_pos:
+            elif self.ptState == 4 and final_pos is not None and \
+                    self.p_Ist != final_pos:
                 next_pos = final_pos
 
             p_Ist = self.p_Ist
             v_Ist = self.v_Ist
 
-            if next_pos and self.axis_state == 3 and not self.stowed:
+            if next_pos is not None and self.axis_state == 3 \
+                    and not self.stowed:
 
                 if self.ptState == 2:
                     self.p_Soll = next_pos + self.p_Offset
