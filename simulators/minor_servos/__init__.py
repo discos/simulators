@@ -2,6 +2,7 @@ import time
 import re
 import random
 import threading
+import math
 try:
     from numpy import sign
 except ImportError as ex:
@@ -486,6 +487,8 @@ class Servo:
                 if now >= first_time:
                     for index in range(self.DOF):
                         coord = splev(now, pt_table[index]).item(0)
+                        if math.isnan(coord):
+                            continue
                         coord = max(coord, self.min_coord[index])
                         coord = min(coord, self.max_coord[index])
                         delta = coord - self.coords[index]
