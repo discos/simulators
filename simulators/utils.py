@@ -9,7 +9,7 @@ import inspect
 import os
 import time
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 from simulators.common import BaseSystem
 
@@ -607,8 +607,8 @@ def mjd(date=None):
     58138.43802199074
     """
     if not date:
-        date = datetime.utcnow()
-    elif date < datetime(1858, 11, 17):
+        date = datetime.now(timezone.utc)
+    elif date < datetime(1858, 11, 17, 0, 0, 0, 0, timezone.utc):
         raise ValueError('Provide a date after Nov 17 1858')
 
     year = date.year
@@ -626,7 +626,7 @@ def mjd(date=None):
 
     modified_julian_day = int(b + c + d + day - 679006)
 
-    # Total UTC hours of the day
+    # Total timezone.utc hours of the day
     day_hour = date.hour
     # Total minutes of the day
     day_minute = (day_hour * 60) + date.minute
@@ -706,14 +706,15 @@ def mjd_to_date(original_mjd_date):
         hour,
         minute,
         second,
-        microsecond
+        microsecond,
+        timezone.utc
     )
 
     return result_date
 
 
 def day_microseconds(date=None):
-    """Returns the microseconds elapsed since last midnight UTC.
+    """Returns the microseconds elapsed since last midnight timezone.utc.
 
     :param date: the object to calculate the total day amount of microseconds.
         If None, the current time is used.
@@ -723,11 +724,11 @@ def day_microseconds(date=None):
     :rtype: int
     """
     if not date:
-        date = datetime.utcnow()
+        date = datetime.now(timezone.utc)
     elif not isinstance(date, datetime):
         raise ValueError('Date parameter must be a datetime object.')
 
-    # Total UTC hours of the day
+    # Total timezone.utc hours of the day
     day_hours = date.hour
     # Total minutes of the day
     day_minutes = (day_hours * 60) + date.minute
@@ -738,7 +739,7 @@ def day_microseconds(date=None):
 
 
 def day_milliseconds(date=None):
-    """Returns the milliseconds elapsed since last midnight UTC.
+    """Returns the milliseconds elapsed since last midnight timezone.utc.
 
     :param date: the object to calculate the total day amount of milliseconds.
         If None, the current time is used.
@@ -748,7 +749,7 @@ def day_milliseconds(date=None):
     :rtype: int
     """
     if not date:
-        date = datetime.utcnow()
+        date = datetime.now(timezone.utc)
     elif not isinstance(date, datetime):
         raise ValueError('Date parameter must be a datetime object.')
     microseconds = day_microseconds(date)
@@ -766,7 +767,7 @@ def day_percentage(date=None):
     :rtype: float
     """
     if not date:
-        date = datetime.utcnow()
+        date = datetime.now(timezone.utc)
 
     if isinstance(date, datetime):
         microseconds = day_microseconds(date)

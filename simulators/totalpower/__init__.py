@@ -1,8 +1,6 @@
 import time
 import socket
-from threading import Timer
-from multiprocessing import Value
-from ctypes import c_bool
+from threading import Timer, Event
 from math import modf
 from random import randint
 from socketserver import ThreadingTCPServer
@@ -79,8 +77,8 @@ class System(ListeningSystem):
         self.data_port = 0
         self.data_configured = False
         self.data_socket = None
-        self.pause = Value(c_bool, True)
-        self.stop = Value(c_bool, False)
+        self.pause = Event()
+        self.stop = Event()
         self.data_timer = None
         self.msg = ''
 
@@ -225,8 +223,8 @@ class System(ListeningSystem):
 
         self.sample_counter = 0
         self.cal_off_samples = 0
-        self.stop.value = False
-        self.pause.value = False
+        self.stop.clear()
+        self.pause.clear()
         self.data_socket = socket.socket()
         self.data_socket.connect((self.data_address, self.data_port))
         self.data_configured = True
@@ -237,8 +235,8 @@ class System(ListeningSystem):
             # Not configured, we cannot start
             return self.nak
 
-        self.stop.value = False
-        self.pause.value = False
+        self.stop.clear()
+        self.pause.clear()
         self.data_timer = Timer(
             1000 / self.sample_period * (float(self.sample_period) / 1000),
             self._send_packet,
@@ -248,11 +246,11 @@ class System(ListeningSystem):
         return self.ack
 
     def _pause(self, _):
-        self.pause.value = True
+        self.pause.set()
         return self.ack
 
     def _stop(self, _):
-        self.stop.value = True
+        self.stop.set()
 
         def _wait_for_timer():
             self.data_timer.join()
@@ -308,11 +306,11 @@ class System(ListeningSystem):
             self._stop(None)
 
         # Start the timer again if not paused
-        if stop.value:
+        if stop.is_set():
             self.sample_counter = 0
             self.cal_off_samples = 0
             self.data_socket.close()
-        elif pause.value:
+        elif pause.is_set():
             return
         else:
             # Restart the timer

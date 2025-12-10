@@ -1,5 +1,3 @@
-from multiprocessing import Array
-from ctypes import c_char
 from simulators import utils
 
 
@@ -9,7 +7,7 @@ class GeneralStatus:
     human-machine interfaces status."""
 
     def __init__(self):
-        self.status = Array(c_char, 25)
+        self.status = bytearray(25)
 
         self.version = (1, 0)
         self.master = 2
@@ -69,8 +67,8 @@ class GeneralStatus:
     @property
     def version(self):
         return (
-            utils.bytes_to_uint(self.status[1]),
-            utils.bytes_to_uint(self.status[0])
+            self.status[1],
+            self.status[0]
         )
 
     @version.setter
@@ -85,7 +83,7 @@ class GeneralStatus:
 
     @property
     def master(self):
-        return utils.bytes_to_uint(self.status[2])
+        return self.status[2]
 
     @master.setter
     def master(self, value=2):
@@ -98,7 +96,7 @@ class GeneralStatus:
         # 5: Secondary control panel active
         if not isinstance(value, int) or value not in range(6):
             raise ValueError('Provide an integer between 0 and 5!')
-        self.status[2] = utils.uint_to_bytes(value, n_bytes=1)
+        self.status[2:3] = utils.uint_to_bytes(value, n_bytes=1)
 
     @property
     def status_HMI(self):
@@ -143,47 +141,47 @@ class GeneralStatus:
 
     @property
     def software_IO(self):
-        return bool(utils.bytes_to_uint(self.status[5]))
+        return bool(self.status[5])
 
     @software_IO.setter
     def software_IO(self, value):
         # BOOL, False: LCP inactive, True: active
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[5] = value
+        self.status[5:6] = bytes(value)
 
     @property
     def simulation(self):
-        return bool(utils.bytes_to_uint(self.status[6]))
+        return bool(self.status[6])
 
     @simulation.setter
     def simulation(self, value):
         # BOOL, False: simulation inactive, True: active
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[6] = value
+        self.status[6:7] = bytes(value)
 
     @property
     def control_system_on(self):
-        return bool(utils.bytes_to_uint(self.status[7]))
+        return bool(self.status[7])
 
     @control_system_on.setter
     def control_system_on(self, value):
         # BOOL, False: control system off, True: on
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[7] = value
+        self.status[7:8] = bytes(value)
 
     @property
     def service(self):
-        return bool(utils.bytes_to_uint(self.status[8]))
+        return bool(self.status[8])
 
     @service.setter
     def service(self, value):
         # BOOL, False: service mode off, True: on
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[8] = value
+        self.status[8:9] = bytes(value)
 
     @property
     def HW_interlock(self):

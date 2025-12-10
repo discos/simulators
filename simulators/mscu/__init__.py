@@ -1,7 +1,7 @@
 # Authors:
 #   Marco Buttu <marco.buttu@inaf.it>
 #   Giuseppe Carboni <giuseppe.carboni@inaf.it>
-from multiprocessing import Value
+from threading import Event
 from socketserver import ThreadingTCPServer
 from simulators.common import ListeningSystem
 from simulators.mscu.servo import Servo
@@ -16,7 +16,7 @@ class System(ListeningSystem):
         self.servos = {}
         for address in app_nr:
             self.servos[address] = Servo(address)
-        self.setpos_NAK = [Value('i', False)] * len(app_nr)
+        self.setpos_NAK = [Event()] * len(app_nr)
         self._set_default()
 
     def __del__(self):
@@ -28,10 +28,10 @@ class System(ListeningSystem):
         return super().system_stop()
 
     def system_setpos_NAK(self):
-        self.setpos_NAK[1].value = True  # The SRP address
+        self.setpos_NAK[1].set()
 
     def system_setpos_ACK(self):
-        self.setpos_NAK[1].value = False  # The SRP address
+        self.setpos_NAK[1].clear()
 
     def _set_default(self):
         self.msg = ''
@@ -73,7 +73,7 @@ class System(ListeningSystem):
             raise ValueError(f"Invalid message: {msg}") from ex
 
         servo = self.servos[address]
-        if self.setpos_NAK[address].value:
+        if self.setpos_NAK[address].is_set():
             servo.setpos_NAK = True
         else:
             servo.setpos_NAK = False

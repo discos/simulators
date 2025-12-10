@@ -3,13 +3,9 @@ import os
 import time
 import socket
 import unittest
-import warnings
 
 from types import ModuleType
-from contextlib import contextmanager
-from threading import Thread, Timer
-from multiprocessing import Value, Array
-from ctypes import c_bool, c_char
+from threading import Thread, Event
 from queue import Empty
 from io import StringIO
 from socketserver import ThreadingTCPServer, ThreadingUDPServer
@@ -55,9 +51,6 @@ class TestListeningServer(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.server.stop()
-
-    def tearDown(self):
-        time.sleep(0.1)
 
     def test_wrong_greet_msg(self):
         with self.assertRaises(ValueError):
@@ -145,9 +138,6 @@ class TestListeningUDPServer(unittest.TestCase):
     def tearDownClass(cls):
         cls.server.stop()
 
-    def tearDown(self):
-        time.sleep(0.1)
-
     def test_proper_request(self):
         response = get_response(
             self.address,
@@ -208,9 +198,6 @@ class TestSendingServer(unittest.TestCase):
     def tearDownClass(cls):
         cls.server.stop()
 
-    def tearDown(self):
-        time.sleep(0.1)
-
     def test_get_message(self):
         response = get_response(self.address)
         self.assertEqual(response, b'message')
@@ -246,9 +233,6 @@ class TestSendingUDPServer(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.server.stop()
-
-    def tearDown(self):
-        time.sleep(0.1)
 
     def test_get_message(self):
         response = get_response(self.address, udp=True)
@@ -293,9 +277,6 @@ class TestDuplexServer(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.server.stop()
-
-    def tearDown(self):
-        time.sleep(0.1)
 
     def test_proper_request(self):
         response = get_response(
@@ -365,9 +346,6 @@ class TestDuplexUDPServer(unittest.TestCase):
     def tearDownClass(cls):
         cls.server.stop()
 
-    def tearDown(self):
-        time.sleep(0.1)
-
     def test_proper_request(self):
         response = get_response(
             self.l_address, msg=b'#command:a,b,c%%%%%', udp=True
@@ -418,18 +396,13 @@ class TestServerVarious(unittest.TestCase):
             l_address=address,
         )
         server.start()
-
-        def shutdown(self):
-            response = get_response(
-                address,
-                greet_msg=b'This is a greeting message!',
-                msg=b'$system_stop%%%%%'
-            )
-            self.assertEqual(response, b'$server_shutdown%%%%%')
-
-        t = Timer(0.01, shutdown, args=(self,))
-        t.start()
-        t.join()
+        time.sleep(0.1)
+        response = get_response(
+            address,
+            greet_msg=b'This is a greeting message!',
+            msg=b'$system_stop%%%%%'
+        )
+        self.assertEqual(response, b'$server_shutdown%%%%%')
 
     def test_server_no_addresses(self):
         with self.assertRaises(ValueError):
@@ -454,7 +427,6 @@ class TestSimulator(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        warnings.simplefilter('ignore', category=ResourceWarning)
         cls.mymodulename = 'simulators.mymodule'
         cls.mymodule = ModuleType(cls.mymodulename)
         sys.modules[cls.mymodulename] = cls.mymodule
@@ -488,14 +460,17 @@ class TestSimulator(unittest.TestCase):
             stdout = StringIO()
             sys.stdout = stdout
             simulator = Simulator(self.mymodule, system_type='moo')
-            simulator.start(daemon=True)
+            context = "fork"
+            if sys.version_info[1] >= 14:
+                context = "forkserver"
+            simulator.start(daemon=True, context=context)
             simulator.stop()
             output = stdout.getvalue()
         finally:
             sys.stdout = sys.__stdout__
             stdout.close()
 
-        self.assertIn("moo' up and running at (", output)
+        self.assertIn("moo' up and running", output)
 
     def test_create_simulator_from_name(self):
         address = next(address_generator)
@@ -570,8 +545,11 @@ class TestSimulator(unittest.TestCase):
         self.mymodule.System = DuplexTestSystem
 
         simulator = Simulator(self.mymodule)
+        e = Event()
 
-        def shutdown(self):
+        def shutdown(self, event):
+            while not event.is_set():
+                continue
             response = get_response(
                 l_addr,
                 greet_msg=b'This is a greeting message!',
@@ -581,9 +559,9 @@ class TestSimulator(unittest.TestCase):
             response = get_response(s_addr, msg=b'$system_stop%%%%%')
             self.assertEqual(response, b'$server_shutdown%%%%%')
 
-        t = Timer(0.01, shutdown, args=(self,))
+        t = Thread(target=shutdown, args=(self, e))
         t.start()
-        simulator.start()
+        simulator.start(has_started=e)
         t.join()
 
 
@@ -601,7 +579,7 @@ def get_response(
             msg = b''
     else:
         socket_type = socket.SOCK_STREAM
-    with socket_context(socket.AF_INET, socket_type) as sock:
+    with socket.socket(socket.AF_INET, socket_type) as sock:
         sock.settimeout(timeout)
         sock.connect(server_address)
         if greet_msg:
@@ -651,7 +629,7 @@ class ListeningTestSystem(ListeningSystem):
         try:
             getattr(self, 'last_cmd')
         except AttributeError:
-            self.last_cmd = Array(c_char, b'\x00' * 50)
+            self.last_cmd = b''
 
     def parse(self, byte):
         # Example of msg: #command_name:par1,par2,par3!
@@ -663,7 +641,7 @@ class ListeningTestSystem(ListeningSystem):
             if self.msg.endswith(self.tail):
                 self.msg = self.msg.lstrip(self.header)
                 self.msg = self.msg.rstrip(self.tail)
-                self.last_cmd.value = self.msg.encode('utf-8')
+                self.last_cmd = self.msg.encode('utf-8')
                 name, params_str = self.msg.split(':')
                 self.msg = ''
                 if name == 'wrong_command':
@@ -700,15 +678,15 @@ class SendingTestSystem(SendingSystem):
         try:
             getattr(self, 'last_cmd')
         except AttributeError:
-            self.last_cmd = Array(c_char, b'\x00' * 50)
-        self.last_cmd.value = b'message'
+            self.last_cmd = b''
+        self.last_cmd = b'message'
         self.t = None
 
     def subscribe(self, q):
-        self.stop = Value(c_bool, False)
+        self.stop = Event()
         t = Thread(
             target=self.put,
-            args=(q, self.stop, self.sampling_time, self.last_cmd)
+            args=(q, self.stop, 0.25, self.last_cmd)
         )
         t.daemon = True
         t.start()
@@ -716,18 +694,18 @@ class SendingTestSystem(SendingSystem):
     @staticmethod
     def put(q, stop, sampling_time, last_cmd):
         while True:
-            if stop.value:
+            if stop.is_set():
                 break
             while True:
                 try:
                     q.get_nowait()
                 except Empty:
                     break
-            q.put(last_cmd.value)
+            q.put(last_cmd)
             time.sleep(sampling_time)
 
     def unsubscribe(self, _):
-        self.stop.value = True
+        self.stop.set()
 
     @staticmethod
     def raise_exception():
@@ -739,15 +717,6 @@ class DuplexTestSystem(ListeningTestSystem, SendingTestSystem):
     def __init__(self, **kwargs):
         ListeningTestSystem.__init__(self, **kwargs)
         SendingTestSystem.__init__(self, **kwargs)
-
-
-@contextmanager
-def socket_context(*args, **kw):
-    sock = socket.socket(*args, **kw)
-    try:
-        yield sock
-    finally:
-        sock.close()
 
 
 if __name__ == '__main__':

@@ -1,5 +1,3 @@
-from multiprocessing import Array
-from ctypes import c_char
 from simulators import utils
 
 
@@ -7,7 +5,7 @@ class MotorStatus:
     """This class holds the status of a generic axis motor."""
 
     def __init__(self):
-        self.status = Array(c_char, 27)
+        self.status = bytearray(27)
 
         self.actual_position = 0
         self.actual_velocity = 0
@@ -88,80 +86,80 @@ class MotorStatus:
 
     @property
     def active(self):
-        return utils.bytes_to_uint(self.status[16])
+        return self.status[16]
 
     @active.setter
     def active(self, value):
         # UINT8, 0: motor inactive, 1: motor active
         if not isinstance(value, int) or value not in range(2):
             raise ValueError('Provide an integer between 0 and 1!')
-        self.status[16] = utils.uint_to_bytes(value, n_bytes=1)
+        self.status[16:17] = utils.uint_to_bytes(value, n_bytes=1)
 
     @property
     def speed_of_rotation(self):
-        return utils.bytes_to_uint(self.status[17])
+        return self.status[17]
 
     @speed_of_rotation.setter
     def speed_of_rotation(self, value):
         # UINT8, 0: speed of rotation unequal 0, 1: speed of rotation equal 0
         if not isinstance(value, int) or value not in range(2):
             raise ValueError('Provide an integer between 0 and 1!')
-        self.status[17] = utils.uint_to_bytes(value, n_bytes=1)
+        self.status[17:18] = utils.uint_to_bytes(value, n_bytes=1)
 
     @property
     def speed_of_rotation_OK(self):
-        return utils.bytes_to_uint(self.status[18])
+        return self.status[18]
 
     @speed_of_rotation_OK.setter
     def speed_of_rotation_OK(self, value):
         # UINT8, 0: speed of rotation failure, 1: speed of rotation ok
         if not isinstance(value, int) or value not in range(2):
             raise ValueError('Provide an integer between 0 and 1!')
-        self.status[18] = utils.uint_to_bytes(value, n_bytes=1)
+        self.status[18:19] = utils.uint_to_bytes(value, n_bytes=1)
 
     @property
     def position(self):
-        return utils.bytes_to_uint(self.status[19])
+        return self.status[19]
 
     @position.setter
     def position(self, value):
         # UINT8, 0: desired position not reached, 1: desired position reached
         if not isinstance(value, int) or value not in range(2):
             raise ValueError('Provide an integer between 0 and 1!')
-        self.status[19] = utils.uint_to_bytes(value, n_bytes=1)
+        self.status[19:20] = utils.uint_to_bytes(value, n_bytes=1)
 
     @property
     def bus(self):
-        return utils.bytes_to_uint(self.status[20])
+        return self.status[20]
 
     @bus.setter
     def bus(self, value):
         # UINT8, 0: bus ok, 1: bus error
         if not isinstance(value, int) or value not in range(2):
             raise ValueError('Provide an integer between 0 and 1!')
-        self.status[20] = utils.uint_to_bytes(value, n_bytes=1)
+        self.status[20:21] = utils.uint_to_bytes(value, n_bytes=1)
 
     @property
     def servo(self):
-        return utils.bytes_to_uint(self.status[21])
+        return self.status[21]
 
     @servo.setter
     def servo(self, value):
         # UINT8, 0: servo ok, 1: servo error
         if not isinstance(value, int) or value not in range(2):
             raise ValueError('Provide an integer between 0 and 1!')
-        self.status[21] = utils.uint_to_bytes(value, n_bytes=1)
+        self.status[21:22] = utils.uint_to_bytes(value, n_bytes=1)
 
     @property
     def sensor(self):
-        return utils.bytes_to_uint(self.status[22])
+        return self.status[22]
 
     @sensor.setter
     def sensor(self, value):
         # UINT8, 0: sensor ok, 1: sensor error
         if not isinstance(value, int) or value not in range(2):
             raise ValueError('Provide an integer between 0 and 1!')
-        self.status[22] = utils.uint_to_bytes(value, n_bytes=1)
+        self.status[22:23] = utils.uint_to_bytes(value, n_bytes=1)
 
     @property
     def motWarnCode(self):

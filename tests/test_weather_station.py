@@ -108,7 +108,8 @@ class TestWeatherStation(unittest.TestCase):
         self.assertEqual(response, self.err_string)
 
     def test_read_as_write(self):
-        date = datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
+        date = datetime.datetime.now(datetime.timezone.utc)
+        date = date.strftime('%Y%m%d%H%M%S')
         args = (list(self.sensors.keys())[0], 10.0, date)
         cmd = f'r {args[0]} {args[1]} {args[2]}'
         for byte in cmd:
@@ -116,7 +117,8 @@ class TestWeatherStation(unittest.TestCase):
         self.assertFalse(self.system.parse('\n'))
 
     def test_write(self):
-        date = datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
+        date = datetime.datetime.now(datetime.timezone.utc)
+        date = date.strftime('%Y%m%d%H%M%S')
         for sensor, values in iter(self.sensors.items()):
             args = (sensor, 10.0, date)
             cmd = f'w {args[0]} {args[1]} {args[2]}'
@@ -132,7 +134,8 @@ class TestWeatherStation(unittest.TestCase):
             self.assertTrue(self._compare(expected, response))
 
     def test_write_wrong_value(self):
-        date = datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
+        date = datetime.datetime.now(datetime.timezone.utc)
+        date = date.strftime('%Y%m%d%H%M%S')
         for sensor, values in iter(self.sensors.items()):
             args = (sensor, 'wrong', date)
             cmd = f'w {args[0]} {args[1]} {args[2]}'
@@ -163,7 +166,8 @@ class TestWeatherStation(unittest.TestCase):
             self.assertTrue(self._compare(expected, response))
 
     def test_write_unknown_sensor(self):
-        date = datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
+        date = datetime.datetime.now(datetime.timezone.utc)
+        date = date.strftime('%Y%m%d%H%M%S')
         args = ('unkn', 10.0, date)
         cmd = f'w {args[0]} {args[1]} {args[2]}'
         for byte in cmd:

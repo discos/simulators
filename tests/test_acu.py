@@ -1,7 +1,7 @@
 import unittest
 import time
 import socket
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from simulators import acu
 from simulators import utils
 from simulators.acu.acu_utils import (
@@ -66,7 +66,7 @@ class TestACU(unittest.TestCase):
         time.sleep(0.01)
 
     def test_status_message_length(self):
-        status = self.system.status.raw
+        status = bytes(self.system.status)
         msg_length = utils.bytes_to_uint(status[4:8])
         self.assertEqual(msg_length, 813)
         self.assertEqual(len(status), 813)
@@ -1157,8 +1157,8 @@ class TestACU(unittest.TestCase):
 
         self.assertEqual(self.system.PS.timeSource, acu_time_mode)
 
-        now_min = datetime.utcnow() - timedelta(milliseconds=50)
-        now_max = datetime.utcnow() + timedelta(milliseconds=50)
+        now_min = datetime.now(timezone.utc) - timedelta(milliseconds=50)
+        now_max = datetime.now(timezone.utc) + timedelta(milliseconds=50)
 
         ps_time = self.system.PS.actual_time()
 
@@ -1183,7 +1183,7 @@ class TestACU(unittest.TestCase):
 
     def test_parameter_command_time_source_external(self):
         offset = timedelta(days=1)
-        new_time = datetime.utcnow() + offset
+        new_time = datetime.now(timezone.utc) + offset
         external_time_mode = 3
 
         external_time = Command(
@@ -1201,8 +1201,10 @@ class TestACU(unittest.TestCase):
 
         self.assertEqual(self.system.PS.timeSource, external_time_mode)
 
-        now_min = datetime.utcnow() + offset - timedelta(milliseconds=25)
-        now_max = datetime.utcnow() + offset + timedelta(milliseconds=25)
+        now_min = \
+            datetime.now(timezone.utc) + offset - timedelta(milliseconds=25)
+        now_max = \
+            datetime.now(timezone.utc) + offset + timedelta(milliseconds=25)
 
         ps_time = self.system.PS.actual_time()
 
@@ -1368,7 +1370,7 @@ class TestACU(unittest.TestCase):
 
     def test_program_track_command_load_new_table(self, start_time=None):
         if not start_time:
-            start_time = datetime.utcnow() + timedelta(seconds=2)
+            start_time = datetime.now(timezone.utc) + timedelta(seconds=2)
 
         pt_command = ProgramTrackCommand(
             load_mode=1,
@@ -1397,7 +1399,7 @@ class TestACU(unittest.TestCase):
         self.assertEqual(ps.parameter_command_answer, 1)
 
     def test_program_track_command_add_entries(self):
-        start_time = datetime.utcnow() + timedelta(seconds=1)
+        start_time = datetime.now(timezone.utc) + timedelta(seconds=1)
 
         self.test_program_track_command_load_new_table(start_time)
 
@@ -1425,7 +1427,7 @@ class TestACU(unittest.TestCase):
         self.assertEqual(ps.parameter_command_answer, 1)
 
     def test_program_track_command_add_entries_during_execution(self):
-        start_time = datetime.utcnow() + timedelta(seconds=1)
+        start_time = datetime.now(timezone.utc) + timedelta(seconds=1)
 
         self.test_program_track_command_load_new_table(start_time)
 
@@ -1476,7 +1478,7 @@ class TestACU(unittest.TestCase):
         self.assertEqual(self.system.EL.p_Ist, 88000000)
 
     def test_program_track_command_add_entries_wrong_start_time(self):
-        start_time = datetime.utcnow() + timedelta(seconds=1)
+        start_time = datetime.now(timezone.utc) + timedelta(seconds=1)
 
         self.test_program_track_command_load_new_table(start_time)
 
@@ -2513,16 +2515,16 @@ class TestACUValues(unittest.TestCase):
         self.assertIsInstance(self.AS.stow_pin_selection, list)
         self.assertIsInstance(self.AS.stow_pin_in, list)
         self.assertIsInstance(self.AS.stow_pin_out, list)
-        self.assertIsInstance(self.AS.mode_command_status, bytes)
-        self.assertIsInstance(self.AS.received_mode_command_status, bytes)
+        self.assertIsInstance(self.AS.mode_command_status, bytearray)
+        self.assertIsInstance(self.AS.received_mode_command_status, bytearray)
         self.assertIsInstance(self.AS.received_mode_command_counter, int)
         self.assertIsInstance(self.AS.received_mode_command, int)
         self.assertIsInstance(self.AS.received_mode_command_answer, int)
-        self.assertIsInstance(self.AS.executed_mode_command_status, bytes)
+        self.assertIsInstance(self.AS.executed_mode_command_status, bytearray)
         self.assertIsInstance(self.AS.executed_mode_command_counter, int)
         self.assertIsInstance(self.AS.executed_mode_command, int)
         self.assertIsInstance(self.AS.executed_mode_command_answer, int)
-        self.assertIsInstance(self.AS.parameter_command_status, bytes)
+        self.assertIsInstance(self.AS.parameter_command_status, bytearray)
         self.assertIsInstance(self.AS.parameter_command_counter, int)
         self.assertIsInstance(self.AS.parameter_command, int)
         self.assertIsInstance(self.AS.parameter_command_answer, int)

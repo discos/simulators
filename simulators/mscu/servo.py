@@ -1,8 +1,7 @@
 from __future__ import division, with_statement
 import time
 import operator
-from multiprocessing import Value, Lock
-from threading import Timer
+from threading import Timer, Lock
 from simulators.mscu.parameters import closers, app_nr, axes, stow_position
 
 
@@ -22,11 +21,11 @@ class DriveCabinet:
     app_status = {}
 
     def __init__(self):
-        self.cab_state = Value('i', DriveCabinet.cab_state['stow'])
+        self.cab_state = DriveCabinet.cab_state['stow']
 
     def set_state(self, state):
         try:
-            self.cab_state.value = DriveCabinet.cab_state[state]
+            self.cab_state = DriveCabinet.cab_state[state]
         except KeyError:
             pass
 
@@ -66,7 +65,7 @@ class Servo:
     def getstatus(self, cmd_num):
         app_state = 4  # remote auto
         app_status = "FFFF"  # Everything OK
-        cab_state = self.dc.cab_state.value
+        cab_state = self.dc.cab_state
 
         answer = f'?getstatus:{cmd_num}={self.id}> '
         answer += f'{Servo.ctime()},{app_state},{app_status},{cab_state}'
@@ -115,7 +114,7 @@ class Servo:
         for param in params:
             answer += f",{param}"
         answer += closers[0]
-        self.dc.cab_state.value = DriveCabinet.cab_state['stow']
+        self.dc.cab_state = DriveCabinet.cab_state['stow']
         self.history.insert(self.stow_position)
         return [answer.replace('@', '?'), answer]
 
@@ -124,7 +123,7 @@ class Servo:
         for param in params:
             answer += f",{param}"
         answer += closers[0]
-        self.dc.cab_state.value = DriveCabinet.cab_state['stow']
+        self.dc.cab_state = DriveCabinet.cab_state['stow']
         return [answer.replace('@', '?'), answer]
 
     def clean(self, cmd_num, *params):

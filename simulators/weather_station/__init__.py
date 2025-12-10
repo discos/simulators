@@ -10,8 +10,8 @@ servers = [(('0.0.0.0', 12600), (), ThreadingUDPServer, {})]
 class System(ListeningSystem):
 
     def __init__(self):
-        self.starting_date = \
-            datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
+        starting_date = datetime.datetime.now(datetime.timezone.utc)
+        self.starting_date = starting_date.strftime('%Y%m%d%H%M%S')
 
         self.commands = {
             'r': '_read',

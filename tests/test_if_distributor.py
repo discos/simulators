@@ -7,6 +7,11 @@ class TestIFDistributorDefaultConfiguration(unittest.TestCase):
     def setUp(self):
         self.system = System(system_type='IFD')
 
+    def get_status(self, board):
+        message = f'? {board}\n'
+        response = self._send(message)
+        return response
+
     def _send(self, message):
         for byte in message[:-1]:
             self.assertTrue(self.system.parse(byte))
@@ -50,18 +55,14 @@ class TestIFDistributorDefaultConfiguration(unittest.TestCase):
 
     def test_out_of_range_board(self):
         with self.assertRaises(IndexError):
-            self.test_get_status(board=50)
+            self.get_status(50)
 
-    def test_get_status(self, board=0):
-        message = f'? {board}\n'
-
-        response = self._send(message)
-
+    def test_get_status(self):
+        board = 0
+        response = self.get_status(0)
         self.assertEqual(len(response), 2)
         self.assertEqual(response[0], 'ack')
         self.assertEqual(response[1][0], board)
-
-        return response
 
     def test_get_status_wrong_argc(self):
         with self.assertRaises(ValueError):
@@ -74,7 +75,7 @@ class TestIFDistributorDefaultConfiguration(unittest.TestCase):
         self.assertEqual(len(response), 1)
         self.assertEqual(response[0], 'ack')
 
-        response = self.test_get_status(board=board)
+        response = self.get_status(board)
 
         self.assertEqual(response[1][0], board)
         self.assertEqual(response[1][3], ref_freq)
@@ -109,7 +110,7 @@ class TestIFDistributorDefaultConfiguration(unittest.TestCase):
         self.assertEqual(len(response), 1)
         self.assertEqual(response[0], 'ack')
 
-        response = self.test_get_status(board=board)
+        response = self.get_status(board)
 
         self.assertEqual(response[1][0], board)
         self.assertEqual(response[1][9], 8 * bandwidth)
@@ -133,7 +134,7 @@ class TestIFDistributorDefaultConfiguration(unittest.TestCase):
         self.assertEqual(len(response), 1)
         self.assertEqual(response[0], 'ack')
 
-        response = self.test_get_status(board=board)
+        response = self.get_status(board)
 
         self.assertEqual(response[1][0], board)
         self.assertEqual(response[1][5 + channel], int(attenuation * 2))
@@ -161,7 +162,7 @@ class TestIFDistributorDefaultConfiguration(unittest.TestCase):
         self.assertEqual(len(response), 1)
         self.assertEqual(response[0], 'ack')
 
-        response = self.test_get_status(board=board)
+        response = self.get_status(board)
 
         self.assertEqual(response[1][0], board)
 

@@ -1,8 +1,6 @@
 import time
-from datetime import datetime, timedelta
-from multiprocessing import Value, Array
-from ctypes import c_bool, c_char
-from threading import Thread
+from datetime import datetime, timedelta, timezone
+from threading import Thread, Event
 from queue import Queue, Empty
 from socketserver import ThreadingTCPServer
 from simulators import utils
@@ -48,6 +46,7 @@ class System(ListeningSystem, SendingSystem):
 
     def __init__(self, sampling_time=default_sampling_time):
         self._set_default()
+        self.stop = Event()
         self.sampling_time = sampling_time
         self.cmd_counter = None
 
@@ -71,14 +70,12 @@ class System(ListeningSystem, SendingSystem):
         self.PS = PointingStatus(self.AZ, self.EL, self.CW)
         self.FS = FacilityStatus()
 
-        self.stop = Value(c_bool, False)
-
         self.command_threads = Queue()
 
-        self.status = Array(c_char, 813)
-        self.status[0:4] = bytes(start_flag, 'latin-1')
+        self.status = bytearray(813)
+        self.status[0:4] = start_flag.encode('latin-1')
         self.status[4:8] = utils.uint_to_bytes(813)
-        self.status[-4:] = bytes(end_flag, 'latin-1')
+        self.status[-4:] = end_flag.encode('latin-1')
 
         subsystems = []
         subsystems.append(self.PS.update_status)
@@ -129,7 +126,7 @@ class System(ListeningSystem, SendingSystem):
         self.system_stop()
 
     def system_stop(self):
-        self.stop.value = True
+        self.stop.set()
         self.update_thread.join()
         while True:
             try:
@@ -190,7 +187,7 @@ class System(ListeningSystem, SendingSystem):
     def _update_status(status, statuses):
         payload = b''
         for subsystem_status in statuses:
-            payload += subsystem_status.raw
+            payload += bytes(subsystem_status)
         status[8:12] = utils.uint_to_bytes(utils.day_milliseconds())
         status[12:-4] = payload
 
@@ -202,7 +199,7 @@ class System(ListeningSystem, SendingSystem):
         nxt = None
         counter = 0
         subscribers = []
-        while not stop.value:
+        while not stop.is_set():
             try:
                 sub = subscribe_q.get_nowait()
                 subscribers.append(sub)
@@ -233,12 +230,12 @@ class System(ListeningSystem, SendingSystem):
                             q.get_nowait()
                         except Empty:
                             break
-                    q.put(status.raw)
+                    q.put(bytes(status))
                 now = utils.bytes_to_real(status[721:729], precision=2)
                 now = utils.mjd_to_date(now)
                 counter = 0
             else:
-                now = datetime.utcnow()
+                now = datetime.now(timezone.utc)
 
             counter += 1
 
@@ -248,9 +245,9 @@ class System(ListeningSystem, SendingSystem):
                 now = nxt
             nxt = now + timedelta(seconds=sampling_time / 20.)
 
-            time.sleep(
-                max(0, (nxt - datetime.utcnow()).total_seconds() - correction)
-            )
+            sleep_for = (nxt - datetime.now(timezone.utc)).total_seconds()
+            sleep_for -= correction
+            time.sleep(max(0, sleep_for))
 
         for command_thread in command_threads:
             cmd_queue.put(command_thread)

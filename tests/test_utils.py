@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from simulators import utils
 
 
@@ -241,28 +241,28 @@ class TestUtils(unittest.TestCase):
 
     def test_mjd_given_date(self):
         """Return the modified julian date of a given datetime object."""
-        time = datetime(2017, 12, 4, 13, 51, 10, 162534)
+        time = datetime(2017, 12, 4, 13, 51, 10, 162534, timezone.utc)
         result = utils.mjd(time)
         expected_result = 58091.57720095525
         self.assertEqual(result, expected_result)
 
     def test_mjd_given_date_first_months(self):
         """Return the modified julian date of a given datetime object."""
-        time = datetime(2017, 1, 4, 13, 51, 10, 162534)
+        time = datetime(2017, 1, 4, 13, 51, 10, 162534, timezone.utc)
         result = utils.mjd(time)
         expected_result = 57757.57720095525
         self.assertEqual(result, expected_result)
 
     def test_mjd_old_date(self):
-        time = datetime(1500, 1, 1, 0, 0, 0, 0)
+        time = datetime(1500, 1, 1, 0, 0, 0, 0, timezone.utc)
         with self.assertRaises(ValueError):
             utils.mjd(time)
 
     def test_mjd_to_date(self):
         """Return the datetime object of a given modified julian date."""
-        expected_date = datetime(2017, 12, 4, 13, 51, 10, 162534)
+        expected_date = datetime(2017, 12, 4, 13, 51, 10, 162534, timezone.utc)
         self.assertEqual(utils.mjd_to_date(58091.57720095525), expected_date)
-        expected_date = datetime(2018, 1, 1, 16, 46, 25, 346278)
+        expected_date = datetime(2018, 1, 1, 16, 46, 25, 346278, timezone.utc)
         self.assertEqual(utils.mjd_to_date(58119.69890447081), expected_date)
 
     def test_mjd_to_date_starting_date(self):
@@ -274,7 +274,7 @@ class TestUtils(unittest.TestCase):
             utils.mjd_to_date(None)
 
     def test_datetime_to_mjd_and_back(self):
-        date_datetime = datetime.now()
+        date_datetime = datetime.now(timezone.utc)
         date_mjd = utils.mjd(date_datetime)
         self.assertAlmostEqual(
             date_datetime,
@@ -297,7 +297,7 @@ class TestUtils(unittest.TestCase):
 
     def test_day_microseconds_date(self):
         """Test the function with an actual date."""
-        date = datetime(2018, 3, 7, 10, 30, 20, 123456)
+        date = datetime(2018, 3, 7, 10, 30, 20, 123456, timezone.utc)
         day_microseconds = utils.day_microseconds(date)
         self.assertEqual(day_microseconds, 37820123456)
 
@@ -316,7 +316,7 @@ class TestUtils(unittest.TestCase):
 
     def test_day_milliseconds_date(self):
         """Test the function with an actual date."""
-        date = datetime(2018, 3, 7, 10, 30, 20, 123456)
+        date = datetime(2018, 3, 7, 10, 30, 20, 123456, timezone.utc)
         day_milliseconds = utils.day_milliseconds(date)
         self.assertEqual(day_milliseconds, 37820123)
 
@@ -335,7 +335,7 @@ class TestUtils(unittest.TestCase):
 
     def test_day_percentage_date(self):
         """Test the function with an actual date."""
-        date = datetime(2018, 3, 7, 10, 30, 20, 123456)
+        date = datetime(2018, 3, 7, 10, 30, 20, 123456, timezone.utc)
         day_percentage = utils.day_percentage(date)
         self.assertEqual(day_percentage, 0.4377329103703704)
 

@@ -1,4 +1,3 @@
-from __future__ import print_function
 import os
 import types
 import socket
@@ -6,13 +5,11 @@ import logging
 import importlib
 import time
 import threading
+import multiprocessing as mp
 from queue import Queue, Empty
-from multiprocessing import Process, Value
-from ctypes import c_bool
 from socketserver import (
     ThreadingTCPServer, ThreadingUDPServer, BaseRequestHandler
 )
-from simulators.common import BaseSystem
 
 
 logging.basicConfig(
@@ -60,7 +57,8 @@ class BaseHandler(BaseRequestHandler):
                 )
                 if response == '$server_shutdown%%%%%':
                     time.sleep(0.01)
-                    self.stop()
+                    self.server.shutdown()
+                    self.server.server_close()
         except AttributeError:
             logging.debug('command %s not supported', name)
         except Exception as ex:
@@ -231,49 +229,57 @@ class Server:
     :type s_address: (ip, port)
     """
     def __init__(
-            self, system, server_type, kwargs, l_address=None, s_address=None):
-        if server_type not in [ThreadingTCPServer, ThreadingUDPServer]:
+        self,
+        system_cls,
+        server_type,
+        kwargs,
+        l_address=None,
+        s_address=None
+    ):
+        if server_type not in (ThreadingTCPServer, ThreadingUDPServer):
             raise ValueError(
                 'Provide either the `ThreadingTCPServer` class '
                 + 'or the `ThreadingUDPServer` class!'
             )
         if not l_address and not s_address:
             raise ValueError('You must specify at least one server.')
-        self.system = system
+        self.system_cls = system_cls
         self.system_kwargs = kwargs
-        self.servers = []
-        self.threads = []
-        self.stop_me = Value(c_bool, False)
+        self.system = None
         self.server_type = server_type
         self.server_type.allow_reuse_address = True
+        self.l_address = l_address
+        self.s_address = s_address
+        self.servers = []
+        self.threads = []
+        self.main_thread = None
 
-        if l_address:
-            self.servers.append(server_type(l_address, ListenHandler))
-        if s_address:
-            self.servers.append(server_type(s_address, SendHandler))
-
-    def serve_forever(self):
-        """This method starts the System and then cycle for incoming requests.
-        It stops the cycle only when the `stop_me` variable gets set to True.
-        """
-        if isinstance(self.system, types.ModuleType):
-            self.system = self.system.System(**self.system_kwargs)
-        elif issubclass(self.system, BaseSystem):
-            self.system = self.system(**self.system_kwargs)
-
+    def _setup(self):
+        if self.l_address:
+            self.servers.append(
+                self.server_type(self.l_address, ListenHandler)
+            )
+        if self.s_address:
+            self.servers.append(
+                self.server_type(self.s_address, SendHandler)
+            )
+        self.system = self.system_cls(**self.system_kwargs)
         for server in self.servers:
             server.RequestHandlerClass.system = self.system
-            server.RequestHandlerClass.stop = self.stop
 
-        threads = []
+    def serve_forever(self, serving=None):
+        """This method starts the System and then cycle for incoming requests.
+        """
+        self._setup()
         for server in self.servers:
             t = threading.Thread(target=server.serve_forever)
             t.daemon = True
-            threads.append(t)
             t.start()
-
+            self.threads.append(t)
+        if serving is not None:
+            serving.set()
         try:
-            for t in threads:
+            for t in self.threads:
                 t.join()
         except KeyboardInterrupt:
             pass
@@ -281,15 +287,20 @@ class Server:
     def start(self):
         """Starts a daemon thread which calls the `serve_forever` method. The
         server is therefore started as a daemon."""
-        t = threading.Thread(target=self.serve_forever)
-        t.daemon = True
-        t.start()
+        serving = mp.Event()
+        self.main_thread = threading.Thread(
+            target=self.serve_forever,
+            args=(serving,),
+            daemon=True
+        )
+        self.main_thread.start()
+        serving.wait()
 
     def stop(self):
-        """Sets the `stop_me` value to True, stopping the server."""
-        self.stop_me.value = True
+        """Stops the server."""
         for server in self.servers:
             server.shutdown()
+            server.server_close()
 
 
 class Simulator:
@@ -301,17 +312,23 @@ class Simulator:
     """
     def __init__(self, system_module, **kwargs):
         if not isinstance(system_module, types.ModuleType):
-            self.system_module = importlib.import_module(
+            system_module = importlib.import_module(
                 f'simulators.{system_module}'
             )
-        else:
-            self.system_module = system_module
+        self.system = system_module.System
         self.kwargs = kwargs
+        self.servers = system_module.servers
         self.system_type = kwargs.get('system_type')  # From command line
-        module_name = self.system_module.__name__.split('.')[-1]
+        module_name = system_module.__name__.split('.')[-1]
         self.simulator_name = self.system_type or module_name
+        self.processes = []
 
-    def start(self, daemon=False):
+    def start(
+        self,
+        context="fork",
+        daemon=False,
+        has_started=None
+    ):
         """Starts a simulator by instancing the servers listed in the given
         module.
 
@@ -322,51 +339,48 @@ class Simulator:
             destroyed. To stop these processes, method `stop` must be called.
         :type daemon: bool
         """
-        processes = []
-        running_servers = []
-        l_addr = ('', '')
-        for l_addr, s_addr, server_type, kwargs in self.system_module.servers:
-            # If the user specifies a 'system_type' from command line (CL), the
-            # other 'system_type' listed in 'servers' don't have to be executed
-            module_system_type = kwargs.get('system_type')  # Listed in servers
-            if self.system_type is not None:
-                if self.system_type != module_system_type:
-                    continue
-            kwargs.update(self.kwargs)
-            s = Server(
-                self.system_module, server_type, kwargs, l_addr, s_addr
-            )
-            p = Process(target=s.serve_forever)
-            p.daemon = daemon
-            processes.append(p)
-            p.start()
-            if module_system_type:
-                running_servers.append((module_system_type, l_addr))
-
-        if any(running_servers):
-            for server_name, addr in running_servers:
-                print(f"Simulator '{self.simulator_name}.{server_name}' up "
-                      f"and running at {*addr, }.")
-        else:
-            print(f"Simulator '{self.simulator_name}' up and running at "
-                  f"{*l_addr, }.")
-
-        if not daemon:
-            try:
-                for p in processes:
+        started_servers = []
+        process_class = mp.get_context(context).Process
+        executor = threading.Thread
+        try:
+            for l_addr, s_addr, s_type, kwargs in self.servers:
+                kwargs.update(self.kwargs)
+                s = Server(
+                    self.system, s_type, kwargs, l_addr, s_addr
+                )
+                started = mp.Event()
+                started_servers.append(started)
+                p = executor(
+                    target=s.serve_forever,
+                    args=(started,),
+                    daemon=daemon
+                )
+                self.processes.append(p)
+                executor = process_class
+            for process in self.processes:
+                process.start()
+            for started_server in started_servers:
+                started_server.wait()
+            print(f"Simulator '{self.simulator_name}' up and running.")
+            if has_started is not None:
+                has_started.set()
+            if not daemon:
+                for p in self.processes:
                     p.join()
-            except KeyboardInterrupt:
-                print('')  # Skip the line displaying the SIGINT character
-                self.stop()
+                print(f"Simulator '{self.simulator_name}' stopped.")
+        except KeyboardInterrupt:
+            print('')  # Skip the line displaying the SIGINT character
+            self.stop()
 
     def stop(self):
         """Stops a simulator by sending the custom `$system_stop%%%%%` command
         to all servers of the given simulator."""
         def _send_stop(entry):
-            for address in entry[:2]:
+            l_addr, s_addr, server_type, _ = entry
+            for address in (l_addr, s_addr):
                 if not address:
                     continue
-                if entry[2] == ThreadingTCPServer:
+                if server_type == ThreadingTCPServer:
                     socket_type = socket.SOCK_STREAM
                 else:
                     socket_type = socket.SOCK_DGRAM
@@ -395,12 +409,16 @@ class Simulator:
                     logging.debug(ex)
                 finally:
                     sockobj.close()
-                break
         threads = []
-        for entry in self.system_module.servers:
+        for entry in self.servers:
             t = threading.Thread(target=_send_stop, args=(entry,))
             t.start()
             threads.append(t)
         for t in threads:
             t.join()
-        print(f"Simulator '{self.simulator_name}' stopped.")
+        for p in self.processes:
+            p.join()
+        if self.processes:
+            print(f"Simulator '{self.simulator_name}' stopped.")
+        else:
+            print(f"Sent stop to '{self.simulator_name}' simulator.")

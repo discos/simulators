@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from simulators import utils
 from simulators.receiver import System
 from simulators.receiver import DEFINITIONS as DEF
@@ -211,7 +211,7 @@ class TestProtocol(unittest.TestCase):
         for byte in command[:-1]:
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         expected_answer = DEF.CMD_STX + '\x01\x01\x47\x00\x00'
         expected_answer += checksum(expected_answer)
         expected_answer += DEF.CMD_EOT
@@ -239,7 +239,7 @@ class TestProtocol(unittest.TestCase):
         for byte in command[:-1]:
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         expected_answer = DEF.CMD_STX + '\x01\x01\x67\x00\x00'
         self.assertEqual(answer, expected_answer)
         # Check that the old slave address is now absent
@@ -301,7 +301,7 @@ class TestProtocol(unittest.TestCase):
         for byte in command[:-1]:
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
-        now = datetime.utcnow() + offset
+        now = datetime.now(timezone.utc) + offset
         expected_answer = DEF.CMD_STX + '\x01\x01\x48\x00\x00\x08'
         # Insert a date placeholder, we check the date differently
         expected_answer += '\x00' * 8
@@ -312,7 +312,8 @@ class TestProtocol(unittest.TestCase):
             ord(answer[11]),  # Hour
             ord(answer[12]),  # Minute
             ord(answer[13]),  # Second
-            min(ord(answer[14]) * 10000, 999999)  # Microsecond
+            min(ord(answer[14]) * 10000, 999999),  # Microsecond
+            timezone.utc
         )
         self.assertEqual(answer[:6], expected_answer[:6])
         self.assertAlmostEqual(
@@ -326,7 +327,7 @@ class TestProtocol(unittest.TestCase):
         for byte in command[:-1]:
             self.assertTrue(self.system.parse(byte))
         answer = self.system.parse(command[-1])
-        now = datetime.utcnow() + offset
+        now = datetime.now(timezone.utc) + offset
         expected_answer = DEF.CMD_STX + '\x01\x01\x68\x00\x00\x08'
         # Insert a date placeholder, we check the date differently
         expected_answer += '\x00' * 8
@@ -337,7 +338,8 @@ class TestProtocol(unittest.TestCase):
             ord(answer[11]),  # Hour
             ord(answer[12]),  # Minute
             ord(answer[13]),  # Second
-            min(ord(answer[14]) * 10000, 999999)  # Microsecond
+            min(ord(answer[14]) * 10000, 999999),  # Microsecond
+            timezone.utc
         )
         self.assertEqual(answer[:6], expected_answer[:6])
         self.assertAlmostEqual(
@@ -349,7 +351,7 @@ class TestProtocol(unittest.TestCase):
     def test_ext_set_time(self):
         command = DEF.CMD_SOH + '\x01\x01\x49\x00\x08'
         offset = timedelta(days=1)
-        new_time = datetime.utcnow() + offset
+        new_time = datetime.now(timezone.utc) + offset
         command += chr(int(str(new_time.year)[:2]))
         command += chr(int(str(new_time.year)[2:]))
         command += chr(new_time.month)
@@ -372,7 +374,7 @@ class TestProtocol(unittest.TestCase):
     def test_abbr_set_time(self):
         command = DEF.CMD_SOH + '\x01\x01\x69\x00\x08'
         offset = timedelta(days=1)
-        new_time = datetime.utcnow() + offset
+        new_time = datetime.now(timezone.utc) + offset
         command += chr(int(str(new_time.year)[:2]))
         command += chr(int(str(new_time.year)[2:]))
         command += chr(new_time.month)
@@ -392,7 +394,7 @@ class TestProtocol(unittest.TestCase):
     def test_ext_set_time_wrong_format(self):
         command = DEF.CMD_SOH + '\x01\x01\x49\x00\x06'
         offset = timedelta(days=1)
-        new_time = datetime.utcnow() + offset
+        new_time = datetime.now(timezone.utc) + offset
         command += chr(int(str(new_time.year)[:2]))
         command += chr(int(str(new_time.year)[2:]))
         command += chr(new_time.month)

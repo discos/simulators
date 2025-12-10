@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from simulators import utils
 from simulators.receiver import DEFINITIONS as DEF
 
@@ -34,7 +34,7 @@ class Slave:
         self.last_cmd = cmd
         self.last_cmd_id = cmd_id
         self.last_cmd_answer = answer
-        self.last_cmd_date = datetime.utcnow()
+        self.last_cmd_date = datetime.now(timezone.utc)
 
     def inquiry(self):
         data = ''
@@ -112,7 +112,9 @@ class Slave:
             cmd_id,
             DEF.CMD_ACK
         )
-        data = self._datetime_to_time(datetime.utcnow() - self.time_offset)
+        data = self._datetime_to_time(
+            datetime.now(timezone.utc) - self.time_offset
+        )
         return [DEF.CMD_ACK, data]
 
     def set_time(self, cmd_id, extended, time):
@@ -128,8 +130,9 @@ class Slave:
                 ord(time[5]),
                 ord(time[6]),
                 min(ord(time[7]) * 10000, 999999),
+                timezone.utc
             )
-            self.time_offset = datetime.utcnow() - date
+            self.time_offset = datetime.now(timezone.utc) - date
         except IndexError:
             retval = DEF.CMD_ERR_FORM
         except ValueError:

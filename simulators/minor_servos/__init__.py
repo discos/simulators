@@ -13,8 +13,6 @@ try:
 except ImportError as ex:
     raise ImportError('The `scipy` package, required for the simulator'
         + ' to run, is missing!') from ex
-from ctypes import c_bool, c_int
-from multiprocessing import Value
 from bisect import bisect_left
 from socketserver import ThreadingTCPServer
 from http.server import HTTPServer
@@ -34,8 +32,8 @@ httpserver_address = ('0.0.0.0', 12799)
 DEFAULT_TIMER_VALUE = 5
 
 
-def _change_atomic_value(variable, value):
-    variable.value = value
+def _change_delayed_value(obj, key, value):
+    obj.__dict__[key] = value
 
 
 class System(ListeningSystem):
@@ -87,7 +85,7 @@ class System(ListeningSystem):
         self.control = 1
         self.power = 1
         self.emergency = 2
-        self.gregorian_cap = Value(c_int, 1)
+        self.gregorian_cap = 1
         self.last_executed_command = 0
         self.timer_value = timer_value
         self.servos = {
@@ -104,7 +102,7 @@ class System(ListeningSystem):
             list(self.servos.keys()) + ['GREGORIAN_CAP'],
             self.configurations
         )
-        self.stop = Value(c_bool, False)
+        self.stop = threading.Event()
         self.update_thread = threading.Thread(
             target=self._update,
             args=(self.stop, self.servos)
@@ -122,12 +120,14 @@ class System(ListeningSystem):
             )
             self.server_thread.start()
         self.cover_timer = threading.Timer(1, lambda: None)
+        self._running = True
 
-    def __del__(self):
-        self.system_stop()
+    def __del__(self):  # skip coverage
+        if self._running:
+            self.system_stop()
 
     def system_stop(self):
-        self.stop.value = True
+        self.stop.set()
         self.update_thread.join()
         if self.cover_timer:
             if self.cover_timer.is_alive():
@@ -138,12 +138,15 @@ class System(ListeningSystem):
                 pass
         if self.rest_api:
             self.httpserver.shutdown()
+            self.httpserver.server_close()
             self.server_thread.join()
-        return super().system_stop()
+        retval = super().system_stop()
+        self._running = False
+        return retval
 
     @staticmethod
     def _update(stop, servos):
-        while not stop.value:
+        while not stop.is_set():
             now = time.time()
             for _, servo in servos.items():
                 servo.get_status(now)
@@ -195,7 +198,7 @@ class System(ListeningSystem):
             answer += f'CONTROL={self.control}|'
             answer += f'POWER={self.power}|'
             answer += f'EMERGENCY={self.emergency}|'
-            answer += f'GREGORIAN_CAP={self.gregorian_cap.value}|'
+            answer += f'GREGORIAN_CAP={self.gregorian_cap}|'
             answer += f'LAST_EXECUTED_COMMAND={self.last_executed_command}'
             return answer
 
@@ -210,19 +213,19 @@ class System(ListeningSystem):
         for servo_name, servo in self.servos.items():
             coordinates = configuration[servo_name]
             servo.operative_mode_timer.cancel()
-            _change_atomic_value(servo.operative_mode, 0)
+            servo.operative_mode = 0
             # We should check the result of the next call but we ignore it and
             # assume setup positions are never out of range
             servo.set_coords(coordinates, 10, apply_offsets=False)
         gregorian_cap_position = configuration['GREGORIAN_CAP'][0]
         if (gregorian_cap_position
-                and self.gregorian_cap.value != gregorian_cap_position):
+                and self.gregorian_cap != gregorian_cap_position):
             self.cover_timer.cancel()
-            _change_atomic_value(self.gregorian_cap, 0)
+            self.gregorian_cap = 0
             self.cover_timer = threading.Timer(
                 self.timer_value,
-                _change_atomic_value,
-                args=(self.gregorian_cap, gregorian_cap_position)
+                _change_delayed_value,
+                args=(self, "gregorian_cap", gregorian_cap_position)
             )
             self.cover_timer.daemon = True
             self.cover_timer.start()
@@ -242,30 +245,27 @@ class System(ListeningSystem):
         if servo_id == 'GREGORIAN_CAP':
             if stow_pos not in range(5):
                 return self.bad
-            if self.gregorian_cap.value != stow_pos:
+            if self.gregorian_cap != stow_pos:
                 self.cover_timer.cancel()
-                if self.gregorian_cap.value <= 1 or stow_pos == 1:
-                    _change_atomic_value(self.gregorian_cap, 0)
+                if self.gregorian_cap <= 1 or stow_pos == 1:
+                    self.gregorian_cap = 0
                     self.cover_timer = threading.Timer(
                         self.timer_value,
-                        _change_atomic_value,
-                        args=(self.gregorian_cap, stow_pos)
+                        _change_delayed_value,
+                        args=(self, "gregorian_cap", stow_pos)
                     )
                     self.cover_timer.daemon = True
                     self.cover_timer.start()
                 else:
-                    _change_atomic_value(
-                        self.gregorian_cap,
-                        stow_pos
-                    )
+                    self.gregorian_cap = stow_pos
         else:
             servo = self.servos.get(servo_id)
             servo.operative_mode_timer.cancel()
-            _change_atomic_value(servo.operative_mode, 0)
+            servo.operative_mode = 0
             servo.operative_mode_timer = threading.Timer(
                 self.timer_value,
-                _change_atomic_value,
-                args=(servo.operative_mode, 20)  # STOW
+                _change_delayed_value,
+                args=(servo, "operative_mode", 20)  # STOW
             )
             servo.operative_mode_timer.daemon = True
             servo.operative_mode_timer.start()
@@ -280,7 +280,7 @@ class System(ListeningSystem):
             return self.bad
         servo = self.servos.get(servo_id)
         servo.operative_mode_timer.cancel()
-        _change_atomic_value(servo.operative_mode, 30)  # STOP
+        servo.operative_mode = 30  # STOP
         self.last_executed_command = self.plc_time()
         return self.good()
 
@@ -300,7 +300,7 @@ class System(ListeningSystem):
         except ValueError:
             return self.bad
         servo.operative_mode_timer.cancel()
-        _change_atomic_value(servo.operative_mode, 0)
+        servo.operative_mode = 0
         retval = servo.set_coords(coords, 40)
         if retval:
             self.last_executed_command = self.plc_time()
@@ -406,7 +406,7 @@ class System(ListeningSystem):
                     ))
                 servo.pt_table = pt_table
             self.last_executed_command = self.plc_time()
-            _change_atomic_value(servo.operative_mode, 50)  # PROGRAMTRACK
+            servo.operative_mode = 50  # PROGRAMTRACK
             return self.good()
 
     def _offset(self, args):
@@ -445,7 +445,7 @@ class Servo:
         self.enabled = 1
         self.status = 1
         self.block = 2
-        self.operative_mode = Value(c_int, 0)
+        self.operative_mode = 0
         self.future_oper_mode = 0
         self.DOF = dof
         self.coords = [0] * self.DOF
@@ -463,7 +463,7 @@ class Servo:
 
     def __del__(self):
         if self.operative_mode_timer:
-            if self.operative_mode_timer.is_alive():
+            if self.operative_mode_timer.is_alive():  # skip coverage
                 self.operative_mode_timer.cancel()
             try:
                 self.operative_mode_timer.join()
@@ -476,8 +476,8 @@ class Servo:
         answer = f',{self.name}_ENABLED={self.enabled}|'
         answer += f'{self.name}_STATUS={self.status}|'
         answer += f'{self.name}_BLOCK={self.block}|'
-        answer += f'{self.name}_OPERATIVE_MODE={self.operative_mode.value}|'
-        if self.operative_mode.value == 50:
+        answer += f'{self.name}_OPERATIVE_MODE={self.operative_mode}|'
+        if self.operative_mode == 50:
             pt_table = []
             with self.trajectory_lock:
                 pt_table = self.pt_table
@@ -487,7 +487,7 @@ class Servo:
                 if now >= first_time:
                     for index in range(self.DOF):
                         coord = splev(now, pt_table[index]).item(0)
-                        if math.isnan(coord):
+                        if math.isnan(coord):  # skip coverage
                             continue
                         coord = max(coord, self.min_coord[index])
                         coord = min(coord, self.max_coord[index])
@@ -504,7 +504,7 @@ class Servo:
                         self.trajectory_point_id = None
                         self.trajectory = [[] for _ in range(self.DOF)]
                         self.pt_table = []
-        elif self.operative_mode.value in [20, 30]:  # STOW or STOP
+        elif self.operative_mode in [20, 30]:  # STOW or STOP
             self.cmd_coords = self.coords
         elif self.coords != self.cmd_coords or self.future_oper_mode != 0:
             # We commanded a preset and changed the commanded coords, move
@@ -520,10 +520,7 @@ class Servo:
             ]
             self.coords = coords
             if self.coords == self.cmd_coords:
-                _change_atomic_value(
-                    self.operative_mode,
-                    self.future_oper_mode
-                )
+                self.operative_mode = self.future_oper_mode
                 self.future_oper_mode = 0
         return answer
 

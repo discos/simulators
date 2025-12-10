@@ -157,7 +157,6 @@ class System(ListeningSystem):
         return att
 
     def parse(self, byte):
-        #  print(byte)
         if byte == self.tail:
             msg = self.msg[:-1]
             self.msg = ''
@@ -172,7 +171,6 @@ class System(ListeningSystem):
 
         :param msg: the received command, comprehensive of its header and tail.
         """
-        print(msg)
         args = [x.strip() for x in msg.split(' ')]
         try:
             device_code = list(self.devices.keys())[
@@ -496,9 +494,6 @@ class System(ListeningSystem):
             brd, a = zip(*self.atts_in_boards)
             for board in selected_boards:
                 b_idx = selected_boards.index(board)
-                #  print(brd)
-                #  print(board["ATT"])
-                #  print(board["ATT"][a[out_idx[b_idx]]])
                 if ((params[2] == '+3' or params[2] == '-3') and
                         not (0 <= (float(board["ATT"][a[out_idx[b_idx]]])
                         + float(params[2])) <= 31.5)):
@@ -549,9 +544,6 @@ class System(ListeningSystem):
             brd, a = zip(*self.atts_in_boards)
             for board in selected_boards:
                 b_idx = selected_boards.index(board)
-                #  print(brd)
-                #  print(board["ATT"])
-                #  print(board["ATT"][a[out_idx[b_idx]]])
 
                 if ((board["Status"] == 1) or (board["Address"] not in brd)):
                     retval += (
@@ -606,9 +598,6 @@ class System(ListeningSystem):
             brd, a = zip(*self.amps_in_boards)
             for board in selected_boards:
                 b_idx = selected_boards.index(board)
-                #  print(brd)
-                #  print(board["AMP"])
-                #  print(board["AMP"][a[out_idx[b_idx]]])
                 if (float(params[2]) not in [0, 1]):
                     retval += (
                         f'ERR DBE {params[1]} BOARD '
@@ -647,9 +636,6 @@ class System(ListeningSystem):
             brd, a = zip(*self.amps_in_boards)
             for board in selected_boards:
                 b_idx = selected_boards.index(board)
-                #  print(brd)
-                #  print(board["AMP"])
-                #  print(board["AMP"][a[out_idx[b_idx]]])
 
                 if ((board["Status"] == 1) or (board["Address"] not in brd)):
                     retval += (
@@ -685,9 +671,6 @@ class System(ListeningSystem):
             brd, a = zip(*self.eqs_in_boards)
             for board in selected_boards:
                 b_idx = selected_boards.index(board)
-                #  print(brd)
-                #  print(board["EQ"])
-                #  print(board["EQ"][a[out_idx[b_idx]]])
                 if (float(params[2]) not in [0, 1]):
                     retval += (
                         f'ERR DBE {params[1]} BOARD '
@@ -723,9 +706,6 @@ class System(ListeningSystem):
             brd, a = zip(*self.eqs_in_boards)
             for board in selected_boards:
                 b_idx = selected_boards.index(board)
-                #  print(brd)
-                #  print(board["EQ"])
-                #  print(board["EQ"][a[out_idx[b_idx]]])
 
                 if ((board["Status"] == 1) or (board["Address"] not in brd)):
                     retval += (
@@ -760,9 +740,6 @@ class System(ListeningSystem):
             brd, a = zip(*self.bpfs_in_boards)
             for board in selected_boards:
                 b_idx = selected_boards.index(board)
-                #  print(brd)
-                #  print(board["BPF"])
-                #  print(board["BPF"][a[out_idx[b_idx]]])
                 if (float(params[2]) not in [0, 1]):
                     retval += (
                         f'ERR DBE {params[1]} BOARD '
@@ -798,9 +775,6 @@ class System(ListeningSystem):
             brd, a = zip(*self.bpfs_in_boards)
             for board in selected_boards:
                 b_idx = selected_boards.index(board)
-                #  print(brd)
-                #  print(board["BPF"])
-                #  print(board["BPF"][a[out_idx[b_idx]]])
 
                 if ((board["Status"] == 1) or (board["Address"] not in brd)):
                     retval += (

@@ -21,7 +21,6 @@ class TestSwitchMatrix(unittest.TestCase):
         msg = 'set IF_switch_config=2\r\n'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
-        print(msg)
         response = self.system.parse(msg)
         self.assertEqual(response, ans)
 
@@ -29,7 +28,6 @@ class TestSwitchMatrix(unittest.TestCase):
         msg = 'set IF_switch_config=2\r\n'
         for byte in msg:
             self.assertTrue(self.system.parse(byte))
-        print(msg)
         response = self.system.set_IF_switch_config("2")
         self.assertEqual(response, ans)
 

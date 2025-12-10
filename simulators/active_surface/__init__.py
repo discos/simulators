@@ -1,7 +1,5 @@
 import time
-from threading import Thread
-from multiprocessing import Value
-from ctypes import c_bool
+from threading import Thread, Event
 from socketserver import ThreadingTCPServer
 from simulators import utils
 from simulators.common import ListeningSystem
@@ -83,7 +81,7 @@ class System(ListeningSystem):
                 'max_usd_index cannot be lower than min_usd_index!'
             )
         self._set_default()
-        self.stop = Value(c_bool, False)
+        self.stop = Event()
         self.min_usd_index = min_usd_index
         self.drivers = {}
         for index in range(min_usd_index, max_usd_index + 1):
@@ -97,9 +95,13 @@ class System(ListeningSystem):
         self.positioning_thread.start()
 
     def __del__(self):
+        self.system_stop()
+
+    def system_stop(self):
         if self.initialized:
-            self.stop.value = True
+            self.stop.set()
             self.positioning_thread.join()
+        return super().system_stop()
 
     def _set_default(self):
         """Resets the received command string to its default value.
@@ -961,9 +963,9 @@ class System(ListeningSystem):
         :param drivers: the list of driver objects of the line
         :param stop: the signal that tells the thread to stop and complete
         :type drivers: list
-        :type stop: multiprocessing.Value"""
+        :type stop: threading.Event"""
         t0 = time.time()
-        while not stop.value:
+        while not stop.is_set():
             t1 = time.time()
             elapsed = t1 - t0
             t0 = t1

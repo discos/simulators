@@ -1,6 +1,4 @@
 import time
-from multiprocessing import Array
-from ctypes import c_char
 from simulators import utils
 from simulators.acu.motor_status import MotorStatus
 
@@ -18,7 +16,7 @@ class SimpleAxisStatus:
         for __ in range(n_motors):
             self.motor_status.append(MotorStatus())
 
-        self.status = Array(c_char, 92)
+        self.status = bytearray(92)
 
         self.simulation = False
         self.axis_ready = True
@@ -126,7 +124,7 @@ class SimpleAxisStatus:
 
     @property
     def simulation(self):
-        return bool(utils.bytes_to_uint(self.status[0]))
+        return bool(self.status[0])
 
     @simulation.setter
     def simulation(self, value):
@@ -139,7 +137,7 @@ class SimpleAxisStatus:
 
     @property
     def axis_ready(self):
-        return bool(utils.bytes_to_uint(self.status[1]))
+        return bool(self.status[1])
 
     @axis_ready.setter
     def axis_ready(self, value):
@@ -152,7 +150,7 @@ class SimpleAxisStatus:
 
     @property
     def confOk(self):
-        return bool(utils.bytes_to_uint(self.status[2]))
+        return bool(self.status[2])
 
     @confOk.setter
     def confOk(self, value):
@@ -165,7 +163,7 @@ class SimpleAxisStatus:
 
     @property
     def initOk(self):
-        return bool(utils.bytes_to_uint(self.status[3]))
+        return bool(self.status[3])
 
     @initOk.setter
     def initOk(self, value):
@@ -178,7 +176,7 @@ class SimpleAxisStatus:
 
     @property
     def override(self):
-        return bool(utils.bytes_to_uint(self.status[4]))
+        return bool(self.status[4])
 
     @override.setter
     def override(self, value):
@@ -191,7 +189,7 @@ class SimpleAxisStatus:
 
     @property
     def low_power_mode(self):
-        return bool(utils.bytes_to_uint(self.status[5]))
+        return bool(self.status[5])
 
     @low_power_mode.setter
     def low_power_mode(self, value):
@@ -208,7 +206,7 @@ class SimpleAxisStatus:
 
     @property
     def Param_Fault(self):
-        return bool(int(self.warnings[0]))
+        return bool(self.warnings[0])
 
     @Param_Fault.setter
     def Param_Fault(self, value):
@@ -1080,7 +1078,7 @@ class SimpleAxisStatus:
 
     @property
     def stowed(self):
-        return bool(utils.bytes_to_uint(self.status[60]))
+        return bool(self.status[60])
 
     @stowed.setter
     def stowed(self, value):
@@ -1093,7 +1091,7 @@ class SimpleAxisStatus:
 
     @property
     def stowPosOk(self):
-        return bool(utils.bytes_to_uint(self.status[61]))
+        return bool(self.status[61])
 
     @stowPosOk.setter
     def stowPosOk(self, value):
@@ -1447,7 +1445,7 @@ class MasterAxisStatus(SimpleAxisStatus):
         self.v_Soll = desired_rate
 
         t0 = time.time()
-        while not stop.value:
+        while not stop.is_set():
             t1 = time.time()
             delta_time = t1 - t0
             t0 = t1
@@ -1728,7 +1726,7 @@ class MasterAxisStatus(SimpleAxisStatus):
         t0 = time.time()
         next_pos = None
         final_pos = None
-        while not stop.value:
+        while not stop.is_set():
             t1 = time.time()
             delta_time = t1 - t0
             t0 = t1

@@ -20,7 +20,7 @@ class TestMinorServos(unittest.TestCase):
         )
 
     def tearDown(self):
-        del self.system
+        self.system.system_stop()
 
     def test_unknown_command(self):
         cmd = f'UNKNOWN{tail}'
@@ -196,7 +196,7 @@ class TestMinorServos(unittest.TestCase):
                 expected_coords = configuration[servo.name]
                 if any(coord is not None for coord in expected_coords):
                     # Should be in SETUP mode
-                    self.assertEqual(servo.operative_mode.value, 10)
+                    self.assertEqual(servo.operative_mode, 10)
         fast_time.stop()
 
     def test_setup_no_wait(self):
@@ -226,8 +226,8 @@ class TestMinorServos(unittest.TestCase):
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
             self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
-            time.sleep(DEFAULT_TIMER_VALUE + 1)
-            self.assertEqual(servo.operative_mode.value, 20)  # STOW mode
+            time.sleep(2 * DEFAULT_TIMER_VALUE)
+            self.assertEqual(servo.operative_mode, 20)  # STOW mode
         fast_time.stop()
 
     def test_stow_gregorian_cap(self):
@@ -238,8 +238,8 @@ class TestMinorServos(unittest.TestCase):
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
             self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
-            time.sleep(DEFAULT_TIMER_VALUE + 1)
-            self.assertEqual(self.system.gregorian_cap.value, stow_pos)
+            time.sleep(2 * DEFAULT_TIMER_VALUE)
+            self.assertEqual(self.system.gregorian_cap, stow_pos)
         fast_time.stop()
 
     def test_stow_gregorian_air_blade(self):
@@ -249,13 +249,13 @@ class TestMinorServos(unittest.TestCase):
         for byte in cmd[:-1]:
             self.assertTrue(self.system.parse(byte))
         self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
-        time.sleep(DEFAULT_TIMER_VALUE + 1)
-        self.assertEqual(self.system.gregorian_cap.value, 2)
+        time.sleep(2 * DEFAULT_TIMER_VALUE)
+        self.assertEqual(self.system.gregorian_cap, 2)
         cmd = f'STOW=GREGORIAN_CAP,3{tail}'
         for byte in cmd[:-1]:
             self.assertTrue(self.system.parse(byte))
         self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
-        self.assertEqual(self.system.gregorian_cap.value, 3)
+        self.assertEqual(self.system.gregorian_cap, 3)
         fast_time.stop()
 
     def test_stow_gregorian_cap_wrong_pos(self):
@@ -297,7 +297,7 @@ class TestMinorServos(unittest.TestCase):
                 self.assertTrue(self.system.parse(byte))
             self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
             time.sleep(0.2)
-            self.assertEqual(servo.operative_mode.value, 30)  # STOP mode
+            self.assertEqual(servo.operative_mode, 30)  # STOP mode
 
     def test_stop_no_arguments(self):
         cmd = f'STOP{tail}'
@@ -321,11 +321,11 @@ class TestMinorServos(unittest.TestCase):
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
             self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
-            self.assertEqual(servo.operative_mode.value, 0)  # moving axes
+            self.assertEqual(servo.operative_mode, 0)  # moving axes
         time.sleep(1)
         for servo_id, servo in self.system.servos.items():
             self.assertEqual(mapping[servo_id], servo.coords)
-            self.assertEqual(servo.operative_mode.value, 40)  # PRESET mode
+            self.assertEqual(servo.operative_mode, 40)  # PRESET mode
 
     def test_preset_oor(self):
         for servo_id, servo in self.system.servos.items():
@@ -375,7 +375,7 @@ class TestMinorServos(unittest.TestCase):
                 self.assertTrue(self.system.parse(byte))
             if servo.program_track_capable:
                 self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
-                self.assertEqual(servo.operative_mode.value, 50)
+                self.assertEqual(servo.operative_mode, 50)
                 # PROGRAMTRACK mode
             else:
                 self.assertRegex(self.system.parse(cmd[-1]), bad)
@@ -408,7 +408,7 @@ class TestMinorServos(unittest.TestCase):
                         self.system.parse(cmd[-1]),
                         f'{good}{tail}$'
                     )
-                    self.assertEqual(servo.operative_mode.value, 50)
+                    self.assertEqual(servo.operative_mode, 50)
                     # PROGRAMTRACK mode
                 else:
                     self.assertRegex(self.system.parse(cmd[-1]), bad)
@@ -458,7 +458,7 @@ class TestMinorServos(unittest.TestCase):
                 self.assertTrue(self.system.parse(byte))
             if servo.program_track_capable:
                 self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
-                self.assertEqual(servo.operative_mode.value, 50)
+                self.assertEqual(servo.operative_mode, 50)
                 # PROGRAMTRACK mode
             else:
                 self.assertRegex(self.system.parse(cmd[-1]), bad)
@@ -602,7 +602,7 @@ class TestRESTApi(unittest.TestCase):
         )
 
     def tearDown(self):
-        del self.system
+        self.system.system_stop()
 
     def test_rest_GET(self):
         for url in VBrainRequestHandler.urls:

@@ -1,9 +1,7 @@
 from bisect import bisect_left
 from copy import deepcopy
-from multiprocessing import Array
 from threading import Lock
-from ctypes import c_char
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 try:
     import numpy as np
 except ImportError as ex:
@@ -43,7 +41,7 @@ class PointingStatus:
         self.time_source_offset = timedelta(0)
         self.time_offset = timedelta(0)
 
-        self.status = Array(c_char, 129)
+        self.status = bytearray(129)
         self.confVersion = 0
         self.confOk = True
         self.posEncAz = 0
@@ -228,9 +226,9 @@ class PointingStatus:
 
     def actual_time(self):
         """This method returns the actual ACU time, which is equal to the
-        current UTC time plus an arbitrary offset."""
+        current timezone.utc time plus an arbitrary offset."""
         return (
-            datetime.utcnow()
+            datetime.now(timezone.utc)
             + self.time_source_offset
             + self.time_offset
         )
@@ -280,7 +278,7 @@ class PointingStatus:
         elif parameter_1 == 3:
             self.time_source_offset = (
                 utils.mjd_to_date(parameter_2)
-                - datetime.utcnow()
+                - datetime.now(timezone.utc)
             )
 
         self.timeSource = int(parameter_1)
@@ -515,7 +513,7 @@ class PointingStatus:
 
     @property
     def confOk(self):
-        return bool(utils.bytes_to_uint(self.status[8]))
+        return bool(self.status[8])
 
     @confOk.setter
     def confOk(self, value):
@@ -524,7 +522,7 @@ class PointingStatus:
         # True: initialization of pointing completed
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[8] = value
+        self.status[8:9] = bytes(value)
 
     @property
     def posEncAz(self):
@@ -574,7 +572,7 @@ class PointingStatus:
 
     @property
     def posCorrTableAzOn(self):
-        return bool(utils.bytes_to_uint(self.status[25]))
+        return bool(self.status[25])
 
     @posCorrTableAzOn.setter
     def posCorrTableAzOn(self, value):
@@ -583,11 +581,11 @@ class PointingStatus:
         # True: pos. of the correction table is added onto the encoder pos.
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[25] = value
+        self.status[25:26] = bytes(value)
 
     @property
     def encAzFault(self):
-        return bool(utils.bytes_to_uint(self.status[26]))
+        return bool(self.status[26])
 
     @encAzFault.setter
     def encAzFault(self, value):
@@ -596,11 +594,11 @@ class PointingStatus:
         # True: position encoder azimuth reports an error
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[26] = value
+        self.status[26:27] = bytes(value)
 
     @property
     def sectorSwitchAz(self):
-        return bool(utils.bytes_to_uint(self.status[27]))
+        return bool(self.status[27])
 
     @sectorSwitchAz.setter
     def sectorSwitchAz(self, value):
@@ -609,7 +607,7 @@ class PointingStatus:
         # True: upper sector active
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[27] = value
+        self.status[27:28] = bytes(value)
 
     @property
     def posEncEl(self):
@@ -659,7 +657,7 @@ class PointingStatus:
 
     @property
     def posCorrTableElOn(self):
-        return bool(utils.bytes_to_uint(self.status[44]))
+        return bool(self.status[44])
 
     @posCorrTableElOn.setter
     def posCorrTableElOn(self, value):
@@ -668,11 +666,11 @@ class PointingStatus:
         # True: pos. of the correction table is added onto the encoder pos.
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[44] = value
+        self.status[44:45] = bytes(value)
 
     @property
     def encElFault(self):
-        return bool(utils.bytes_to_uint(self.status[45]))
+        return bool(self.status[45])
 
     @encElFault.setter
     def encElFault(self, value):
@@ -681,7 +679,7 @@ class PointingStatus:
         # True: position encoder elevation reports an error
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[45] = value
+        self.status[45:46] = bytes(value)
 
     @property
     def posEncCw(self):
@@ -708,7 +706,7 @@ class PointingStatus:
 
     @property
     def encCwFault(self):
-        return bool(utils.bytes_to_uint(self.status[54]))
+        return bool(self.status[54])
 
     @encCwFault.setter
     def encCwFault(self, value):
@@ -717,7 +715,7 @@ class PointingStatus:
         # True: position encoder cable wrap reports an error
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[54] = value
+        self.status[54:55] = bytes(value)
 
     @property
     def timeSource(self):
@@ -757,7 +755,7 @@ class PointingStatus:
 
     @property
     def clockOnline(self):
-        return bool(utils.bytes_to_uint(self.status[73]))
+        return bool(self.status[73])
 
     @clockOnline.setter
     def clockOnline(self, value):
@@ -766,11 +764,11 @@ class PointingStatus:
         # True: GPS receiver sends data
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[73] = value
+        self.status[73:74] = bytes(value)
 
     @property
     def clockOK(self):
-        return bool(utils.bytes_to_uint(self.status[74]))
+        return bool(self.status[74])
 
     @clockOK.setter
     def clockOK(self, value):
@@ -779,7 +777,7 @@ class PointingStatus:
         # True: GPS receiver sends clock ok
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[74] = value
+        self.status[74:75] = bytes(value)
 
     @property
     def year(self):

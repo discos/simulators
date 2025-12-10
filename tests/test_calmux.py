@@ -57,7 +57,7 @@ class TestCalmux(unittest.TestCase):
 
     def test_get_status_wrong_argc(self):
         with self.assertRaisesRegex(Exception, 'Received nak'):
-            print(self._send('? 0 0\n'))
+            _ = self._send('? 0 0\n')
 
     def test_set_input(self, channel=0, polarity=0):
         message = f'I {channel} {polarity}\n'
