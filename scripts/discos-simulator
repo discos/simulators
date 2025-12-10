@@ -6,18 +6,50 @@
   $ discos-simulator start -s if_distributor
   $ discos-simulator stop -s if_distributor
 """
-from __future__ import print_function
 import importlib
 import subprocess
 import sys
-import time
-import socket
+import re
+import os
 from argparse import ArgumentParser, ArgumentTypeError
+from concurrent.futures import ThreadPoolExecutor
 
 from simulators.server import Simulator
 from simulators.utils import list_simulators
 
 AVAILABLE_SIMULATORS = list_simulators()
+PATTERN = re.compile(
+    r"discos-simulator\s+(?:-s\s+(\S+)\s+start|start\s+-s\s+(\S+))"
+)
+
+
+def running_simulators():
+    current_pid = os.getpid()
+    out = subprocess.check_output(["ps", "aux"], text=True)
+    result = set()
+    for line in out.splitlines():
+        parts = line.split(None, 2)
+        if len(parts) < 3:
+            continue
+        try:
+            pid = int(parts[1])
+        except ValueError:
+            continue
+        if pid == current_pid:
+            continue
+        m = PATTERN.search(line)
+        if m:
+            n = m.group(1) or m.group(2)
+            result.add(n)
+    return sorted(result)
+
+
+def wait_until_started(process):
+    for line in process.stdout:
+        sys.stdout.write(line)
+        sys.stdout.flush()
+        if "running" in line:
+            return
 
 
 def system_from_arg(system_name):
@@ -35,7 +67,7 @@ def system_from_arg(system_name):
 parser = ArgumentParser()
 parser.add_argument(
     "action",
-    choices=["start", "stop", "list"]
+    choices=["start", "stop", "status", "list"]
 )
 parser.add_argument(
     "-s", "--system",
@@ -49,62 +81,106 @@ parser.add_argument(
     required=False,
     help="System configuration type: IFD_14_channels for if_distributor, ...",
 )
-args = parser.parse_args()
 
-if args.action == "list":
-    print(
-        "Available simulators: '"
-        + "', '".join(AVAILABLE_SIMULATORS)
-        + "'."
-    )
+if __name__ == "__main__":
+    kwargs = {}
 
-kwargs = {}
+    args = parser.parse_args()
 
-if args.type:
-    name = args.system.__name__.rsplit(".", 1)[1]
-    if not args.system:
-        parser.error(
-            "The '--type' argument only has to be used "
-            + "in conjunction with the '--system' argument."
-        )
-    try:
-        systems = getattr(args.system, "systems")
-    except AttributeError:
-        parser.error(
-            f"System '{name}' has no configurations other than the default one"
-            + ". Omit the '--type' argument to start the simulator properly."
-        )
-    if args.type not in systems:
-        err_string = (
-            f"Configuration '{args.type}' for system '{name}' not found.\n"
-        )
-        err_string += "Available configurations for desired simulator:\n"
-        err_string += "'" + "', ".join(systems) + "'."
-        parser.error(err_string)
-    kwargs["system_type"] = args.type
-
-if args.action == "start":
-    if args.system:
-        try:
-            simulator = Simulator(args.system, **kwargs)
-            simulator.start()
-        except socket.error:
-            name = args.system.__name__.rsplit(".", 1)[1]
-            print(
-                f"Cannot start simulator '{name}', address already in use."
+    if args.type:
+        sim = args.system.__name__.rsplit(".", 1)[1]
+        if not args.system:
+            parser.error(
+                "The '--type' argument only has to be used "
+                + "in conjunction with the '--system' argument."
             )
-            sys.exit(1)
-    else:
-        for sim in AVAILABLE_SIMULATORS:
-            # pylint: disable=consider-using-with
-            subprocess.Popen([sys.argv[0], "start", "-s", sim])
-        time.sleep(3)
-elif args.action == "stop":
-    if args.system:
-        simulator = Simulator(args.system, **kwargs)
-        simulator.stop()
-    else:
-        for sim in AVAILABLE_SIMULATORS:
-            sim = importlib.import_module(f"simulators.{sim}")
-            simulator = Simulator(sim, **kwargs)
-            simulator.stop()
+        try:
+            systems = getattr(args.system, "systems")
+        except AttributeError:
+            parser.error(
+                f"System '{sim}' has no configurations other than the default "
+                + "one. Omit the '--type' argument to start the simulator "
+                + "properly."
+            )
+        if args.type not in systems:
+            err_string = (
+                f"Configuration '{args.type}' for system '{sim}' not found.\n"
+            )
+            err_string += "Available configurations for desired simulator:\n"
+            err_string += "'" + "', ".join(systems) + "'."
+            parser.error(err_string)
+        kwargs["system_type"] = args.type
+
+    if args.action == "list":
+        print(
+            "Available simulators: '"
+            + "', '".join(AVAILABLE_SIMULATORS)
+            + "'."
+        )
+        running = running_simulators()
+        if running:
+            print(
+                "Running simulators: '"
+                + "', '".join(running)
+                + "'."
+            )
+    if args.action == "status":
+        running = running_simulators()
+        if running:
+            print(
+                "Running simulators: '"
+                + "', '".join(running)
+                + "'."
+            )
+        else:
+            print("No simulator is running.")
+    elif args.action == "start":
+        running = running_simulators()
+        if args.system:
+            sim = args.system.__name__.split('.')[-1]
+            if sim not in running:
+                simulator = Simulator(args.system, **kwargs)
+                simulator.start()
+            else:
+                print(f"Simulator '{sim}' already running.")
+        else:
+            processes = []
+            for sim in AVAILABLE_SIMULATORS:
+                if sim in running:
+                    print(f"Simulator '{sim}' already running.")
+                    continue
+                command = \
+                    [sys.executable, "-u", sys.argv[0], "-s", sim, "start"]
+                # pylint: disable=consider-using-with
+                p = subprocess.Popen(
+                    command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    bufsize=1
+                )
+                processes.append(p)
+            if processes:
+                futures = []
+                executor = ThreadPoolExecutor(max_workers=len(processes))
+                for proc in processes:
+                    fut = executor.submit(wait_until_started, proc)
+                    futures.append(fut)
+                executor.shutdown(wait=True)
+    elif args.action == "stop":
+        running = running_simulators()
+        if args.system:
+            name = args.system.__name__.split('.')[-1]
+            if name not in running:
+                print(f"Simulator '{name}' is not running.")
+            else:
+                simulator = Simulator(args.system, **kwargs)
+                simulator.stop()
+        else:
+            for name in AVAILABLE_SIMULATORS:
+                if name not in running:
+                    print(f"Simulator '{name}' is not running.")
+                else:
+                    sim = importlib.import_module(f"simulators.{name}")
+                    simulator = Simulator(sim, **kwargs)
+                    simulator.stop()

@@ -243,6 +243,15 @@ class Server:
             )
         if not l_address and not s_address:
             raise ValueError('You must specify at least one server.')
+        for address in (l_address, s_address):
+            if not address:
+                continue
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                try:
+                    s.bind(address)
+                finally:
+                    s.close()
+
         self.system_cls = system_cls
         self.system_kwargs = kwargs
         self.system = None
@@ -342,20 +351,23 @@ class Simulator:
         started_servers = []
         process_class = mp.get_context(context).Process
         executor = threading.Thread
+        servers = []
         try:
             for l_addr, s_addr, s_type, kwargs in self.servers:
                 kwargs.update(self.kwargs)
                 s = Server(
                     self.system, s_type, kwargs, l_addr, s_addr
                 )
+                servers.append(s)
+            for s in servers:
                 started = mp.Event()
-                started_servers.append(started)
                 p = executor(
                     target=s.serve_forever,
                     args=(started,),
                     daemon=daemon
                 )
                 self.processes.append(p)
+                started_servers.append(started)
                 executor = process_class
             for process in self.processes:
                 process.start()
@@ -371,6 +383,8 @@ class Simulator:
         except KeyboardInterrupt:
             print('')  # Skip the line displaying the SIGINT character
             self.stop()
+        except OSError:
+            print(f"Simulator '{self.simulator_name}' already running.")
 
     def stop(self):
         """Stops a simulator by sending the custom `$system_stop%%%%%` command

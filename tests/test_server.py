@@ -422,6 +422,24 @@ class TestServerVarious(unittest.TestCase):
                 l_address=address
             )
 
+    def test_server_start_twice(self):
+        address = next(address_generator)
+        with self.assertRaises(OSError):
+            s1 = Server(
+                ListeningTestSystem,
+                ThreadingTCPServer,
+                kwargs={},
+                l_address=address
+            )
+            s1.start()
+            s2 = Server(
+                ListeningTestSystem,
+                ThreadingTCPServer,
+                kwargs={},
+                l_address=address
+            )
+            s2.start()
+
 
 class TestSimulator(unittest.TestCase):
 
@@ -563,6 +581,28 @@ class TestSimulator(unittest.TestCase):
         t.start()
         simulator.start(has_started=e)
         t.join()
+
+    def test_start_simulator_twice(self):
+        try:
+            address = next(address_generator)
+            self.mymodule.servers = [(address, (), ThreadingTCPServer, {})]
+            self.mymodule.System = ListeningTestSystem
+
+            s1 = Simulator(self.mymodule)
+            s1.start(daemon=True)
+
+            stdout = StringIO()
+            sys.stdout = stdout
+            s2 = Simulator(self.mymodule)
+            s2.start(daemon=True)
+
+            s1.stop()
+            output = stdout.getvalue()
+        finally:
+            sys.stdout = sys.__stdout__
+            stdout.close()
+
+        self.assertIn("already running", output)
 
 
 def get_response(
