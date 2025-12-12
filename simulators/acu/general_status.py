@@ -148,7 +148,7 @@ class GeneralStatus:
         # BOOL, False: LCP inactive, True: active
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[5:6] = bytes(value)
+        self.status[5] = value
 
     @property
     def simulation(self):
@@ -159,7 +159,7 @@ class GeneralStatus:
         # BOOL, False: simulation inactive, True: active
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[6:7] = bytes(value)
+        self.status[6] = value
 
     @property
     def control_system_on(self):
@@ -170,7 +170,7 @@ class GeneralStatus:
         # BOOL, False: control system off, True: on
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[7:8] = bytes(value)
+        self.status[7] = value
 
     @property
     def service(self):
@@ -181,7 +181,7 @@ class GeneralStatus:
         # BOOL, False: service mode off, True: on
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[8:9] = bytes(value)
+        self.status[8] = value
 
     @property
     def HW_interlock(self):

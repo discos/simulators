@@ -522,7 +522,7 @@ class PointingStatus:
         # True: initialization of pointing completed
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[8:9] = bytes(value)
+        self.status[8] = value
 
     @property
     def posEncAz(self):
@@ -581,7 +581,7 @@ class PointingStatus:
         # True: pos. of the correction table is added onto the encoder pos.
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[25:26] = bytes(value)
+        self.status[25] = value
 
     @property
     def encAzFault(self):
@@ -594,7 +594,7 @@ class PointingStatus:
         # True: position encoder azimuth reports an error
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[26:27] = bytes(value)
+        self.status[26] = value
 
     @property
     def sectorSwitchAz(self):
@@ -607,7 +607,7 @@ class PointingStatus:
         # True: upper sector active
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[27:28] = bytes(value)
+        self.status[27] = value
 
     @property
     def posEncEl(self):
@@ -666,7 +666,7 @@ class PointingStatus:
         # True: pos. of the correction table is added onto the encoder pos.
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[44:45] = bytes(value)
+        self.status[44] = value
 
     @property
     def encElFault(self):
@@ -679,7 +679,7 @@ class PointingStatus:
         # True: position encoder elevation reports an error
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[45:46] = bytes(value)
+        self.status[45] = value
 
     @property
     def posEncCw(self):
@@ -715,7 +715,7 @@ class PointingStatus:
         # True: position encoder cable wrap reports an error
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[54:55] = bytes(value)
+        self.status[54] = value
 
     @property
     def timeSource(self):
@@ -764,7 +764,7 @@ class PointingStatus:
         # True: GPS receiver sends data
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[73:74] = bytes(value)
+        self.status[73] = value
 
     @property
     def clockOK(self):
@@ -777,7 +777,7 @@ class PointingStatus:
         # True: GPS receiver sends clock ok
         if not isinstance(value, bool):
             raise ValueError('Provide a boolean!')
-        self.status[74:75] = bytes(value)
+        self.status[74] = value
 
     @property
     def year(self):
