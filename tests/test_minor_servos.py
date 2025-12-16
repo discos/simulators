@@ -9,7 +9,7 @@ from simulators.utils import FastTimeMock
 
 tail = '\r\n'
 good = r'^OUTPUT:GOOD,[0-9]+\.[0-9]{6}'
-bad = f'^OUTPUT:BAD{tail}$'
+bad = f'^OUTPUT:BAD.*{tail}$'
 
 
 class TestMinorServos(unittest.TestCase):
@@ -412,6 +412,7 @@ class TestMinorServos(unittest.TestCase):
                     # PROGRAMTRACK mode
                 else:
                     self.assertRegex(self.system.parse(cmd[-1]), bad)
+        time.sleep(0.1)
         # Check if the trajectory is being tracked
         for servo_id, servo in self.system.servos.items():
             if servo.program_track_capable:
