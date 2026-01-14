@@ -183,21 +183,19 @@ class TestMinorServos(unittest.TestCase):
         # By closing here we test that the timers get canceled
 
     def test_setup(self):
-        fast_time = FastTimeMock(100)
-        fast_time.start()
-        configurations = self.system.configurations
-        for conf_name, configuration in configurations.items():
-            cmd = f'SETUP={conf_name}{tail}'
-            for byte in cmd[:-1]:
-                self.assertTrue(self.system.parse(byte))
-            self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
-            time.sleep(120)
-            for _, servo in self.system.servos.items():
-                expected_coords = configuration[servo.name]
-                if any(coord is not None for coord in expected_coords):
-                    # Should be in SETUP mode
-                    self.assertEqual(servo.operative_mode, 10)
-        fast_time.stop()
+        with FastTimeMock(100):
+            configurations = self.system.configurations
+            for conf_name, configuration in configurations.items():
+                cmd = f'SETUP={conf_name}{tail}'
+                for byte in cmd[:-1]:
+                    self.assertTrue(self.system.parse(byte))
+                self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
+                time.sleep(120)
+                for _, servo in self.system.servos.items():
+                    expected_coords = configuration[servo.name]
+                    if any(coord is not None for coord in expected_coords):
+                        # Should be in SETUP mode
+                        self.assertEqual(servo.operative_mode, 10)
 
     def test_setup_no_wait(self):
         cmd = f'SETUP=Gregoriano1{tail}'
@@ -219,44 +217,38 @@ class TestMinorServos(unittest.TestCase):
         self.assertRegex(self.system.parse(cmd[-1]), bad)
 
     def test_stow(self):
-        fast_time = FastTimeMock(100)
-        fast_time.start()
-        for servo_id, servo in self.system.servos.items():
-            cmd = f'STOW={servo_id},1{tail}'
-            for byte in cmd[:-1]:
-                self.assertTrue(self.system.parse(byte))
-            self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
-            time.sleep(2 * DEFAULT_TIMER_VALUE)
-            self.assertEqual(servo.operative_mode, 20)  # STOW mode
-        fast_time.stop()
+        with FastTimeMock(100):
+            for servo_id, servo in self.system.servos.items():
+                cmd = f'STOW={servo_id},1{tail}'
+                for byte in cmd[:-1]:
+                    self.assertTrue(self.system.parse(byte))
+                self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
+                time.sleep(2 * DEFAULT_TIMER_VALUE)
+                self.assertEqual(servo.operative_mode, 20)  # STOW mode
 
     def test_stow_gregorian_cap(self):
-        fast_time = FastTimeMock(100)
-        fast_time.start()
-        for stow_pos in [1, 2]:
-            cmd = f'STOW=GREGORIAN_CAP,{stow_pos}{tail}'
+        with FastTimeMock(100):
+            for stow_pos in [1, 2]:
+                cmd = f'STOW=GREGORIAN_CAP,{stow_pos}{tail}'
+                for byte in cmd[:-1]:
+                    self.assertTrue(self.system.parse(byte))
+                self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
+                time.sleep(2 * DEFAULT_TIMER_VALUE)
+                self.assertEqual(self.system.gregorian_cap, stow_pos)
+
+    def test_stow_gregorian_air_blade(self):
+        with FastTimeMock(100):
+            cmd = f'STOW=GREGORIAN_CAP,2{tail}'
             for byte in cmd[:-1]:
                 self.assertTrue(self.system.parse(byte))
             self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
             time.sleep(2 * DEFAULT_TIMER_VALUE)
-            self.assertEqual(self.system.gregorian_cap, stow_pos)
-        fast_time.stop()
-
-    def test_stow_gregorian_air_blade(self):
-        fast_time = FastTimeMock(100)
-        fast_time.start()
-        cmd = f'STOW=GREGORIAN_CAP,2{tail}'
-        for byte in cmd[:-1]:
-            self.assertTrue(self.system.parse(byte))
-        self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
-        time.sleep(2 * DEFAULT_TIMER_VALUE)
-        self.assertEqual(self.system.gregorian_cap, 2)
-        cmd = f'STOW=GREGORIAN_CAP,3{tail}'
-        for byte in cmd[:-1]:
-            self.assertTrue(self.system.parse(byte))
-        self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
-        self.assertEqual(self.system.gregorian_cap, 3)
-        fast_time.stop()
+            self.assertEqual(self.system.gregorian_cap, 2)
+            cmd = f'STOW=GREGORIAN_CAP,3{tail}'
+            for byte in cmd[:-1]:
+                self.assertTrue(self.system.parse(byte))
+            self.assertRegex(self.system.parse(cmd[-1]), f'{good}{tail}$')
+            self.assertEqual(self.system.gregorian_cap, 3)
 
     def test_stow_gregorian_cap_wrong_pos(self):
         cmd = f'STOW=GREGORIAN_CAP,5{tail}'

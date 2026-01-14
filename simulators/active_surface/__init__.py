@@ -1,5 +1,4 @@
 import time
-from threading import Thread, Event
 from socketserver import ThreadingTCPServer
 from simulators import utils
 from simulators.common import ListeningSystem
@@ -67,7 +66,6 @@ class System(ListeningSystem):
     slope_time = 10  # msec
 
     def __init__(self, min_usd_index=0, max_usd_index=31):
-        self.initialized = False
         if min_usd_index < 0 or min_usd_index > 31:
             raise ValueError(
                 'Choose a minimum USD index between 0 and 31!'
@@ -81,27 +79,10 @@ class System(ListeningSystem):
                 'max_usd_index cannot be lower than min_usd_index!'
             )
         self._set_default()
-        self.stop = Event()
         self.min_usd_index = min_usd_index
         self.drivers = {}
         for index in range(min_usd_index, max_usd_index + 1):
             self.drivers[index] = USD(index)
-        self.positioning_thread = Thread(
-            target=self._positioning,
-            args=(self.drivers, self.stop)
-        )
-        self.positioning_thread.daemon = True
-        self.initialized = True
-        self.positioning_thread.start()
-
-    def __del__(self):
-        self.system_stop()
-
-    def system_stop(self):
-        if self.initialized:
-            self.stop.set()
-            self.positioning_thread.join()
-        return super().system_stop()
 
     def _set_default(self):
         """Resets the received command string to its default value.
@@ -951,28 +932,3 @@ class System(ListeningSystem):
             else:
                 self.drivers[params[0]].set_working_mode(params[2])
                 return self.byte_ack
-
-    @staticmethod
-    def _positioning(drivers, stop):
-        """This method runs in a dedicated thread. Its purpose its to call the
-        `calc_position` method for each USD of the line. Using a thread for
-        each USD will result in having 1116 concurrent threads, which are
-        definitely too many threads. Using this behavior, the number of
-        concurrent threads is limited to 96, one for each single line.
-
-        :param drivers: the list of driver objects of the line
-        :param stop: the signal that tells the thread to stop and complete
-        :type drivers: list
-        :type stop: threading.Event"""
-        t0 = time.time()
-        while not stop.is_set():
-            t1 = time.time()
-            elapsed = t1 - t0
-            t0 = t1
-
-            for driver in drivers.values():
-                driver.calc_position(t1, elapsed)
-
-            t2 = time.time()
-            elapsed = t2 - t1
-            time.sleep(max(0.01 - elapsed, 0))
