@@ -177,16 +177,6 @@ class USD:
         return self._running
 
     @property
-    def cmd_position(self):
-        self._update_state()
-        return self._cmd_position
-
-    @property
-    def standby(self):
-        self._update_state()
-        return self._standby
-
-    @property
     def full_current(self):
         self._update_state()
         return self._full_current

@@ -468,7 +468,7 @@ class Servo:
                     if now >= first_time:
                         for index in range(self.DOF):
                             coord = splev(now, pt_table[index]).item(0)
-                            if math.isnan(coord):
+                            if math.isnan(coord):  # skip coverage
                                 continue
                             coord = max(coord, self.min_coord[index])
                             coord = min(coord, self.max_coord[index])
@@ -498,11 +498,10 @@ class Servo:
                     diff = self.cmd_coords[i] - self._coords[i]
                     dist = abs(diff)
                     step = self.max_delta[i] * elapsed
-
-                    if step >= dist:
-                        coords.append(self.cmd_coords[i])
-                    else:
-                        coords.append(self._coords[i] + sign(diff) * step)
+                    coords.append(
+                        self.cmd_coords[i] if step >= dist
+                        else self._coords[i] + sign(diff) * step
+                    )
                 self._coords = coords
                 if self._coords == self.cmd_coords:
                     self._operative_mode = self.future_oper_mode
