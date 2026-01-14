@@ -883,12 +883,12 @@ class FastTimeMock:
             kwargs or {}
         )
 
-    def start(self):
+    def __enter__(self):
         self._patch_time.start()
         self._patch_sleep.start()
         self._patch_timer.start()
 
-    def stop(self):
+    def __exit__(self, *_):
         self._patch_time.stop()
         self._patch_sleep.stop()
         self._patch_timer.stop()

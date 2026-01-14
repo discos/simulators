@@ -1,6 +1,6 @@
 import time
 from datetime import datetime, timedelta, timezone
-from threading import Thread, Event
+from threading import Thread, Event, RLock
 from queue import Queue, Empty
 from socketserver import ThreadingTCPServer
 from simulators import utils
@@ -99,8 +99,8 @@ class System(ListeningSystem, SendingSystem):
         statuses.append(self.FS.status)
         self._update_status(self.status, statuses)
 
-        self.subscribe_q = Queue()
-        self.unsubscribe_q = Queue()
+        self.subscribers = []
+        self.subscribers_lock = RLock()
 
         args = (
             self.stop,
@@ -111,8 +111,8 @@ class System(ListeningSystem, SendingSystem):
             self.command_threads,
             self._update_subsystems,
             self._update_status,
-            self.subscribe_q,
-            self.unsubscribe_q
+            self.subscribers,
+            self.subscribers_lock
         )
 
         self.update_thread = Thread(
@@ -194,22 +194,11 @@ class System(ListeningSystem, SendingSystem):
     @staticmethod
     def _update_loop(stop, sampling_time, status, subsystems, statuses,
                      cmd_queue, update_subsystems, update_status,
-                     subscribe_q, unsubscribe_q):
+                     subscribers, subscribers_lock):
         command_threads = []
         nxt = None
-        counter = 0
-        subscribers = []
+
         while not stop.is_set():
-            try:
-                sub = subscribe_q.get_nowait()
-                subscribers.append(sub)
-            except Empty:
-                pass
-            try:
-                sub = unsubscribe_q.get_nowait()
-                subscribers.remove(sub)
-            except Empty:
-                pass
             try:
                 command_threads.append(cmd_queue.get_nowait())
             except Empty:
@@ -221,29 +210,26 @@ class System(ListeningSystem, SendingSystem):
                     )
 
             update_subsystems(subsystems)
+            update_status(status, statuses)
 
-            if counter % 20 == 0:
-                update_status(status, statuses)
-                for q in subscribers:
-                    while True:
-                        try:
-                            q.get_nowait()
-                        except Empty:
-                            break
-                    q.put(bytes(status))
-                now = utils.bytes_to_real(status[721:729], precision=2)
-                now = utils.mjd_to_date(now)
-                counter = 0
-            else:
-                now = datetime.now(timezone.utc)
+            with subscribers_lock:
+                current_subscribers = list(subscribers)
 
-            counter += 1
+            for q in current_subscribers:
+                while True:
+                    try:
+                        q.get_nowait()
+                    except Empty:
+                        break
+                q.put(bytes(status))
+            now = utils.bytes_to_real(status[721:729], precision=2)
+            now = utils.mjd_to_date(now)
 
             correction = 0
             if nxt:
                 correction = max(0, (now - nxt).total_seconds())
                 now = nxt
-            nxt = now + timedelta(seconds=sampling_time / 20.)
+            nxt = now + timedelta(seconds=sampling_time)
 
             sleep_for = (nxt - datetime.now(timezone.utc)).total_seconds()
             sleep_for -= correction
@@ -253,10 +239,14 @@ class System(ListeningSystem, SendingSystem):
             cmd_queue.put(command_thread)
 
     def subscribe(self, q):
-        self.subscribe_q.put(q)
+        with self.subscribers_lock:
+            if q not in self.subscribers:
+                self.subscribers.append(q)
 
     def unsubscribe(self, q):
-        self.unsubscribe_q.put(q)
+        with self.subscribers_lock:
+            if q in self.subscribers:
+                self.subscribers.remove(q)
 
     def _parse_commands(self, msg):
         cmds_number = utils.string_to_int(msg[12:16])

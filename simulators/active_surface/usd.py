@@ -1,4 +1,5 @@
 import time
+from threading import RLock
 from queue import Queue
 from simulators.utils import sign
 
@@ -46,20 +47,22 @@ class USD:
     }
 
     def __init__(self, usd_index):
+        self.usd_index = usd_index
         self._set_default()
         self.last_movement = None
-        self.usd_index = usd_index
+        self._update_threshold = 0.01
+        self._lock = RLock()
 
     def _set_default(self):
         """Called at initialization or reset phases to restore default
         parameters."""
         self.reference_position = 0
-        self.current_position = 0
+        self._current_position = 0
         self.position_queue = Queue()
         self.delay_multiplier = 5  # x * delay_step. 255: no response
         self.standby_delay_multiplier = 0
         self.standby_mode = self.standby_modes.get(0)
-        self.current_percentage = 1.0
+        self._current_percentage = 1.0
         self.version = [1, 3]  # Major, minor
         self.driver_type = 0x21  # 0x20: USD50xxx, 0x21: USD60xxx
         self.slope_delayer = 1
@@ -82,16 +85,106 @@ class USD:
         # I/O lines combination assumed by the driver after positioning to HOME
         self.home_io_level = [0, 0, 0]
         self.home_io_enable = [0, 0, 0]
-        self.running = False  # True: driver is moving
+        self._running = False  # True: driver is moving
         self.delayed_execution = False  # True: positioning by TRIGGER event
         self.ready = False  # True: new position enqueued
-        self.full_current = True
+        self._full_current = True
         self.auto_resolution = False
         self.resolution = self.resolutions.get(1)
         self.velocity = 0
         self.baud_rate = self.baud_rates.get(0)
-        self.cmd_position = None
-        self.standby = False
+        self._cmd_position = None
+        self._standby = False
+        self._last_update_time = time.time()
+
+    def _update_state(self):
+        with self._lock:
+            now = time.time()
+            elapsed = now - self._last_update_time
+
+            if elapsed < self._update_threshold:
+                return
+
+            self._last_update_time = now
+
+            velocity = None
+            cmd_position = None
+
+            if self.velocity:
+                velocity = self.velocity
+                self._running = True
+            elif self._cmd_position is not None:
+                cmd_position = self._cmd_position
+                self._running = True
+            else:
+                self._running = False
+
+            if self._running:
+                self._current_percentage = 1.0
+                self._full_current = True
+                self._standby = False
+                self.last_movement = now
+
+                if velocity:
+                    frequency = abs(velocity)
+                    sign0 = sign(velocity)
+                elif cmd_position is not None:
+                    frequency = self.max_frequency
+                    sign0 = sign(cmd_position - self._current_position)
+
+                if sign0 != 0:
+                    steps_per_second = frequency * (128.0 / self.resolution)
+                    delta_steps = int(steps_per_second * elapsed)
+
+                    if delta_steps > 0:
+                        change = sign0 * delta_steps
+                        new_position = self._current_position + change
+
+                        if cmd_position is not None:
+                            if sign(cmd_position - new_position) != sign0:
+                                new_position = cmd_position
+                                self._cmd_position = None
+                                self._running = False
+                                self.last_movement = now
+
+                        new_position = max(new_position, self.min_position)
+                        new_position = min(new_position, self.max_position)
+
+                        self._current_position = new_position
+
+            if not self._running and not self._standby:
+                if self.last_movement:
+                    time_stopped = now - self.last_movement
+                    standby_delay = (
+                        self.standby_delay_multiplier * self.standby_delay_step
+                    )
+                    if time_stopped >= standby_delay:
+                        self._current_percentage = 1.0 - self.standby_mode
+                        if self.standby_mode > 0:
+                            self._full_current = False
+                        else:
+                            self._full_current = True
+                        self._standby = True
+
+    @property
+    def current_position(self):
+        self._update_state()
+        return self._current_position
+
+    @property
+    def running(self):
+        self._update_state()
+        return self._running
+
+    @property
+    def full_current(self):
+        self._update_state()
+        return self._full_current
+
+    @property
+    def current_percentage(self):
+        self._update_state()
+        return self._current_percentage
 
     def soft_reset(self):
         """Resets the USD to it default values. When a reset is performed, the
@@ -112,9 +205,9 @@ class USD:
             next_position, absolute = self.position_queue.get()
             if not self.velocity:
                 if absolute:
-                    self.cmd_position = next_position
+                    self._cmd_position = next_position
                 else:
-                    self.cmd_position = self.current_position + next_position
+                    self._cmd_position = self.current_position + next_position
             if self.position_queue.empty() is True:
                 self.ready = False
 
@@ -129,7 +222,8 @@ class USD:
         """Immediate stop. The USD stops even if it did not completed its
         previous positioning movement."""
         self.velocity = None
-        self.cmd_position = None
+        self._cmd_position = None
+        self._running = False
 
     def get_position(self):
         """Returns the USD current position.
@@ -349,7 +443,7 @@ class USD:
                 # Driver is already moving, return False
                 # so the parser can return a byte_nak
                 return False
-            self.cmd_position = cmd_position
+            self._cmd_position = cmd_position
         return True
 
     def set_relative_position(self, position):
@@ -378,7 +472,7 @@ class USD:
                 # Driver is already moving, return False
                 # so the parser can return a byte_nak
                 return False
-            self.cmd_position = cmd_position
+            self._cmd_position = cmd_position
         return True
 
     def rotate(self, rotation_sign):
@@ -397,7 +491,7 @@ class USD:
             # so the parser can return a byte_nak
             return False
         else:
-            self.cmd_position = rotation_sign * self.out_of_scale_position
+            self._cmd_position = rotation_sign * self.out_of_scale_position
             return True
 
     def set_velocity(self, velocity):
@@ -414,7 +508,7 @@ class USD:
         elif velocity == 0:
             velocity = None
         # Start rotating with given velocity without an acceleration ramp
-        self.cmd_position = None
+        self._cmd_position = None
         self.velocity = velocity
         return True
 
@@ -517,66 +611,3 @@ class USD:
         # binary_string[0:7] is currently unused
         self.baud_rate = self.baud_rates.get(int(binary_string[7], 2))
         #  params[1] is currently unused
-
-    def calc_position(self, now, elapsed):
-        """Calculates the current position of the USD considering its current
-        status and previously set parameters, along with the elapsed time since
-        last position calculation.
-
-        :param now: the current time in UNIX time
-        :param elapsed: the elapsed time in seconds since last position
-            calculation
-        :type elapsed: float"""
-        velocity = None
-        cmd_position = None
-        if self.velocity:
-            velocity = self.velocity
-            self.running = True
-        elif self.cmd_position is not None:
-            cmd_position = self.cmd_position
-            self.running = True
-        else:
-            self.running = False
-
-        if self.running:
-            self.current_percentage = 1.0
-            self.full_current = True
-            self.standby = False
-            self.last_movement = now
-            if velocity:
-                frequency = abs(velocity)
-                sign0 = sign(velocity)
-            elif cmd_position is not None:
-                # To be replaced with the slope frequency calculation
-                frequency = self.max_frequency
-                sign0 = sign(cmd_position - self.current_position)
-
-            new_position = None
-            if sign0:
-                steps_per_second = frequency * (128.0 / self.resolution)
-                delta = sign0 * int(round(steps_per_second * elapsed))
-                new_position = self.current_position + delta
-                new_position = max(new_position, self.min_position)
-                new_position = min(new_position, self.max_position)
-            if new_position is not None:
-                if cmd_position is not None:
-                    sign1 = sign(cmd_position - new_position)
-                    if sign1 != sign0:
-                        new_position = cmd_position
-                        self.cmd_position = None
-                        self.running = False
-                self.current_position = new_position
-        if not self.running and not self.standby:
-            if self.last_movement:
-                elapsed = now - self.last_movement
-                standby_delay = (
-                    self.standby_delay_multiplier * self.standby_delay_step
-                )
-                if elapsed >= standby_delay:
-                    self.current_percentage = 1.0 - self.standby_mode
-                    if self.standby_mode > 0:
-                        self.full_current = False
-                    else:
-                        self.full_current = True
-                    self.last_movement = None
-                    self.standby = True

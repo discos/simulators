@@ -103,16 +103,11 @@ class System(ListeningSystem):
             'DR_GFR3': Derotator('GFR3', self.stop),
             'DR_PFP': Derotator('PFP', self.stop),
         }
+        self.cover_timer = threading.Timer(1, lambda: None)
         setup_import(
             list(self.servos.keys()) + ['GREGORIAN_CAP'],
             self.configurations
         )
-        self.update_thread = threading.Thread(
-            target=self._update,
-            args=(self.stop, self.servos)
-        )
-        self.update_thread.daemon = True
-        self.update_thread.start()
         self.rest_api = rest_api
         if self.rest_api:
             self.httpserver = HTTPServer(
@@ -123,16 +118,12 @@ class System(ListeningSystem):
                 target=self.httpserver.serve_forever
             )
             self.server_thread.start()
-        self.cover_timer = threading.Timer(1, lambda: None)
-        self._running = True
 
     def __del__(self):  # skip coverage
-        if self._running:
-            self.system_stop()
+        self.system_stop()
 
     def system_stop(self):
         self.stop.set()
-        self.update_thread.join()
         if self.cover_timer:
             if self.cover_timer.is_alive():
                 self.cover_timer.cancel()
@@ -145,16 +136,7 @@ class System(ListeningSystem):
             self.httpserver.server_close()
             self.server_thread.join()
         retval = super().system_stop()
-        self._running = False
         return retval
-
-    @staticmethod
-    def _update(stop, servos):
-        while not stop.is_set():
-            now = time.time()
-            for _, servo in servos.items():
-                servo.get_status(now)
-            time.sleep(0.01)
 
     def parse(self, byte):
         self.msg += byte
@@ -269,7 +251,7 @@ class System(ListeningSystem):
             servo.operative_mode_timer = threading.Timer(
                 self.timer_value,
                 _change_delayed_value,
-                args=(servo, "operative_mode", 20)  # STOW
+                args=(servo, "_operative_mode", 20)  # STOW
             )
             servo.operative_mode_timer.daemon = True
             servo.operative_mode_timer.start()
@@ -408,19 +390,21 @@ class Servo:
 
     def __init__(self, name, dof=1, stop=None):
         self.name = name
+        self._lock = threading.RLock()
         self.enabled = 1
         self.status = 1
         self.block = 2
-        self.operative_mode = 0
+        self._operative_mode = 0
         self.future_oper_mode = 0
         self.DOF = dof
-        self.coords = [0] * self.DOF
-        self.cmd_coords = self.coords.copy()
+        self._coords = [0] * self.DOF
+        self.cmd_coords = self._coords.copy()
         self.offsets = [0] * self.DOF
-        self.last_status_read = 0
+        self._last_update_time = time.time()
+        self._update_threshold = 0.01
         self.operative_mode_timer = threading.Timer(1, lambda: None)
         if self.program_track_capable:
-            self.trajectory_lock = threading.Lock()
+            self.trajectory_lock = threading.RLock()
             self.trajectory_id = None
             self.trajectory_start_time = None
             self.trajectory_point_id = None
@@ -447,6 +431,89 @@ class Servo:
                 self.program_track_thread.join()
             except RuntimeError:
                 pass
+
+    @property
+    def operative_mode(self):
+        self._update_state()
+        return self._operative_mode
+
+    @operative_mode.setter
+    def operative_mode(self, value):
+        self._update_state()
+        self._operative_mode = value
+
+    @property
+    def coords(self):
+        self._update_state()
+        return self._coords
+
+    def _update_state(self, now=None):
+        if now is None:
+            now = time.time()
+        with self._lock:
+            elapsed = now - self._last_update_time
+
+            if elapsed < self._update_threshold:
+                return
+
+            self._last_update_time = now
+
+            if self._operative_mode == 50:
+                pt_table = []
+                with self.trajectory_lock:
+                    pt_table = self.pt_table
+                if pt_table:
+                    first_time = self.trajectory[0][0]
+                    last_time = self.trajectory[0][-1]
+                    if now >= first_time:
+                        for index in range(self.DOF):
+                            coord = splev(now, pt_table[index]).item(0)
+                            if math.isnan(coord):  # skip coverage
+                                continue
+                            coord = max(coord, self.min_coord[index])
+                            coord = min(coord, self.max_coord[index])
+                            delta = coord - self._coords[index]
+                            direction = sign(delta)
+                            delta = min(
+                                self.max_delta[index] * elapsed,
+                                abs(delta)
+                            )
+                            self._coords[index] += direction * delta
+                    if now > last_time:
+                        with self.trajectory_lock:
+                            self.trajectory_id = None
+                            self.trajectory_start_time = None
+                            self.trajectory_point_id = None
+                            self.trajectory = [[] for _ in range(self.DOF + 1)]
+                            self.pt_table = []
+            elif self._operative_mode in [20, 30]:
+                self.cmd_coords = self._coords
+            elif self._coords != self.cmd_coords or self.future_oper_mode != 0:
+                coords = []
+                for i in range(self.DOF):
+                    if self._coords[i] == self.cmd_coords[i]:
+                        coords.append(self.cmd_coords[i])
+                        continue
+
+                    diff = self.cmd_coords[i] - self._coords[i]
+                    dist = abs(diff)
+                    step = self.max_delta[i] * elapsed
+                    coords.append(
+                        self.cmd_coords[i] if step >= dist
+                        else self._coords[i] + sign(diff) * step
+                    )
+                self._coords = coords
+                if self._coords == self.cmd_coords:
+                    self._operative_mode = self.future_oper_mode
+                    self.future_oper_mode = 0
+
+    def get_status(self, now):
+        self._update_state(now)
+        answer = f',{self.name}_ENABLED={self.enabled}|'
+        answer += f'{self.name}_STATUS={self.status}|'
+        answer += f'{self.name}_BLOCK={self.block}|'
+        answer += f'{self.name}_OPERATIVE_MODE={self._operative_mode}|'
+        return answer
 
     def _program_track_worker(self, stop):
         while not stop.is_set():
@@ -490,61 +557,8 @@ class Servo:
                         ))
                     self.pt_table = pt_table
 
-    def get_status(self, now):
-        elapsed = now - self.last_status_read
-        self.last_status_read = now
-        answer = f',{self.name}_ENABLED={self.enabled}|'
-        answer += f'{self.name}_STATUS={self.status}|'
-        answer += f'{self.name}_BLOCK={self.block}|'
-        answer += f'{self.name}_OPERATIVE_MODE={self.operative_mode}|'
-        if self.operative_mode == 50:
-            pt_table = []
-            with self.trajectory_lock:
-                pt_table = self.pt_table
-            if pt_table:
-                first_time = self.trajectory[0][0]
-                last_time = self.trajectory[0][-1]
-                if now >= first_time:
-                    for index in range(self.DOF):
-                        coord = splev(now, pt_table[index]).item(0)
-                        if math.isnan(coord):  # skip coverage
-                            continue
-                        coord = max(coord, self.min_coord[index])
-                        coord = min(coord, self.max_coord[index])
-                        delta = coord - self.coords[index]
-                        direction = sign(delta)
-                        delta = min(
-                            self.max_delta[index] * elapsed, abs(delta)
-                        )
-                        self.coords[index] += direction * delta
-                if now > last_time:
-                    with self.trajectory_lock:
-                        self.trajectory_id = None
-                        self.trajectory_start_time = None
-                        self.trajectory_point_id = None
-                        self.trajectory = [[] for _ in range(self.DOF + 1)]
-                        self.pt_table = []
-        elif self.operative_mode in [20, 30]:  # STOW or STOP
-            self.cmd_coords = self.coords
-        elif self.coords != self.cmd_coords or self.future_oper_mode != 0:
-            # We commanded a preset and changed the commanded coords, move
-            delta = [a - b for a, b in zip(self.cmd_coords, self.coords)]
-            direction = sign(delta).tolist()
-            delta = [abs(d) for d in delta]
-            delta = [
-                min(self.max_delta[i] * elapsed, delta[i])
-                for i in range(self.DOF)
-            ]
-            coords = [
-                a + b * c for a, b, c in zip(self.coords, direction, delta)
-            ]
-            self.coords = coords
-            if self.coords == self.cmd_coords:
-                self.operative_mode = self.future_oper_mode
-                self.future_oper_mode = 0
-        return answer
-
     def set_coords(self, coords, future_oper_mode, apply_offsets=True):
+        self._update_state(time.time())
         for index, value in enumerate(coords):
             if value is None:
                 coords[index] = self.cmd_coords[index]
@@ -559,6 +573,7 @@ class Servo:
         return True
 
     def set_offsets(self, coords):
+        self._update_state(time.time())
         for index, value in enumerate(coords):
             self.offsets[index] = value
 
@@ -589,9 +604,9 @@ class PFP(Servo):
         answer += f'PFP_ELONG_Z_SLAVE={random.uniform(-10, 10):.6f}|'
         answer += f'PFP_ELONG_THETA_MASTER={random.uniform(-10, 10):.6f}|'
         answer += f'PFP_ELONG_THETA_SLAVE={random.uniform(-10, 10):.6f}|'
-        answer += f'PFP_TX={self.coords[0]:.6f}|'
-        answer += f'PFP_TZ={self.coords[1]:.6f}|'
-        answer += f'PFP_RTHETA={self.coords[2]:.6f}|'
+        answer += f'PFP_TX={self._coords[0]:.6f}|'
+        answer += f'PFP_TZ={self._coords[1]:.6f}|'
+        answer += f'PFP_RTHETA={self._coords[2]:.6f}|'
         answer += f'PFP_OFFSET_TX={self.offsets[0]:.6f}|'
         answer += f'PFP_OFFSET_TZ={self.offsets[1]:.6f}|'
         answer += f'PFP_OFFSET_RTHETA={self.offsets[2]:.6f}'
@@ -627,12 +642,12 @@ class SRP(Servo):
         answer += f'SRP_ELONG_Y1={random.uniform(-10, 10):.6f}|'
         answer += f'SRP_ELONG_Y2={random.uniform(-10, 10):.6f}|'
         answer += f'SRP_ELONG_X1={random.uniform(-10, 10):.6f}|'
-        answer += f'SRP_TX={self.coords[0]:.6f}|'
-        answer += f'SRP_TY={self.coords[1]:.6f}|'
-        answer += f'SRP_TZ={self.coords[2]:.6f}|'
-        answer += f'SRP_RX={self.coords[3]:.6f}|'
-        answer += f'SRP_RY={self.coords[4]:.6f}|'
-        answer += f'SRP_RZ={self.coords[5]:.6f}|'
+        answer += f'SRP_TX={self._coords[0]:.6f}|'
+        answer += f'SRP_TY={self._coords[1]:.6f}|'
+        answer += f'SRP_TZ={self._coords[2]:.6f}|'
+        answer += f'SRP_RX={self._coords[3]:.6f}|'
+        answer += f'SRP_RY={self._coords[4]:.6f}|'
+        answer += f'SRP_RZ={self._coords[5]:.6f}|'
         answer += f'SRP_OFFSET_TX={self.offsets[0]:.6f}|'
         answer += f'SRP_OFFSET_TY={self.offsets[1]:.6f}|'
         answer += f'SRP_OFFSET_TZ={self.offsets[2]:.6f}|'
@@ -658,7 +673,7 @@ class M3R(Servo):
         answer += f'M3R_COUNTERCLOCKWISE_ENABLED={self.ccw_enabled}|'
         answer += f'M3R_CLOCKWISE={random.uniform(-2, 2):.6f}|'
         answer += f'M3R_COUNTERCLOCKWISE={random.uniform(-2, 2):.6f}|'
-        answer += f'M3R_ROTATION={self.coords[0]:.6f}|'
+        answer += f'M3R_ROTATION={self._coords[0]:.6f}|'
         answer += f'M3R_OFFSET={self.offsets[0]:.6f}'
         return answer
 
@@ -679,7 +694,7 @@ class GFR(Servo):
         answer += f'GFR_COUNTERCLOCKWISE_ENABLED={self.ccw_enabled}|'
         answer += f'GFR_CLOCKWISE={random.uniform(-2, 2):.6f}|'
         answer += f'GFR_COUNTERCLOCKWISE={random.uniform(-2, 2):.6f}|'
-        answer += f'GFR_ROTATION={self.coords[0]:.6f}|'
+        answer += f'GFR_ROTATION={self._coords[0]:.6f}|'
         answer += f'GFR_OFFSET={self.offsets[0]:.6f}'
         return answer
 
@@ -699,6 +714,6 @@ class Derotator(Servo):
         answer = super().get_status(now)
         answer += f'{self.name}_ROTARY_AXIS_ENABLED='
         answer += f'{self.rotary_axis_enabled}|'
-        answer += f'{self.name}_ROTATION={self.coords[0]:.6f}|'
+        answer += f'{self.name}_ROTATION={self._coords[0]:.6f}|'
         answer += f'{self.name}_OFFSET={self.offsets[0]:.6f}'
         return answer
