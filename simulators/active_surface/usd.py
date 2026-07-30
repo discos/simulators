@@ -1,6 +1,5 @@
 import time
 from threading import RLock
-from queue import Queue
 from simulators.utils import sign
 
 
@@ -58,7 +57,7 @@ class USD:
         parameters."""
         self.reference_position = 0
         self._current_position = 0
-        self.position_queue = Queue()
+        self._pending_position = None
         self.delay_multiplier = 5  # x * delay_step. 255: no response
         self.standby_delay_multiplier = 0
         self.standby_mode = self.standby_modes.get(0)
@@ -201,15 +200,12 @@ class USD:
         movements. Whenever this command is received, if there is at least
         one position in the queue and the USD status is set to ready, the USD
         starts moving towards the desired position."""
-        if self.ready is True:
-            next_position, absolute = self.position_queue.get()
+        if self.ready is True and self._pending_position is not None:
+            next_position = self._pending_position
+            self._pending_position = None
+            self.ready = False
             if not self.velocity:
-                if absolute:
-                    self._cmd_position = next_position
-                else:
-                    self._cmd_position = self.current_position + next_position
-            if self.position_queue.empty() is True:
-                self.ready = False
+                self._cmd_position = next_position
 
     def get_version(self):
         """Returns the USD software version.
@@ -415,8 +411,8 @@ class USD:
         else:
             self.trigger_io_level[2] = 0
 
-        # Empty the position queue
-        self.position_queue = Queue()
+        self._pending_position = None
+        self.ready = False
 
     def set_absolute_position(self, position):
         """Receives an absolute position to which the USD will have to move.
@@ -436,7 +432,7 @@ class USD:
         :rtype: boolean"""
         cmd_position = self.reference_position + position
         if self.delayed_execution is True:
-            self.position_queue.put((cmd_position, True))
+            self._pending_position = cmd_position
             self.ready = True
         else:
             if self.running:
@@ -465,7 +461,7 @@ class USD:
         :rtype: boolean"""
         cmd_position = self.current_position + position
         if self.delayed_execution is True:
-            self.position_queue.put((cmd_position, False))
+            self._pending_position = cmd_position
             self.ready = True
         else:
             if self.running:

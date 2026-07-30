@@ -1696,7 +1696,6 @@ class TestASParse(unittest.TestCase):
         for index in range(self.min_usd_index, self.max_usd_index + 1):
             self._toggle_delayed_execution(255, index, True)
             self._enqueue_absolute_position(2000, index, True)
-            self._enqueue_relative_position(4000, index, True)
 
         for driver in self.system.drivers.values():
             self.assertEqual(driver.current_position, 0)
@@ -1708,6 +1707,17 @@ class TestASParse(unittest.TestCase):
             self.assertEqual(driver.current_position, 2000)
             self.assertFalse(driver.running)
 
+        for index in range(self.min_usd_index, self.max_usd_index + 1):
+            self._enqueue_relative_position(4000, index, True)
+
+        self._send_soft_trigger(True)
+
+        time.sleep(0.015)
+        for driver in self.system.drivers.values():
+            self.assertEqual(driver.current_position, 6000)
+            self.assertFalse(driver.running)
+
+        # No position is pending anymore: a second TRIGGER has no effect.
         self._send_soft_trigger(True)
 
         time.sleep(0.015)
