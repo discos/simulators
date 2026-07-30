@@ -200,6 +200,7 @@ class USD:
         movements. Whenever this command is received, if there is at least
         one position in the queue and the USD status is set to ready, the USD
         starts moving towards the desired position."""
+        self.update_state()
         if self.ready is True and self._pending_position is not None:
             next_position = self._pending_position
             self._pending_position = None
