@@ -166,6 +166,8 @@ class System(ListeningSystem):
 
         name = self.functions.get(command)
         if name is not None:
+            for d in self.drivers.values():
+                d.update_state()
             params = [driver, byte_start, [ord(x) for x in cparams]]
             method = getattr(self, name)
             t0 = time.time()

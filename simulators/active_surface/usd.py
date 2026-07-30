@@ -97,7 +97,7 @@ class USD:
         self._standby = False
         self._last_update_time = time.time()
 
-    def _update_state(self):
+    def update_state(self):
         with self._lock:
             now = time.time()
             elapsed = now - self._last_update_time
@@ -168,22 +168,22 @@ class USD:
 
     @property
     def current_position(self):
-        self._update_state()
+        self.update_state()
         return self._current_position
 
     @property
     def running(self):
-        self._update_state()
+        self.update_state()
         return self._running
 
     @property
     def full_current(self):
-        self._update_state()
+        self.update_state()
         return self._full_current
 
     @property
     def current_percentage(self):
-        self._update_state()
+        self.update_state()
         return self._current_percentage
 
     def soft_reset(self):
