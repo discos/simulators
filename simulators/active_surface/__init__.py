@@ -65,6 +65,9 @@ class System(ListeningSystem):
     delay_step = 0.000512  # 512 microseconds
     slope_time = 10  # msec
 
+    bits_per_byte = 10
+    baud_rate = 19200
+
     def __init__(self, min_usd_index=0, max_usd_index=31):
         if min_usd_index < 0 or min_usd_index > 31:
             raise ValueError(
@@ -170,18 +173,27 @@ class System(ListeningSystem):
                 d.update_state()
             params = [driver, byte_start, [ord(x) for x in cparams]]
             method = getattr(self, name)
+
+            request_tx_time = len(msg) * self.bits_per_byte / self.baud_rate
+            time.sleep(request_tx_time)
+
             t0 = time.time()
             retval = method(params)
             if driver is not None:
                 if self.drivers[driver].delay_multiplier == 255:
                     return True
                 else:
-                    time_to_sleep = (
+                    response_delay = (
                         self.drivers[driver].delay_multiplier
                         * self.delay_step
                     )
                     elapsed_time = time.time() - t0
-                    time.sleep(max(0, time_to_sleep - elapsed_time))
+                    time.sleep(max(0, response_delay - elapsed_time))
+                if retval is not None:
+                    response_tx_time = (
+                        len(retval) * self.bits_per_byte / self.baud_rate
+                    )
+                    time.sleep(response_tx_time)
                 return retval
             else:
                 return True
