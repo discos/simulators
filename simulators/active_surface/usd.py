@@ -49,7 +49,7 @@ class USD:
         self.usd_index = usd_index
         self._set_default()
         self.last_movement = None
-        self._update_threshold = 0.01
+        self._update_threshold = 0.001
         self._lock = RLock()
 
     def _set_default(self):
@@ -391,7 +391,7 @@ class USD:
         :type param: byte"""
         binary_string = bin(param)[2:].zfill(8)
 
-        self.delayed_execution = bool(binary_string[0])
+        self.delayed_execution = binary_string[0] == '1'
         # binary_string[1] is currently unused
 
         self.trigger_io_enable[0] = int(binary_string[7], 2)
